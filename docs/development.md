@@ -39,6 +39,20 @@ Use `npm run dev:extension` when you want Vite to keep rebuilding extension
 output during local development. Reload the unpacked extension from Chrome after
 each background or manifest change.
 
+## Runtime Proof
+
+The Phase 2 workspace can register a local snippet against a page you grant
+access to.
+
+1. Build and reload the unpacked extension after manifest changes.
+2. Open the Tampr workspace from the popup or extension details page.
+3. Save the prefilled `*://example.com/*` snippet and approve host access.
+4. Open or reload `https://example.com`.
+5. Confirm the page receives the Tampr outline.
+
+Chrome 138 and newer may also require the Tampr extension detail page's Allow
+User Scripts toggle before `chrome.userScripts` is available.
+
 ## Commands
 
 | Command                 | Purpose                                                    |
