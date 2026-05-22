@@ -79,6 +79,13 @@ User Scripts toggle before `chrome.userScripts` is available.
 | `npm run test:e2e`      | Run Playwright tests once extension smoke tests exist.     |
 | `npm run typecheck`     | Run strict TypeScript checking.                            |
 
+## Component Conventions
+
+Feature components live in their own folders with their source, SCSS module, and
+focused render or interaction tests together. Keep workspace-specific components
+under `src/workspace/components`; move UI primitives into a shared UI folder only
+after popup and workspace genuinely share them.
+
 ## Commit Messages
 
 Commit messages follow Conventional Commits and are linted by the local
