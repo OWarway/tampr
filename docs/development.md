@@ -86,6 +86,11 @@ focused render or interaction tests together. Keep workspace-specific components
 under `src/workspace/components`; move UI primitives into a shared UI folder only
 after popup and workspace genuinely share them.
 
+Author extension UI styles in `px` inside SCSS modules and global SCSS entry
+styles. The PostCSS build step converts extension CSS to `rem` with a `16px`
+root so the source stays easy to read while shipped UI sizing respects root font
+scaling.
+
 ## Commit Messages
 
 Commit messages follow Conventional Commits and are linted by the local
