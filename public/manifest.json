@@ -2,7 +2,10 @@
   "manifest_version": 3,
   "name": "Tampr",
   "version": "0.1.0",
+  "minimum_chrome_version": "138",
   "description": "Lightweight, local-first CSS and JavaScript browser mods.",
+  "permissions": ["storage", "userScripts"],
+  "optional_host_permissions": ["*://*/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Tampr"

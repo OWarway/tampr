@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { createEmptySnippet } from '../../src/domain/snippets';
+import {
+  buildSnippet,
+  createEmptySnippet,
+  SnippetDraftSchema,
+} from '../../src/domain/snippets';
 
 describe('createEmptySnippet', () => {
   it('creates a safe local snippet default', () => {
@@ -32,5 +36,27 @@ describe('createEmptySnippet', () => {
     });
 
     expect(snippet.name).toBe('Current page focus');
+  });
+
+  it('builds a runtime snippet from a validated draft', () => {
+    const draft = SnippetDraftSchema.parse({
+      name: 'Example highlight',
+      enabled: true,
+      matches: ['*://Example.com/*'],
+      excludeMatches: [],
+      css: 'main { outline: 1px solid red; }',
+      js: '',
+      runAt: 'document_start',
+      world: 'USER_SCRIPT',
+    });
+
+    const snippet = buildSnippet({
+      draft,
+      id: 'snippet-3',
+      now: 1_748_000_000_002,
+    });
+
+    expect(snippet.matches).toEqual(['*://example.com/*']);
+    expect(snippet.runAt).toBe('document_start');
   });
 });

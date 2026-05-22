@@ -1,3 +1,7 @@
+import { z } from 'zod';
+
+import { WebMatchPatternSchema } from './web-match-patterns';
+
 export const SNIPPET_RUN_TIMINGS = ['document_start', 'document_idle'] as const;
 export const SNIPPET_WORLDS = ['USER_SCRIPT', 'MAIN'] as const;
 
@@ -17,6 +21,60 @@ export type Snippet = {
   createdAt: number;
   updatedAt: number;
 };
+
+export const SnippetRunTimingSchema = z.enum(SNIPPET_RUN_TIMINGS);
+export const SnippetWorldSchema = z.enum(SNIPPET_WORLDS);
+
+export const SnippetIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9_-]*$/,
+    'Snippet IDs must contain letters, numbers, underscores, or hyphens.',
+  );
+
+const SnippetCodeSchema = z.string().max(250_000);
+const SnippetNameSchema = z.string().trim().min(1).max(120);
+const TimestampSchema = z.number().int().nonnegative();
+
+export const SnippetSchema = z.object({
+  id: SnippetIdSchema,
+  name: SnippetNameSchema,
+  enabled: z.boolean(),
+  matches: z.array(WebMatchPatternSchema),
+  excludeMatches: z.array(WebMatchPatternSchema),
+  css: SnippetCodeSchema,
+  js: SnippetCodeSchema,
+  runAt: SnippetRunTimingSchema,
+  world: SnippetWorldSchema,
+  createdAt: TimestampSchema,
+  updatedAt: TimestampSchema,
+});
+
+export const SnippetDraftSchema = SnippetSchema.pick({
+  id: true,
+  name: true,
+  enabled: true,
+  matches: true,
+  excludeMatches: true,
+  css: true,
+  js: true,
+  runAt: true,
+  world: true,
+})
+  .partial({ id: true })
+  .extend({
+    enabled: z.boolean().default(true),
+    excludeMatches: z.array(WebMatchPatternSchema).default([]),
+    css: SnippetCodeSchema.default(''),
+    js: SnippetCodeSchema.default(''),
+    runAt: SnippetRunTimingSchema.default('document_idle'),
+    world: SnippetWorldSchema.default('USER_SCRIPT'),
+  });
+
+export type SnippetDraft = z.infer<typeof SnippetDraftSchema>;
 
 type EmptySnippetInput = {
   id: string;
@@ -42,4 +100,25 @@ export function createEmptySnippet({
     createdAt: now,
     updatedAt: now,
   };
+}
+
+type BuildSnippetInput = {
+  draft: SnippetDraft;
+  id: string;
+  now: number;
+  previous?: Snippet | undefined;
+};
+
+export function buildSnippet({
+  draft,
+  id,
+  now,
+  previous,
+}: BuildSnippetInput): Snippet {
+  return SnippetSchema.parse({
+    ...draft,
+    id,
+    createdAt: previous?.createdAt ?? now,
+    updatedAt: now,
+  });
 }
