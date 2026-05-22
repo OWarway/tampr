@@ -3,6 +3,7 @@ import {
   type Snippet,
   type SnippetDraft,
 } from '../domain/snippets';
+import { validateWebMatchPattern } from '../domain/web-match-patterns';
 import type { WorkspaceState } from '../shared/workspace-messages';
 
 export type EditorState = {
@@ -41,6 +42,11 @@ export type EditorDraftResult =
       message: string;
     };
 
+export type EditorRuleIssue = {
+  line: number;
+  message: string;
+};
+
 export function parseEditorDraft(value: EditorState): EditorDraftResult {
   const result = SnippetDraftSchema.safeParse({
     ...value,
@@ -59,6 +65,50 @@ export function parseEditorDraft(value: EditorState): EditorDraftResult {
     ok: true,
     draft: result.data,
   };
+}
+
+export function validateEditorRuleLines(
+  value: string,
+  required: boolean,
+): EditorRuleIssue[] {
+  const issues: EditorRuleIssue[] = [];
+  let ruleCount = 0;
+
+  value.split('\n').forEach((line, index) => {
+    if (!line.trim()) {
+      return;
+    }
+
+    ruleCount += 1;
+
+    const validation = validateWebMatchPattern(line);
+
+    if (!validation.ok) {
+      issues.push({
+        line: index + 1,
+        message: validation.message,
+      });
+    }
+  });
+
+  if (required && ruleCount === 0) {
+    issues.push({
+      line: 1,
+      message: 'Add a match rule before this snippet can run.',
+    });
+  }
+
+  return issues;
+}
+
+export function appendEditorRuleLine(value: string, pattern: string): string {
+  const lines = toPatternLines(value);
+
+  if (lines.includes(pattern)) {
+    return lines.join('\n');
+  }
+
+  return [...lines, pattern].join('\n');
 }
 
 export function toEditorState(snippet: Snippet): EditorState {

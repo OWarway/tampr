@@ -17,6 +17,7 @@ export function runtimeLabel(workspace: WorkspaceState | undefined): string {
 export function runtimeNotice(
   workspace: WorkspaceState | undefined,
   fallback: string,
+  snippetId?: string | undefined,
 ): string {
   if (workspace?.runtime.errors[0]) {
     return workspace.runtime.errors[0].message;
@@ -26,11 +27,15 @@ export function runtimeNotice(
     return 'User Scripts are unavailable for Tampr.';
   }
 
-  if (workspace?.runtime.skipped[0]?.reason === 'host-access') {
+  const skipped = snippetId
+    ? workspace?.runtime.skipped.find((skip) => skip.snippetId === snippetId)
+    : workspace?.runtime.skipped[0];
+
+  if (skipped?.reason === 'host-access') {
     return 'Host access is still needed before a matching snippet runs.';
   }
 
-  if (workspace?.runtime.skipped[0]?.reason === 'invalid-matches') {
+  if (skipped?.reason === 'invalid-matches') {
     return 'A saved match rule cannot be registered.';
   }
 

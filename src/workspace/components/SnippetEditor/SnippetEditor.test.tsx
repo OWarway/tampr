@@ -116,6 +116,44 @@ describe('SnippetEditor', () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it('validates rule lines and appends current page presets', () => {
+    const onUpdate = vi.fn();
+
+    render(
+      <SnippetEditor
+        busy={false}
+        dirty={true}
+        editor={{ ...newSnippetEditor, matches: 'example.com/docs' }}
+        notice="Ready."
+        pageRulePresets={[
+          {
+            id: 'path',
+            label: 'Path',
+            pattern: 'https://example.com/docs*',
+          },
+        ]}
+        workspace={undefined}
+        onDelete={() => undefined}
+        onDuplicate={() => undefined}
+        onSave={() => undefined}
+        onUpdate={onUpdate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rules' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Path' }));
+
+    expect(
+      screen.getByText(
+        'Line 1: Use a web match pattern such as *://example.com/*.',
+      ),
+    ).toBeTruthy();
+    expect(onUpdate).toHaveBeenLastCalledWith({
+      ...newSnippetEditor,
+      matches: 'example.com/docs\nhttps://example.com/docs*',
+    });
+  });
 });
 
 function createHostAccessState(): WorkspaceState {

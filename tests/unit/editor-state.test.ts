@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  appendEditorRuleLine,
   duplicateEditor,
   hasUnsavedChanges,
   toEditorState,
+  validateEditorRuleLines,
 } from '../../src/workspace/editor-state';
 import { buildSnippet, SnippetDraftSchema } from '../../src/domain/snippets';
 
@@ -31,6 +33,29 @@ describe('editor state', () => {
     expect(hasUnsavedChanges(duplicateEditor(savedEditor), [snippet])).toBe(
       true,
     );
+  });
+
+  it('validates and appends editor match-rule lines', () => {
+    expect(validateEditorRuleLines('', true)).toEqual([
+      {
+        line: 1,
+        message: 'Add a match rule before this snippet can run.',
+      },
+    ]);
+    expect(
+      validateEditorRuleLines('*://example.com/*\nexample.com/private', false),
+    ).toEqual([
+      {
+        line: 2,
+        message: 'Use a web match pattern such as *://example.com/*.',
+      },
+    ]);
+    expect(appendEditorRuleLine('*://example.com/*', '*://example.com/*')).toBe(
+      '*://example.com/*',
+    );
+    expect(
+      appendEditorRuleLine('*://example.com/*', 'https://example.com/docs*'),
+    ).toBe('*://example.com/*\nhttps://example.com/docs*');
   });
 });
 

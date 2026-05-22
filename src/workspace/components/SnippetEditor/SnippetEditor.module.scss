@@ -86,6 +86,60 @@
   min-height: 390px;
 }
 
+.ruleField {
+  align-content: start;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ruleIssues {
+  color: #aa382a;
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 4px;
+  line-height: 1.4;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 1 / -1;
+
+  button {
+    background: #fff;
+    border-color: #79a78f;
+    color: #29463d;
+  }
+}
+
+.ruleRuntime {
+  align-items: center;
+  background: #e2f1e7;
+  border: 1px solid #c7d2cc;
+  border-radius: 6px;
+  color: #29463d;
+  display: flex;
+  gap: 10px;
+  grid-column: 1 / -1;
+  line-height: 1.45;
+  min-height: 46px;
+  padding: 10px 12px;
+
+  strong {
+    font-size: 12px;
+  }
+
+  span {
+    color: #53645b;
+  }
+}
+
 .settings {
   align-items: end;
   border-top: 1px solid #dbe3de;

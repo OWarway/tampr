@@ -65,6 +65,10 @@ access to.
 Chrome 138 and newer may also require the Tampr extension detail page's Allow
 User Scripts toggle before `chrome.userScripts` is available.
 
+Opening the workspace from the popup carries sanitized active-page context for
+match-rule presets. Tampr uses Chrome's temporary `activeTab` access for that
+user-invoked handoff rather than broad tab access.
+
 ## Commands
 
 | Command                 | Purpose                                                    |

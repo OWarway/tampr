@@ -1,8 +1,14 @@
 import { useState, type FormEvent } from 'react';
 
+import type { PageRulePreset } from '../../../domain/page-rule-presets';
 import type { Snippet } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
-import type { EditorState } from '../../editor-state';
+import {
+  appendEditorRuleLine,
+  validateEditorRuleLines,
+  type EditorRuleIssue,
+  type EditorState,
+} from '../../editor-state';
 import { runtimeNotice } from '../../runtime-copy';
 import { CodeEditor } from '../CodeEditor/CodeEditor';
 
@@ -17,6 +23,7 @@ type SnippetEditorProps = {
   dirty: boolean;
   editor: EditorState;
   notice: string;
+  pageRulePresets?: readonly PageRulePreset[] | undefined;
   workspace: WorkspaceState | undefined;
   onDelete(): void;
   onDuplicate(): void;
@@ -29,6 +36,7 @@ export function SnippetEditor({
   dirty,
   editor,
   notice,
+  pageRulePresets = [],
   workspace,
   onDelete,
   onDuplicate,
@@ -38,6 +46,11 @@ export function SnippetEditor({
   const [deleteTargetId, setDeleteTargetId] = useState<string>();
   const [mode, setMode] = useState<EditorMode>('css');
   const deletePending = editor.id !== undefined && deleteTargetId === editor.id;
+  const excludeRuleIssues = validateEditorRuleLines(
+    editor.excludeMatches,
+    false,
+  );
+  const matchRuleIssues = validateEditorRuleLines(editor.matches, true);
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -56,6 +69,13 @@ export function SnippetEditor({
   function confirmDelete(): void {
     setDeleteTargetId(undefined);
     onDelete();
+  }
+
+  function addPageRulePreset(preset: PageRulePreset): void {
+    onUpdate({
+      ...editor,
+      matches: appendEditorRuleLine(editor.matches, preset.pattern),
+    });
   }
 
   return (
@@ -108,25 +128,51 @@ export function SnippetEditor({
 
         {mode === 'rules' ? (
           <div className={styles.rules}>
-            <label className={styles.field}>
-              <span>Match rules</span>
-              <textarea
-                value={editor.matches}
-                onChange={(event) =>
-                  onUpdate({ ...editor, matches: event.target.value })
-                }
-              />
-            </label>
+            <div className={styles.ruleField}>
+              <label className={styles.field}>
+                <span>Match rules</span>
+                <textarea
+                  value={editor.matches}
+                  onChange={(event) =>
+                    onUpdate({ ...editor, matches: event.target.value })
+                  }
+                />
+              </label>
+              <RuleIssues issues={matchRuleIssues} />
+            </div>
 
-            <label className={styles.field}>
-              <span>Exclude rules</span>
-              <textarea
-                value={editor.excludeMatches}
-                onChange={(event) =>
-                  onUpdate({ ...editor, excludeMatches: event.target.value })
-                }
-              />
-            </label>
+            <div className={styles.ruleField}>
+              <label className={styles.field}>
+                <span>Exclude rules</span>
+                <textarea
+                  value={editor.excludeMatches}
+                  onChange={(event) =>
+                    onUpdate({ ...editor, excludeMatches: event.target.value })
+                  }
+                />
+              </label>
+              <RuleIssues issues={excludeRuleIssues} />
+            </div>
+
+            {pageRulePresets.length > 0 ? (
+              <div className={styles.presets} aria-label="Page rule presets">
+                {pageRulePresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    title={preset.pattern}
+                    type="button"
+                    onClick={() => addPageRulePreset(preset)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <div className={styles.ruleRuntime} aria-label="Rule runtime state">
+              <strong>Runtime</strong>
+              <span>{runtimeNotice(workspace, notice, editor.id)}</span>
+            </div>
 
             <div className={styles.settings}>
               <label className={styles.setting}>
@@ -177,7 +223,7 @@ export function SnippetEditor({
         )}
 
         <footer className={styles.footer}>
-          <p role="status">{runtimeNotice(workspace, notice)}</p>
+          <p role="status">{runtimeNotice(workspace, notice, editor.id)}</p>
           <div className={styles.actions}>
             <button type="button" onClick={onDuplicate}>
               Duplicate
@@ -224,4 +270,20 @@ function modeLabel(mode: EditorMode): string {
   }
 
   return mode === 'css' ? 'CSS' : 'Rules';
+}
+
+function RuleIssues({ issues }: { issues: readonly EditorRuleIssue[] }) {
+  if (issues.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className={styles.ruleIssues} aria-live="polite">
+      {issues.map((issue) => (
+        <li key={`${issue.line}-${issue.message}`}>
+          Line {issue.line}: {issue.message}
+        </li>
+      ))}
+    </ul>
+  );
 }
