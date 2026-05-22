@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   validateWebMatchPattern,
+  webMatchPatternMatchesUrl,
   WebMatchPatternSchema,
 } from '../../src/domain/web-match-patterns';
 
@@ -25,5 +26,29 @@ describe('validateWebMatchPattern', () => {
       'http://localhost/*',
     );
     expect(() => WebMatchPatternSchema.parse('example.com/*')).toThrow();
+  });
+
+  it('matches URLs by web match pattern scheme, host, and path rules', () => {
+    expect(
+      webMatchPatternMatchesUrl(
+        'https://*.example.com/docs*',
+        'https://docs.example.com/docs/api?mode=all#hash',
+      ),
+    ).toBe(true);
+    expect(
+      webMatchPatternMatchesUrl(
+        '*://example.com/*',
+        'https://sub.example.com/docs',
+      ),
+    ).toBe(false);
+    expect(
+      webMatchPatternMatchesUrl(
+        '*://*.example.com/*',
+        'http://example.com/docs',
+      ),
+    ).toBe(true);
+    expect(
+      webMatchPatternMatchesUrl('example.com/*', 'https://example.com/docs'),
+    ).toBe(false);
   });
 });

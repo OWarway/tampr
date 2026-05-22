@@ -34,6 +34,43 @@ describe('WorkspaceController', () => {
     expect(runtimeSync.calls).toEqual([[snippet]]);
   });
 
+  it('returns matching page snippets and runtime state', async () => {
+    const matchingSnippet = createSnippet('page-match');
+    const excludedSnippet = createSnippet('page-excluded', {
+      excludeMatches: ['*://example.com/private/*'],
+    });
+    const controller = createController({
+      snippets: new MemorySnippetStore([matchingSnippet, excludedSnippet]),
+    });
+
+    const response = await controller.handleMessage({
+      type: 'page/get-state',
+      pageUrl: 'https://example.com/private/profile',
+    });
+
+    expect(response).toEqual({
+      ok: true,
+      state: {
+        pageUrl: 'https://example.com/private/profile',
+        savedMatches: [
+          {
+            id: matchingSnippet.id,
+            name: matchingSnippet.name,
+            rule: '*://example.com/*',
+          },
+        ],
+        enabledMatches: [
+          {
+            id: matchingSnippet.id,
+            name: matchingSnippet.name,
+            rule: '*://example.com/*',
+          },
+        ],
+        runtime: readyRuntime(2),
+      },
+    });
+  });
+
   it('saves a new snippet before returning synced state', async () => {
     const snippets = new MemorySnippetStore();
     const runtimeSync = new RuntimeSync();
@@ -146,13 +183,18 @@ function createController({
   });
 }
 
-function createSnippet(id: string): Snippet {
+type SnippetOverrides = {
+  excludeMatches?: string[];
+};
+
+function createSnippet(id: string, overrides: SnippetOverrides = {}): Snippet {
   return buildSnippet({
     id,
     now: 1_747_000_000_000,
     draft: SnippetDraftSchema.parse({
       name: 'Existing proof',
       matches: ['*://example.com/*'],
+      excludeMatches: overrides.excludeMatches,
       css: 'body { color: blue; }',
     }),
   });

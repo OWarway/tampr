@@ -61,6 +61,41 @@ export function validateWebMatchPattern(
   };
 }
 
+export function webMatchPatternMatchesUrl(
+  rawPattern: string,
+  rawUrl: string,
+): boolean {
+  const validation = validateWebMatchPattern(rawPattern);
+
+  if (!validation.ok) {
+    return false;
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return false;
+  }
+
+  const pattern = splitValidatedPattern(validation.pattern);
+
+  if (!pattern) {
+    return false;
+  }
+
+  return (
+    schemeMatches(pattern.scheme, url.protocol.slice(0, -1)) &&
+    hostMatches(pattern.host, url.hostname.toLowerCase()) &&
+    wildcardMatches(pattern.path, `${url.pathname}${url.search}`)
+  );
+}
+
 export const WebMatchPatternSchema = z
   .string()
   .transform((pattern, context) => {
@@ -108,4 +143,55 @@ function isValidExactHost(host: string): boolean {
   }
 
   return host.split('.').every((label) => HOST_LABEL.test(label));
+}
+
+type ValidatedPatternParts = {
+  host: string;
+  path: string;
+  scheme: string;
+};
+
+function splitValidatedPattern(
+  pattern: string,
+): ValidatedPatternParts | undefined {
+  const separatorIndex = pattern.indexOf('://');
+  const hostAndPath = pattern.slice(separatorIndex + 3);
+  const pathIndex = hostAndPath.indexOf('/');
+
+  if (separatorIndex < 1 || pathIndex < 1) {
+    return undefined;
+  }
+
+  return {
+    scheme: pattern.slice(0, separatorIndex),
+    host: hostAndPath.slice(0, pathIndex),
+    path: hostAndPath.slice(pathIndex),
+  };
+}
+
+function schemeMatches(patternScheme: string, urlScheme: string): boolean {
+  return patternScheme === '*' || patternScheme === urlScheme;
+}
+
+function hostMatches(patternHost: string, urlHost: string): boolean {
+  if (patternHost === '*') {
+    return true;
+  }
+
+  if (patternHost.startsWith('*.')) {
+    const rootHost = patternHost.slice(2);
+
+    return urlHost === rootHost || urlHost.endsWith(`.${rootHost}`);
+  }
+
+  return patternHost === urlHost;
+}
+
+function wildcardMatches(pattern: string, value: string): boolean {
+  const escaped = pattern
+    .split('*')
+    .map((segment) => segment.replace(/[\\^$+?.()|[\]{}]/g, '\\$&'))
+    .join('.*');
+
+  return new RegExp(`^${escaped}$`).test(value);
 }

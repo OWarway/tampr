@@ -3,10 +3,11 @@ import {
   SnippetDraftSchema,
   type Snippet,
 } from '../domain/snippets';
+import { derivePageSnippetStatus } from '../domain/page-snippet-status';
 import type { RuntimeStatus } from '../runtime/runtime-status';
 import {
-  WorkspaceMessageSchema,
-  type WorkspaceResponse,
+  ExtensionMessageSchema,
+  type ExtensionResponse,
   type WorkspaceState,
 } from '../shared/workspace-messages';
 
@@ -31,8 +32,8 @@ type WorkspaceControllerDependencies = {
 export class WorkspaceController {
   constructor(private readonly dependencies: WorkspaceControllerDependencies) {}
 
-  async handleMessage(message: unknown): Promise<WorkspaceResponse> {
-    const parsedMessage = WorkspaceMessageSchema.safeParse(message);
+  async handleMessage(message: unknown): Promise<ExtensionResponse> {
+    const parsedMessage = ExtensionMessageSchema.safeParse(message);
 
     if (!parsedMessage.success) {
       return {
@@ -45,6 +46,18 @@ export class WorkspaceController {
       return {
         ok: true,
         state: await this.readState(),
+      };
+    }
+
+    if (parsedMessage.data.type === 'page/get-state') {
+      const snippets = await this.dependencies.snippets.list();
+
+      return {
+        ok: true,
+        state: {
+          ...derivePageSnippetStatus(snippets, parsedMessage.data.pageUrl),
+          runtime: await this.dependencies.runtimeSync(snippets),
+        },
       };
     }
 

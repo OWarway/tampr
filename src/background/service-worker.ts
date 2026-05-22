@@ -1,6 +1,6 @@
 import { startDevReloadWatcher } from '../dev/reload-extension';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
-import type { WorkspaceResponse } from '../shared/workspace-messages';
+import type { ExtensionResponse } from '../shared/workspace-messages';
 import { createChromeSnippetRepository } from '../storage/snippet-repository';
 import { WorkspaceController } from './workspace-controller';
 
@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener(
   },
 );
 
-function toErrorResponse(error: unknown): WorkspaceResponse {
+function toErrorResponse(error: unknown): ExtensionResponse {
   return {
     ok: false,
     error: error instanceof Error ? error.message : String(error),

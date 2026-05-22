@@ -1,10 +1,8 @@
-import {
-  sanitizeWebPageUrl,
-  WORKSPACE_SOURCE_PAGE_PARAM,
-} from '../shared/workspace-source-page';
+import { WORKSPACE_SOURCE_PAGE_PARAM } from '../shared/workspace-source-page';
+import { getActivePageUrl } from './active-page';
 
 export async function openWorkspace(): Promise<void> {
-  const sourcePageUrl = await getActiveSourcePageUrl();
+  const sourcePageUrl = await getActivePageUrl();
 
   if (!sourcePageUrl) {
     await chrome.runtime.openOptionsPage();
@@ -15,21 +13,4 @@ export async function openWorkspace(): Promise<void> {
   workspaceUrl.searchParams.set(WORKSPACE_SOURCE_PAGE_PARAM, sourcePageUrl);
 
   await chrome.tabs.create({ url: workspaceUrl.href });
-}
-
-async function getActiveSourcePageUrl(): Promise<string | undefined> {
-  if (!chrome.tabs?.query) {
-    return undefined;
-  }
-
-  try {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-
-    return tab?.url ? sanitizeWebPageUrl(tab.url) : undefined;
-  } catch {
-    return undefined;
-  }
 }

@@ -20,6 +20,7 @@ describe('Popup App', () => {
   it('opens the workspace with active page context from the popup action', async () => {
     const create = vi.fn().mockResolvedValue(undefined);
     const openOptionsPage = vi.fn().mockResolvedValue(undefined);
+    const sendMessage = vi.fn().mockResolvedValue(readyPageResponse());
     const query = vi.fn().mockResolvedValue([
       {
         url: 'https://docs.example.com/snippets/new?token=private#draft',
@@ -30,13 +31,14 @@ describe('Popup App', () => {
       runtime: {
         getURL: (path: string) => `chrome-extension://tampr/${path}`,
         openOptionsPage,
+        sendMessage,
       },
       tabs: { create, query },
     });
 
     render(<App />);
 
-    expect(screen.getByText('No snippets active')).toBeTruthy();
+    await screen.findByText('Current page cleanup');
 
     fireEvent.click(screen.getByRole('button', { name: 'Workspace' }));
 
@@ -64,4 +66,45 @@ describe('Popup App', () => {
 
     await waitFor(() => expect(openOptionsPage).toHaveBeenCalledTimes(1));
   });
+
+  it('shows unsupported web surfaces before local page snippets', async () => {
+    vi.stubGlobal('chrome', {
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ url: 'chrome://extensions' }]),
+      },
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText('Web page needed')).toBeTruthy();
+  });
 });
+
+function readyPageResponse() {
+  return {
+    ok: true,
+    state: {
+      pageUrl: 'https://docs.example.com/snippets/new',
+      savedMatches: [
+        {
+          id: 'page-snippet',
+          name: 'Current page cleanup',
+          rule: '*://docs.example.com/*',
+        },
+      ],
+      enabledMatches: [
+        {
+          id: 'page-snippet',
+          name: 'Current page cleanup',
+          rule: '*://docs.example.com/*',
+        },
+      ],
+      runtime: {
+        state: 'ready',
+        registrations: 1,
+        skipped: [],
+        errors: [],
+      },
+    },
+  };
+}

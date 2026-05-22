@@ -1,6 +1,6 @@
 import type { SnippetDraft } from '../domain/snippets';
 import type {
-  WorkspaceResponse,
+  WorkspaceStateResponse,
   WorkspaceState,
 } from '../shared/workspace-messages';
 
@@ -21,9 +21,9 @@ export async function removeSnippet(
 }
 
 async function sendWorkspaceMessage(message: unknown): Promise<WorkspaceState> {
-  const response = (await chrome.runtime.sendMessage(
-    message,
-  )) as WorkspaceResponse;
+  const response = (await chrome.runtime.sendMessage(message)) as
+    | WorkspaceStateResponse
+    | { ok: false; error: string };
 
   if (!response.ok) {
     throw new Error(response.error);
