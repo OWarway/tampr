@@ -58,6 +58,27 @@ describe('SnippetEditor', () => {
       'Host access is still needed before a matching snippet runs.',
     );
   });
+
+  it('switches from code editing to rule controls', () => {
+    render(
+      <SnippetEditor
+        busy={false}
+        editor={newSnippetEditor}
+        notice="Ready."
+        workspace={undefined}
+        onDelete={() => undefined}
+        onSave={() => undefined}
+        onUpdate={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'CSS code' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rules' }));
+
+    expect(screen.getByLabelText('Match rules')).toBeTruthy();
+    expect(screen.queryByRole('textbox', { name: 'CSS code' })).toBeNull();
+  });
 });
 
 function createHostAccessState(): WorkspaceState {

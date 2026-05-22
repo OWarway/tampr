@@ -1,42 +1,49 @@
 .shell {
   display: grid;
-  grid-template-rows: auto 1fr;
   min-width: 0;
   padding: 24px clamp(18px, 3vw, 42px);
-}
-
-.tabs {
-  border-bottom: 1px solid #c7d2cc;
-  display: flex;
-  gap: 8px;
-  min-height: 42px;
-}
-
-.tab {
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid #c7d2cc;
-  border-bottom: 0;
-  border-radius: 6px 6px 0 0;
-  color: #29463d;
-  display: inline-flex;
-  font-size: 13px;
-  font-weight: 800;
-  min-height: 42px;
-  padding: 0 14px;
 }
 
 .form {
   align-content: start;
   background: rgb(255 255 255 / 68%);
   border: 1px solid #c7d2cc;
-  border-radius: 0 8px 8px;
+  border-radius: 8px;
   display: grid;
   gap: 18px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   min-height: min(640px, calc(100vh - 184px));
   min-width: 0;
   padding: clamp(18px, 3vw, 34px);
+}
+
+.identity {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.tabs {
+  border-bottom: 1px solid #dbe3de;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  padding-bottom: 12px;
+}
+
+.tab {
+  background: #fff;
+  border-color: #c7d2cc;
+  color: #29463d;
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 78px;
+
+  &:hover,
+  &.selected {
+    background: #e2f1e7;
+    border-color: #79a78f;
+  }
 }
 
 .field {
@@ -71,20 +78,12 @@
   }
 }
 
-.name,
-.codeField,
-.settings,
-.footer {
-  grid-column: 1 / -1;
-}
-
-.field textarea.code {
-  background: #12201d;
-  border-color: #12201d;
-  color: #e5f0ea;
-  font-family:
-    'Cascadia Code', Consolas, 'SFMono-Regular', ui-monospace, monospace;
-  min-height: 160px;
+.rules {
+  align-content: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 390px;
 }
 
 .settings {
@@ -92,7 +91,8 @@
   border-top: 1px solid #dbe3de;
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 180px));
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 180px));
   padding-top: 16px;
 }
 
@@ -156,8 +156,12 @@
 }
 
 @media (max-width: 720px) {
-  .form {
+  .identity,
+  .rules {
     grid-template-columns: 1fr;
+  }
+
+  .form {
     min-height: 54vh;
   }
 

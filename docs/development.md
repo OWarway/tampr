@@ -14,7 +14,7 @@ Install dependencies:
 npm install
 ```
 
-Run the Phase 1 quality gates:
+Run the local quality gates:
 
 ```sh
 npm run check
@@ -53,7 +53,7 @@ the development reload.
 
 ## Runtime Proof
 
-The Phase 2 workspace can register a local snippet against a page you grant
+The workspace runtime proof can register a local snippet against a page you grant
 access to.
 
 1. Build and reload the unpacked extension after manifest changes.
@@ -90,6 +90,10 @@ Author extension UI styles in `px` inside SCSS modules and global SCSS entry
 styles. The PostCSS build step converts extension CSS to `rem` with a `16px`
 root so the source stays easy to read while shipped UI sizing respects root font
 scaling.
+
+The workspace code editor uses CodeMirror packages directly. Keep editor
+extensions intentional so code editing earns its bundle weight without turning
+Tampr into a broad IDE surface.
 
 ## Commit Messages
 

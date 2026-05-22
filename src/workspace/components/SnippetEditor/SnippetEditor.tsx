@@ -1,11 +1,16 @@
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 
 import type { Snippet } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import type { EditorState } from '../../editor-state';
 import { runtimeNotice } from '../../runtime-copy';
+import { CodeEditor } from '../CodeEditor/CodeEditor';
 
 import styles from './SnippetEditor.module.scss';
+
+const EDITOR_MODES = ['rules', 'css', 'javascript'] as const;
+
+type EditorMode = (typeof EDITOR_MODES)[number];
 
 type SnippetEditorProps = {
   busy: boolean;
@@ -26,6 +31,8 @@ export function SnippetEditor({
   onSave,
   onUpdate,
 }: SnippetEditorProps) {
+  const [mode, setMode] = useState<EditorMode>('css');
+
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     onSave();
@@ -33,95 +40,16 @@ export function SnippetEditor({
 
   return (
     <section className={styles.shell} aria-label="Snippet editor">
-      <div className={styles.tabs}>
-        <span className={styles.tab}>Rules</span>
-        <span className={styles.tab}>CSS</span>
-        <span className={styles.tab}>JavaScript</span>
-      </div>
       <form className={styles.form} onSubmit={submit}>
-        <label className={`${styles.field} ${styles.name}`}>
-          <span>Name</span>
-          <input
-            value={editor.name}
-            onChange={(event) =>
-              onUpdate({ ...editor, name: event.target.value })
-            }
-          />
-        </label>
-
-        <label className={styles.field}>
-          <span>Match rules</span>
-          <textarea
-            value={editor.matches}
-            onChange={(event) =>
-              onUpdate({ ...editor, matches: event.target.value })
-            }
-          />
-        </label>
-
-        <label className={styles.field}>
-          <span>Exclude rules</span>
-          <textarea
-            value={editor.excludeMatches}
-            onChange={(event) =>
-              onUpdate({ ...editor, excludeMatches: event.target.value })
-            }
-          />
-        </label>
-
-        <label className={`${styles.field} ${styles.codeField}`}>
-          <span>CSS</span>
-          <textarea
-            className={styles.code}
-            value={editor.css}
-            onChange={(event) =>
-              onUpdate({ ...editor, css: event.target.value })
-            }
-          />
-        </label>
-
-        <label className={`${styles.field} ${styles.codeField}`}>
-          <span>JavaScript</span>
-          <textarea
-            className={styles.code}
-            value={editor.js}
-            onChange={(event) =>
-              onUpdate({ ...editor, js: event.target.value })
-            }
-          />
-        </label>
-
-        <div className={styles.settings}>
-          <label className={styles.setting}>
-            <span>Run</span>
-            <select
-              value={editor.runAt}
+        <div className={styles.identity}>
+          <label className={`${styles.field} ${styles.name}`}>
+            <span>Name</span>
+            <input
+              value={editor.name}
               onChange={(event) =>
-                onUpdate({
-                  ...editor,
-                  runAt: event.target.value as Snippet['runAt'],
-                })
+                onUpdate({ ...editor, name: event.target.value })
               }
-            >
-              <option value="document_idle">Document idle</option>
-              <option value="document_start">Document start</option>
-            </select>
-          </label>
-
-          <label className={styles.setting}>
-            <span>World</span>
-            <select
-              value={editor.world}
-              onChange={(event) =>
-                onUpdate({
-                  ...editor,
-                  world: event.target.value as Snippet['world'],
-                })
-              }
-            >
-              <option value="USER_SCRIPT">User script</option>
-              <option value="MAIN">Main</option>
-            </select>
+            />
           </label>
 
           <label className={styles.toggle}>
@@ -135,6 +63,92 @@ export function SnippetEditor({
             <span>Enabled</span>
           </label>
         </div>
+
+        <div className={styles.tabs} aria-label="Editor mode">
+          {EDITOR_MODES.map((editorMode) => (
+            <button
+              aria-pressed={mode === editorMode}
+              className={`${styles.tab} ${
+                mode === editorMode ? styles.selected : ''
+              }`}
+              key={editorMode}
+              type="button"
+              onClick={() => setMode(editorMode)}
+            >
+              {modeLabel(editorMode)}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'rules' ? (
+          <div className={styles.rules}>
+            <label className={styles.field}>
+              <span>Match rules</span>
+              <textarea
+                value={editor.matches}
+                onChange={(event) =>
+                  onUpdate({ ...editor, matches: event.target.value })
+                }
+              />
+            </label>
+
+            <label className={styles.field}>
+              <span>Exclude rules</span>
+              <textarea
+                value={editor.excludeMatches}
+                onChange={(event) =>
+                  onUpdate({ ...editor, excludeMatches: event.target.value })
+                }
+              />
+            </label>
+
+            <div className={styles.settings}>
+              <label className={styles.setting}>
+                <span>Run</span>
+                <select
+                  value={editor.runAt}
+                  onChange={(event) =>
+                    onUpdate({
+                      ...editor,
+                      runAt: event.target.value as Snippet['runAt'],
+                    })
+                  }
+                >
+                  <option value="document_idle">Document idle</option>
+                  <option value="document_start">Document start</option>
+                </select>
+              </label>
+
+              <label className={styles.setting}>
+                <span>World</span>
+                <select
+                  value={editor.world}
+                  onChange={(event) =>
+                    onUpdate({
+                      ...editor,
+                      world: event.target.value as Snippet['world'],
+                    })
+                  }
+                >
+                  <option value="USER_SCRIPT">User script</option>
+                  <option value="MAIN">Main</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : (
+          <CodeEditor
+            label={`${modeLabel(mode)} code`}
+            language={mode}
+            value={editor[mode === 'css' ? 'css' : 'js']}
+            onChange={(value) =>
+              onUpdate({
+                ...editor,
+                [mode === 'css' ? 'css' : 'js']: value,
+              })
+            }
+          />
+        )}
 
         <footer className={styles.footer}>
           <p role="status">{runtimeNotice(workspace, notice)}</p>
@@ -150,4 +164,12 @@ export function SnippetEditor({
       </form>
     </section>
   );
+}
+
+function modeLabel(mode: EditorMode): string {
+  if (mode === 'javascript') {
+    return 'JavaScript';
+  }
+
+  return mode === 'css' ? 'CSS' : 'Rules';
 }

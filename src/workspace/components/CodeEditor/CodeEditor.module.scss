@@ -1,0 +1,68 @@
+.shell {
+  background: #12201d;
+  border: 1px solid #12201d;
+  border-radius: 7px;
+  color: #e5f0ea;
+  min-height: 390px;
+  overflow: hidden;
+
+  &:focus-within {
+    border-color: #d44d3a;
+    box-shadow: 0 0 0 2px rgb(212 77 58 / 22%);
+  }
+
+  :global(.cm-editor) {
+    height: 100%;
+  }
+
+  :global(.cm-focused) {
+    outline: 0;
+  }
+
+  :global(.cm-scroller) {
+    font-family:
+      'Cascadia Code', Consolas, 'SFMono-Regular', ui-monospace, monospace;
+    line-height: 1.55;
+    min-height: 390px;
+    overflow: auto;
+  }
+
+  :global(.cm-content) {
+    caret-color: #f7fbf8;
+    min-height: 390px;
+    padding: 14px 0;
+  }
+
+  :global(.cm-line) {
+    padding: 0 16px 0 10px;
+  }
+
+  :global(.cm-gutters) {
+    background: #0d1615;
+    border-right: 1px solid #243c36;
+    color: #80a095;
+    padding-inline: 4px;
+  }
+
+  :global(.cm-activeLine),
+  :global(.cm-activeLineGutter) {
+    background: rgb(255 255 255 / 6%);
+  }
+
+  :global(.cm-cursor) {
+    border-left-color: #f7fbf8;
+  }
+
+  :global(.cm-selectionBackground),
+  :global(.cm-editor.cm-focused .cm-selectionBackground) {
+    background: rgb(121 167 143 / 38%);
+  }
+}
+
+@media (max-width: 720px) {
+  .shell,
+  .shell :global(.cm-scroller),
+  .shell :global(.cm-content) {
+    min-height: 320px;
+  }
+}
