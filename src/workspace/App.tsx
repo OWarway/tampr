@@ -1,18 +1,19 @@
-import { SnippetEditor } from './components/SnippetEditor';
-import { SnippetRail } from './components/SnippetRail';
-import { WorkspaceHeader } from './components/WorkspaceHeader';
+import { SnippetEditor } from './components/SnippetEditor/SnippetEditor';
+import { SnippetRail } from './components/SnippetRail/SnippetRail';
+import { WorkspaceHeader } from './components/WorkspaceHeader/WorkspaceHeader';
 import { useWorkspace } from './hooks/use-workspace';
 
-import './workspace.css';
+import styles from './App.module.scss';
+import './workspace.scss';
 
 export function App() {
   const state = useWorkspace();
 
   return (
-    <main className="workspace">
+    <main className={styles.workspace}>
       <WorkspaceHeader workspace={state.workspace} />
 
-      <section className="workspace__body" aria-label="Snippet workspace">
+      <section className={styles.body} aria-label="Snippet workspace">
         <SnippetRail
           editor={state.editor}
           snippets={state.workspace?.snippets ?? []}

@@ -1,13 +1,13 @@
 import { openWorkspace } from '../chrome/workspace';
 
-import './popup.css';
+import styles from './App.module.scss';
 
 export function App() {
   return (
-    <main className="popup">
-      <header className="popup__header">
+    <main className={styles.popup}>
+      <header className={styles.header}>
         <div>
-          <p className="popup__label">Current page</p>
+          <p className={styles.label}>Current page</p>
           <h1>Tampr</h1>
         </div>
         <button type="button" onClick={() => void openWorkspace()}>
@@ -15,8 +15,8 @@ export function App() {
         </button>
       </header>
 
-      <section className="popup__status" aria-label="Page snippets">
-        <div className="popup__status-row">
+      <section className={styles.status} aria-label="Page snippets">
+        <div className={styles.statusRow}>
           <strong>No snippets active</strong>
           <span>Ready</span>
         </div>

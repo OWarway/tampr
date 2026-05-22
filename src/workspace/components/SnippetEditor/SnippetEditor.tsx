@@ -1,9 +1,11 @@
 import type { FormEvent } from 'react';
 
-import type { Snippet } from '../../domain/snippets';
-import type { WorkspaceState } from '../../shared/workspace-messages';
-import type { EditorState } from '../editor-state';
-import { runtimeNotice } from '../runtime-copy';
+import type { Snippet } from '../../../domain/snippets';
+import type { WorkspaceState } from '../../../shared/workspace-messages';
+import type { EditorState } from '../../editor-state';
+import { runtimeNotice } from '../../runtime-copy';
+
+import styles from './SnippetEditor.module.scss';
 
 type SnippetEditorProps = {
   busy: boolean;
@@ -30,14 +32,14 @@ export function SnippetEditor({
   }
 
   return (
-    <section className="editor-shell" aria-label="Snippet editor">
-      <div className="editor-shell__tabs">
-        <span>Rules</span>
-        <span>CSS</span>
-        <span>JavaScript</span>
+    <section className={styles.shell} aria-label="Snippet editor">
+      <div className={styles.tabs}>
+        <span className={styles.tab}>Rules</span>
+        <span className={styles.tab}>CSS</span>
+        <span className={styles.tab}>JavaScript</span>
       </div>
-      <form className="snippet-editor" onSubmit={submit}>
-        <label>
+      <form className={styles.form} onSubmit={submit}>
+        <label className={`${styles.field} ${styles.name}`}>
           <span>Name</span>
           <input
             value={editor.name}
@@ -47,7 +49,7 @@ export function SnippetEditor({
           />
         </label>
 
-        <label>
+        <label className={styles.field}>
           <span>Match rules</span>
           <textarea
             value={editor.matches}
@@ -57,7 +59,7 @@ export function SnippetEditor({
           />
         </label>
 
-        <label>
+        <label className={styles.field}>
           <span>Exclude rules</span>
           <textarea
             value={editor.excludeMatches}
@@ -67,10 +69,10 @@ export function SnippetEditor({
           />
         </label>
 
-        <label>
+        <label className={`${styles.field} ${styles.codeField}`}>
           <span>CSS</span>
           <textarea
-            className="snippet-editor__code"
+            className={styles.code}
             value={editor.css}
             onChange={(event) =>
               onUpdate({ ...editor, css: event.target.value })
@@ -78,10 +80,10 @@ export function SnippetEditor({
           />
         </label>
 
-        <label>
+        <label className={`${styles.field} ${styles.codeField}`}>
           <span>JavaScript</span>
           <textarea
-            className="snippet-editor__code"
+            className={styles.code}
             value={editor.js}
             onChange={(event) =>
               onUpdate({ ...editor, js: event.target.value })
@@ -89,8 +91,8 @@ export function SnippetEditor({
           />
         </label>
 
-        <div className="snippet-editor__settings">
-          <label>
+        <div className={styles.settings}>
+          <label className={styles.setting}>
             <span>Run</span>
             <select
               value={editor.runAt}
@@ -106,7 +108,7 @@ export function SnippetEditor({
             </select>
           </label>
 
-          <label>
+          <label className={styles.setting}>
             <span>World</span>
             <select
               value={editor.world}
@@ -122,7 +124,7 @@ export function SnippetEditor({
             </select>
           </label>
 
-          <label className="snippet-editor__toggle">
+          <label className={styles.toggle}>
             <input
               checked={editor.enabled}
               type="checkbox"
@@ -134,10 +136,10 @@ export function SnippetEditor({
           </label>
         </div>
 
-        <footer>
+        <footer className={styles.footer}>
           <p role="status">{runtimeNotice(workspace, notice)}</p>
-          <div>
-            <button type="button" onClick={onDelete}>
+          <div className={styles.actions}>
+            <button className={styles.delete} type="button" onClick={onDelete}>
               Delete
             </button>
             <button type="submit" disabled={busy}>

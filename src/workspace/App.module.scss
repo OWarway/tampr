@@ -1,0 +1,19 @@
+.workspace {
+  background:
+    linear-gradient(90deg, rgb(20 89 77 / 12%), transparent 34%), #f2f6f3;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(236px, 300px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+}

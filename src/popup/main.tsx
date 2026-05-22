@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { startDevReloadWatcher } from '../dev/reload-extension';
 import { App } from './App';
 
+import './popup.scss';
+
 const root = document.getElementById('root');
 
 if (!root) {

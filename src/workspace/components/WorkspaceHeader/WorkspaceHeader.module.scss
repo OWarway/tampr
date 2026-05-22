@@ -1,0 +1,33 @@
+.header {
+  align-items: center;
+  border-bottom: 1px solid #c7d2cc;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  min-height: 88px;
+  padding: 18px clamp(18px, 3vw, 42px);
+
+  h1 {
+    font-size: 28px;
+    line-height: 1.1;
+    margin: 4px 0 0;
+  }
+
+  p,
+  span {
+    color: #53645b;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    margin: 0;
+    text-transform: uppercase;
+  }
+}
+
+.status {
+  background: #f9fcfa;
+  border: 1px solid #c7d2cc;
+  border-radius: 999px;
+  color: #17472e;
+  padding: 7px 10px;
+}
