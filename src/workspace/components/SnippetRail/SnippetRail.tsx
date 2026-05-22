@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { Snippet } from '../../../domain/snippets';
 import { toEditorState, type EditorState } from '../../editor-state';
 
@@ -16,6 +18,9 @@ export function SnippetRail({
   onCreate,
   onSelect,
 }: SnippetRailProps) {
+  const [query, setQuery] = useState('');
+  const visibleSnippets = filterSnippets(snippets, query);
+
   return (
     <aside className={styles.rail} aria-label="Snippets">
       <div className={styles.top}>
@@ -24,8 +29,16 @@ export function SnippetRail({
           New
         </button>
       </div>
+      <label className={styles.search}>
+        <span>Search</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
       <ol className={styles.list}>
-        {snippets.map((snippet) => (
+        {visibleSnippets.map((snippet) => (
           <li key={snippet.id}>
             <button
               className={`${styles.item} ${
@@ -44,7 +57,26 @@ export function SnippetRail({
       </ol>
       {snippets.length === 0 ? (
         <p className={styles.empty}>No snippets yet.</p>
+      ) : visibleSnippets.length === 0 ? (
+        <p className={styles.empty}>No snippets match.</p>
       ) : null}
     </aside>
   );
+}
+
+function filterSnippets(
+  snippets: readonly Snippet[],
+  query: string,
+): readonly Snippet[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+
+  if (!normalizedQuery) {
+    return snippets;
+  }
+
+  return snippets.filter((snippet) => {
+    return [snippet.name, ...snippet.matches, ...snippet.excludeMatches].some(
+      (value) => value.toLocaleLowerCase().includes(normalizedQuery),
+    );
+  });
 }

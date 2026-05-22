@@ -75,6 +75,32 @@ export function toEditorState(snippet: Snippet): EditorState {
   };
 }
 
+export function duplicateEditor(value: EditorState): EditorState {
+  return {
+    css: value.css,
+    enabled: value.enabled,
+    excludeMatches: value.excludeMatches,
+    js: value.js,
+    matches: value.matches,
+    name: duplicateName(value.name),
+    runAt: value.runAt,
+    world: value.world,
+  };
+}
+
+export function hasUnsavedChanges(
+  value: EditorState,
+  snippets: readonly Snippet[],
+): boolean {
+  if (!value.id) {
+    return true;
+  }
+
+  const snippet = snippets.find((candidate) => candidate.id === value.id);
+
+  return !snippet || !editorsEqual(value, toEditorState(snippet));
+}
+
 export function findSavedSnippet(
   workspace: WorkspaceState,
   savedId: string | undefined,
@@ -93,4 +119,25 @@ function toPatternLines(value: string): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function duplicateName(value: string): string {
+  const suffix = ' copy';
+  const base = value.trim() || 'Untitled snippet';
+
+  return `${base.slice(0, 120 - suffix.length).trimEnd()}${suffix}`;
+}
+
+function editorsEqual(left: EditorState, right: EditorState): boolean {
+  return (
+    left.id === right.id &&
+    left.name === right.name &&
+    left.enabled === right.enabled &&
+    left.matches === right.matches &&
+    left.excludeMatches === right.excludeMatches &&
+    left.css === right.css &&
+    left.js === right.js &&
+    left.runAt === right.runAt &&
+    left.world === right.world
+  );
 }

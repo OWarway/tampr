@@ -22,10 +22,12 @@ export function App() {
         />
         <SnippetEditor
           busy={state.busy}
+          dirty={state.dirty}
           editor={state.editor}
           notice={state.notice}
           workspace={state.workspace}
           onDelete={() => void state.deleteEditor()}
+          onDuplicate={state.duplicateCurrentEditor}
           onSave={() => void state.saveEditor()}
           onUpdate={state.updateEditor}
         />

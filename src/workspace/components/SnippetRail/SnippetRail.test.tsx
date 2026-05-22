@@ -43,15 +43,42 @@ describe('SnippetRail', () => {
 
     expect(screen.getByText('No snippets yet.')).toBeTruthy();
   });
+
+  it('searches snippet names and match rules', () => {
+    render(
+      <SnippetRail
+        editor={newSnippetEditor}
+        snippets={[
+          createSnippet(),
+          createSnippet('Route cleaner', '*://docs.example.com/*'),
+        ]}
+        onCreate={() => undefined}
+        onSelect={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Search'), {
+      target: { value: 'docs.example' },
+    });
+
+    expect(screen.getByRole('button', { name: /Route cleaner/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Example proof/ })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Search'), {
+      target: { value: 'missing' },
+    });
+
+    expect(screen.getByText('No snippets match.')).toBeTruthy();
+  });
 });
 
-function createSnippet() {
+function createSnippet(name = 'Example proof', match = '*://example.com/*') {
   return buildSnippet({
-    id: 'snippet-rail-proof',
+    id: name.toLocaleLowerCase().replaceAll(' ', '-'),
     now: 1_748_000_000_000,
     draft: SnippetDraftSchema.parse({
-      name: 'Example proof',
-      matches: ['*://example.com/*'],
+      name,
+      matches: [match],
       css: 'body { color: red; }',
     }),
   });

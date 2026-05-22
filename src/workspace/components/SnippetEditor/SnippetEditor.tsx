@@ -14,28 +14,48 @@ type EditorMode = (typeof EDITOR_MODES)[number];
 
 type SnippetEditorProps = {
   busy: boolean;
+  dirty: boolean;
   editor: EditorState;
   notice: string;
   workspace: WorkspaceState | undefined;
   onDelete(): void;
+  onDuplicate(): void;
   onSave(): void;
   onUpdate(editor: EditorState): void;
 };
 
 export function SnippetEditor({
   busy,
+  dirty,
   editor,
   notice,
   workspace,
   onDelete,
+  onDuplicate,
   onSave,
   onUpdate,
 }: SnippetEditorProps) {
+  const [deleteTargetId, setDeleteTargetId] = useState<string>();
   const [mode, setMode] = useState<EditorMode>('css');
+  const deletePending = editor.id !== undefined && deleteTargetId === editor.id;
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     onSave();
+  }
+
+  function requestDelete(): void {
+    if (!editor.id) {
+      onDelete();
+      return;
+    }
+
+    setDeleteTargetId(editor.id);
+  }
+
+  function confirmDelete(): void {
+    setDeleteTargetId(undefined);
+    onDelete();
   }
 
   return (
@@ -62,6 +82,12 @@ export function SnippetEditor({
             />
             <span>Enabled</span>
           </label>
+
+          <span
+            className={`${styles.saveState} ${dirty ? styles.unsaved : ''}`}
+          >
+            {dirty ? 'Unsaved' : 'Saved'}
+          </span>
         </div>
 
         <div className={styles.tabs} aria-label="Editor mode">
@@ -153,9 +179,35 @@ export function SnippetEditor({
         <footer className={styles.footer}>
           <p role="status">{runtimeNotice(workspace, notice)}</p>
           <div className={styles.actions}>
-            <button className={styles.delete} type="button" onClick={onDelete}>
-              Delete
+            <button type="button" onClick={onDuplicate}>
+              Duplicate
             </button>
+            {deletePending ? (
+              <>
+                <button
+                  className={styles.delete}
+                  type="button"
+                  onClick={() => setDeleteTargetId(undefined)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={styles.confirmDelete}
+                  type="button"
+                  onClick={confirmDelete}
+                >
+                  Delete snippet
+                </button>
+              </>
+            ) : (
+              <button
+                className={styles.delete}
+                type="button"
+                onClick={requestDelete}
+              >
+                {editor.id ? 'Delete' : 'Clear'}
+              </button>
+            )}
             <button type="submit" disabled={busy}>
               Save
             </button>

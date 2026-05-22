@@ -8,7 +8,9 @@ import {
 } from '../../chrome/workspace-state';
 import type { WorkspaceState } from '../../shared/workspace-messages';
 import {
+  duplicateEditor,
   findSavedSnippet,
+  hasUnsavedChanges,
   newSnippetEditor,
   parseEditorDraft,
   toEditorState,
@@ -17,11 +19,13 @@ import {
 
 export type UseWorkspaceResult = {
   busy: boolean;
+  dirty: boolean;
   editor: EditorState;
   notice: string;
   workspace: WorkspaceState | undefined;
   clearEditor(): void;
   deleteEditor(): Promise<void>;
+  duplicateCurrentEditor(): void;
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
   updateEditor(editor: EditorState): void;
@@ -97,7 +101,7 @@ export function useWorkspace(): UseWorkspaceResult {
 
   async function deleteEditor(): Promise<void> {
     if (!editor.id) {
-      clearEditor();
+      resetEditor();
       setNotice('New snippet cleared.');
       return;
     }
@@ -121,18 +125,52 @@ export function useWorkspace(): UseWorkspaceResult {
   }
 
   function clearEditor(): void {
+    if (workspace && hasUnsavedChanges(editor, workspace.snippets)) {
+      setNotice('Save or clear unsaved changes before starting a snippet.');
+      return;
+    }
+
+    resetEditor();
+    setNotice('New snippet ready.');
+  }
+
+  function duplicateCurrentEditor(): void {
+    setEditor(duplicateEditor(editor));
+    setNotice('Snippet duplicated. Save the copy to sync it.');
+  }
+
+  function selectEditor(nextEditor: EditorState): void {
+    if (shouldKeepUnsavedEditor(nextEditor)) {
+      setNotice('Save or clear unsaved changes before switching snippets.');
+      return;
+    }
+
+    setEditor(nextEditor);
+  }
+
+  function shouldKeepUnsavedEditor(nextEditor: EditorState): boolean {
+    if (!workspace || editor.id === nextEditor.id) {
+      return false;
+    }
+
+    return hasUnsavedChanges(editor, workspace.snippets);
+  }
+
+  function resetEditor(): void {
     setEditor(newSnippetEditor);
   }
 
   return {
     busy,
+    dirty: workspace ? hasUnsavedChanges(editor, workspace.snippets) : false,
     editor,
     notice,
     workspace,
     clearEditor,
     deleteEditor,
+    duplicateCurrentEditor,
     saveEditor,
-    selectEditor: setEditor,
+    selectEditor,
     updateEditor: setEditor,
   };
 }

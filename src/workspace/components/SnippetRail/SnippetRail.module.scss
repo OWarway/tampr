@@ -28,6 +28,24 @@
   padding: 0;
 }
 
+.search {
+  color: #29463d;
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+
+  input {
+    background: rgb(255 255 255 / 86%);
+    border: 1px solid #b9cac1;
+    border-radius: 6px;
+    color: #14201b;
+    min-height: 38px;
+    min-width: 0;
+    padding: 0 10px;
+  }
+}
+
 .item {
   align-items: start;
   background: rgb(255 255 255 / 74%);

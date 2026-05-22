@@ -20,7 +20,7 @@
   align-items: end;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 .tabs {
@@ -128,6 +128,28 @@
   }
 }
 
+.saveState {
+  align-items: center;
+  color: #53645b;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 7px;
+  min-height: 42px;
+
+  &::before {
+    background: #79a78f;
+    border-radius: 50%;
+    content: '';
+    height: 8px;
+    width: 8px;
+  }
+}
+
+.unsaved::before {
+  background: #d44d3a;
+}
+
 .footer {
   align-items: center;
   border-top: 1px solid #dbe3de;
@@ -147,12 +169,23 @@
 .actions {
   display: flex;
   gap: 8px;
+  justify-content: end;
+  min-width: min-content;
 }
 
 .delete {
   background: #fff;
   border-color: #c7d2cc;
   color: #31463e;
+}
+
+.confirmDelete {
+  background: #aa382a;
+  border-color: #aa382a;
+
+  &:hover {
+    background: #8e2b20;
+  }
 }
 
 @media (max-width: 720px) {
@@ -172,5 +205,10 @@
   .footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    justify-content: start;
   }
 }

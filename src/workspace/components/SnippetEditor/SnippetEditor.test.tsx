@@ -18,10 +18,12 @@ describe('SnippetEditor', () => {
     render(
       <SnippetEditor
         busy={false}
+        dirty={true}
         editor={newSnippetEditor}
         notice="Ready."
         workspace={undefined}
         onDelete={onDelete}
+        onDuplicate={() => undefined}
         onSave={onSave}
         onUpdate={onUpdate}
       />,
@@ -31,7 +33,7 @@ describe('SnippetEditor', () => {
       target: { value: 'Updated proof' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
 
     expect(onUpdate).toHaveBeenCalledWith({
       ...newSnippetEditor,
@@ -45,10 +47,12 @@ describe('SnippetEditor', () => {
     render(
       <SnippetEditor
         busy={false}
+        dirty={false}
         editor={newSnippetEditor}
         notice="Saved."
         workspace={createHostAccessState()}
         onDelete={() => undefined}
+        onDuplicate={() => undefined}
         onSave={() => undefined}
         onUpdate={() => undefined}
       />,
@@ -63,10 +67,12 @@ describe('SnippetEditor', () => {
     render(
       <SnippetEditor
         busy={false}
+        dirty={true}
         editor={newSnippetEditor}
         notice="Ready."
         workspace={undefined}
         onDelete={() => undefined}
+        onDuplicate={() => undefined}
         onSave={() => undefined}
         onUpdate={() => undefined}
       />,
@@ -78,6 +84,37 @@ describe('SnippetEditor', () => {
 
     expect(screen.getByLabelText('Match rules')).toBeTruthy();
     expect(screen.queryByRole('textbox', { name: 'CSS code' })).toBeNull();
+  });
+
+  it('duplicates drafts and confirms saved snippet deletes', () => {
+    const onDelete = vi.fn();
+    const onDuplicate = vi.fn();
+
+    render(
+      <SnippetEditor
+        busy={false}
+        dirty={false}
+        editor={{ ...newSnippetEditor, id: 'saved-snippet' }}
+        notice="Ready."
+        workspace={undefined}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
+        onSave={() => undefined}
+        onUpdate={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Saved')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(onDuplicate).toHaveBeenCalledTimes(1);
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete snippet' }));
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });
 
