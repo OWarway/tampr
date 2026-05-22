@@ -35,9 +35,21 @@ Then in Chrome:
 3. Choose Load unpacked.
 4. Select this repository's generated `dist` directory.
 
-Use `npm run dev:extension` when you want Vite to keep rebuilding extension
-output during local development. Reload the unpacked extension from Chrome after
-each background or manifest change.
+Use the extension watch build during local development:
+
+```sh
+npm run dev:extension
+```
+
+Load or reload `dist` once after that first development build. Development builds
+include a small reload watcher: keep the workspace open while you work and Tampr
+will reload itself when Vite writes the next build. Popup and awake service
+worker contexts watch the same marker too.
+
+Reload the target web page after extension reloads when you need to rerun a
+changed snippet on that page. Reload Tampr manually from `chrome://extensions`
+after changing manifest permissions if Chrome does not pick the change up from
+the development reload.
 
 ## Runtime Proof
 
@@ -60,7 +72,7 @@ User Scripts toggle before `chrome.userScripts` is available.
 | `npm run build`         | Typecheck and build the extension into `dist`.             |
 | `npm run check`         | Run formatting, linting, typecheck, unit tests, and build. |
 | `npm run dev`           | Preview popup and workspace HTML through Vite.             |
-| `npm run dev:extension` | Rebuild unpacked extension output in watch mode.           |
+| `npm run dev:extension` | Rebuild unpacked output and trigger dev extension reloads. |
 | `npm run format`        | Format tracked source and docs.                            |
 | `npm run lint`          | Lint TypeScript and config files.                          |
 | `npm test`              | Run unit tests.                                            |

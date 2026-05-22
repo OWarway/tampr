@@ -1,4 +1,5 @@
 import { buildSnippet, SnippetDraftSchema } from '../domain/snippets';
+import { startDevReloadWatcher } from '../dev/reload-extension';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
 import {
   WorkspaceMessageSchema,
@@ -8,6 +9,10 @@ import {
 import { createChromeSnippetRepository } from '../storage/snippet-repository';
 
 const snippets = createChromeSnippetRepository();
+
+if (import.meta.env.MODE === 'development') {
+  startDevReloadWatcher();
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.action.setBadgeText({ text: '' });

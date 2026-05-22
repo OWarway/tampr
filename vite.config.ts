@@ -2,12 +2,13 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
+const DEV_RELOAD_MARKER_PATH = 'dev/reload.json';
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [react(), mode === 'development' ? devReloadMarker() : undefined],
   build: {
     emptyOutDir: true,
     rollupOptions: {
@@ -29,3 +30,18 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode !== 'production',
   },
 }));
+
+function devReloadMarker(): Plugin {
+  return {
+    name: 'tampr-dev-reload-marker',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: DEV_RELOAD_MARKER_PATH,
+        source: JSON.stringify({
+          builtAt: new Date().toISOString(),
+        }),
+      });
+    },
+  };
+}
