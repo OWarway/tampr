@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildSnippet, SnippetDraftSchema } from '../../src/domain/snippets';
 import {
+  buildScriptApiBridgeSource,
   buildSnippetRegistrations,
   buildStyleBridgeSource,
   syncUserScripts,
@@ -24,6 +25,24 @@ describe('user script runtime', () => {
     ]);
     expect(registrations[0]?.world).toBe('USER_SCRIPT');
     expect(registrations[1]?.world).toBe('MAIN');
+    expect(registrations[1]?.js).toEqual([
+      `document.documentElement.dataset.tampr = 'active';`,
+    ]);
+  });
+
+  it('adds the Tampr API bridge to default user-script world snippets', () => {
+    const snippet = createRuntimeSnippet({ world: 'USER_SCRIPT' });
+    const registrations = buildSnippetRegistrations(
+      snippet,
+      snippet.matches,
+      snippet.excludeMatches,
+    );
+
+    expect(registrations[1]?.js[0]).toContain("globalThis, 'Tampr'");
+    expect(registrations[1]?.js[0]).toContain('tampr/api/download');
+    expect(registrations[1]?.js[1]).toBe(
+      `document.documentElement.dataset.tampr = 'active';`,
+    );
   });
 
   it('unregisters previous Tampr scripts and filters by granted access', async () => {
@@ -36,6 +55,7 @@ describe('user script runtime', () => {
     });
 
     expect(userScripts.unregisteredIds).toEqual(['tampr-stale']);
+    expect(userScripts.configureWorldCalls).toBe(1);
     expect(userScripts.registered).toHaveLength(2);
     expect(status).toMatchObject({
       state: 'ready',
@@ -64,9 +84,19 @@ describe('user script runtime', () => {
     expect(source).toContain(`const css = "body::before`);
     expect(source).toContain(`id = "tampr-style-snippet-1"`);
   });
+
+  it('builds a stable script API bridge', () => {
+    const source = buildScriptApiBridgeSource('snippet-1');
+
+    expect(source).toContain(`const snippetId = "snippet-1"`);
+    expect(source).toContain(`chrome.runtime.sendMessage`);
+    expect(source).toContain(`Object.freeze({ download })`);
+  });
 });
 
-function createRuntimeSnippet() {
+function createRuntimeSnippet(
+  overrides: Partial<Pick<RuntimeRegistration, 'world'>> = {},
+) {
   return buildSnippet({
     id: 'snippet-1',
     now: 1_748_000_000_000,
@@ -78,16 +108,21 @@ function createRuntimeSnippet() {
       css: 'main { outline: 1px solid red; }',
       js: `document.documentElement.dataset.tampr = 'active';`,
       runAt: 'document_idle',
-      world: 'MAIN',
+      world: overrides.world ?? 'MAIN',
     }),
   });
 }
 
 class MemoryUserScripts implements UserScriptsApi {
+  public configureWorldCalls = 0;
   public readonly registered: RuntimeRegistration[] = [];
   public readonly unregisteredIds: string[] = [];
 
   constructor(private scripts: Array<{ id: string }> = []) {}
+
+  async configureWorld(): Promise<void> {
+    this.configureWorldCalls += 1;
+  }
 
   async getScripts(): Promise<Array<{ id: string }>> {
     return this.scripts;

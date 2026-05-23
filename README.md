@@ -13,6 +13,8 @@ captured in [the build spec](./docs/tampr-v2-build-spec.md).
 - Shows what matches the current page from the popup.
 - Enables and disables matching snippets quickly.
 - Registers snippets through Chrome's User Scripts runtime.
+- Lets user-script world snippets save generated text files with a constrained
+  `Tampr.download()` API.
 - Exports and imports native Tampr JSON.
 - Explains local data, runtime, and host-access state in the workspace.
 
@@ -108,10 +110,10 @@ native Tampr version 1 JSON:
 ```
 
 Imports are runtime-validated before storage changes and merge by stable snippet
-ID. Manual export is the V1 backup path; Tampr can use the optional browser
-downloads API for that user-triggered export and falls back to an in-page
-download when that permission is unavailable. Automatic backups are deferred to
-avoid scheduled background writes.
+ID. Manual export is the V1 backup path. Tampr uses Chrome downloads access for
+workspace exports and for the user-script world `Tampr.download()` API, which
+only accepts generated text payloads and simple filenames. Automatic backups are
+deferred to avoid scheduled background writes.
 
 Read more:
 

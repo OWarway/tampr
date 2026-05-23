@@ -43,7 +43,8 @@ The listing should make these points plainly:
 - Snippets are stored in Chrome local extension storage.
 - Tampr does not use accounts, telemetry, cloud sync, or remote snippet feeds.
 - Host access is requested for user-authored match rules.
-- Downloads access is optional and used only for user-triggered exports.
+- Downloads access is used for user-triggered exports and the constrained
+  `Tampr.download()` API for generated text files.
 - User Scripts may need to be enabled in Chrome extension details.
 - Imported snippets should be reviewed like source code.
 

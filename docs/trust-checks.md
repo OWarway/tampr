@@ -10,14 +10,15 @@ V1 uses manual JSON export only. Automatic backups are explicitly deferred.
 
 That keeps Tampr lightweight because it avoids scheduled background work, extra
 backup state, and quiet writes outside the user's immediate action. The
-workspace export button is the supported backup path for now. Export can request
-optional `downloads` access to use the browser downloads API, and falls back to
-the in-page object URL download when access is denied or unavailable.
+workspace export button is the supported backup path for now. Tampr declares
+`downloads` because workspace export and the user-script-world
+`Tampr.download()` API both need dependable browser download creation. Workspace
+export still falls back to the in-page object URL path when the browser downloads
+API is unavailable.
 
 Revisit automatic backups only if users need it enough to justify:
 
 - A clear opt-in setting.
-- A permission explanation for browser downloads.
 - A predictable backup filename and conflict strategy.
 - Tests around backup timing and failure states.
 - UI that shows when the last backup succeeded or failed.
@@ -27,10 +28,7 @@ Revisit automatic backups only if users need it enough to justify:
 Before release, exercise:
 
 - Export an empty workspace and confirm the JSON envelope is `format: "tampr"`.
-- Export with optional downloads access granted and confirm the browser download
-  path succeeds.
-- Export with optional downloads access denied and confirm the fallback download
-  path succeeds.
+- Export from the workspace and confirm the browser download path succeeds.
 - Export multiple snippets and confirm CSS, JavaScript, match rules, run timing,
   world, enabled state, and timestamps are present.
 - Import a valid Tampr export into an empty workspace.
@@ -51,6 +49,8 @@ Before release, exercise:
 - Create, edit, enable, disable, duplicate, and delete snippet flows.
 - A matching CSS snippet on `https://example.com`.
 - A matching JavaScript snippet in the default user-script world.
+- A default user-script world snippet that calls
+  `Tampr.download({ filename: 'tampr-test.txt', text: 'ok' })`.
 - A main-world JavaScript snippet after intentionally choosing `MAIN`.
 - Host access granted after save.
 - Host access denied after save.
@@ -67,14 +67,15 @@ Before release, verify:
   path context.
 - Saving a snippet requests host access for its match rules.
 - Denying host access leaves the snippet saved but not registered.
-- Workspace export requests optional downloads access only from the export
-  action.
+- The manifest `downloads` permission is explained by workspace export and the
+  constrained `Tampr.download()` API, not by automatic background behavior.
 - The workspace trust strip explains local data, runtime state, and host access.
 
 ## Known Limits For V1
 
 - No accounts, cloud sync, telemetry, or hosted snippet gallery.
 - No automatic backups.
+- No script download API for remote URLs.
 - No cross-browser support before Chrome is dependable.
 - No imported prototype data conversion.
 - No incognito-only snippet setting yet.

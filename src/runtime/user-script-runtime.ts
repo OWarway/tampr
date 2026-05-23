@@ -1,5 +1,6 @@
 import type { Snippet } from '../domain/snippets';
 import { validateWebMatchPattern } from '../domain/web-match-patterns';
+import { TAMPR_DOWNLOAD_MESSAGE } from '../shared/tampr-api';
 import type {
   RuntimeRegistrationError,
   RuntimeSkip,
@@ -12,12 +13,13 @@ export type RuntimeRegistration = {
   id: string;
   matches: string[];
   excludeMatches: string[];
-  js: string;
+  js: string[];
   runAt: Snippet['runAt'];
   world: Snippet['world'];
 };
 
 export type UserScriptsApi = {
+  configureWorld?(): Promise<void>;
   getScripts(): Promise<Array<{ id: string }>>;
   register(scripts: RuntimeRegistration[]): Promise<void>;
   unregister(filter: { ids: string[] }): Promise<void>;
@@ -36,6 +38,8 @@ export async function syncUserScripts({
   snippets,
   userScripts,
 }: SyncUserScriptsInput): Promise<RuntimeStatus> {
+  await userScripts.configureWorld?.();
+
   const existingScripts = await userScripts.getScripts();
   const previousIds = existingScripts
     .map((script) => script.id)
@@ -151,7 +155,7 @@ export function buildSnippetRegistrations(
       id: styleRegistrationId(snippet.id),
       matches,
       excludeMatches,
-      js: buildStyleBridgeSource(snippet.id, snippet.css),
+      js: [buildStyleBridgeSource(snippet.id, snippet.css)],
       runAt: snippet.runAt,
       world: 'USER_SCRIPT',
     });
@@ -162,13 +166,45 @@ export function buildSnippetRegistrations(
       id: scriptRegistrationId(snippet.id),
       matches,
       excludeMatches,
-      js: snippet.js,
+      js:
+        snippet.world === 'USER_SCRIPT'
+          ? [buildScriptApiBridgeSource(snippet.id), snippet.js]
+          : [snippet.js],
       runAt: snippet.runAt,
       world: snippet.world,
     });
   }
 
   return registrations;
+}
+
+export function buildScriptApiBridgeSource(snippetId: string): string {
+  return `(() => {
+  const type = ${JSON.stringify(TAMPR_DOWNLOAD_MESSAGE)};
+  const snippetId = ${JSON.stringify(snippetId)};
+  const download = async (payload) => {
+    const response = await chrome.runtime.sendMessage({
+      type,
+      snippetId,
+      payload,
+    });
+
+    if (!response || response.ok !== true) {
+      throw new Error(
+        response && typeof response.error === 'string'
+          ? response.error
+          : 'Tampr download failed.',
+      );
+    }
+
+    return { downloadId: response.downloadId };
+  };
+
+  Object.defineProperty(globalThis, 'Tampr', {
+    configurable: true,
+    value: Object.freeze({ download }),
+  });
+})();`;
 }
 
 export function buildStyleBridgeSource(snippetId: string, css: string): string {
@@ -192,6 +228,9 @@ function createChromeUserScriptsApi(): UserScriptsApi | undefined {
   }
 
   return {
+    configureWorld: async () => {
+      await chrome.userScripts.configureWorld({ messaging: true });
+    },
     getScripts: async () => chrome.userScripts.getScripts(),
     register: async (scripts) => {
       await chrome.userScripts.register(
@@ -199,7 +238,7 @@ function createChromeUserScriptsApi(): UserScriptsApi | undefined {
           id: script.id,
           matches: script.matches,
           excludeMatches: script.excludeMatches,
-          js: [{ code: script.js }],
+          js: script.js.map((code) => ({ code })),
           runAt: script.runAt,
           world: script.world,
         })),

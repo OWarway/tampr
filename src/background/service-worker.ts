@@ -1,4 +1,5 @@
 import { startDevReloadWatcher } from '../dev/reload-extension';
+import { handleTamprDownloadMessage } from '../runtime/tampr-download-api';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
 import type { ExtensionResponse } from '../shared/workspace-messages';
 import { createChromeSnippetRepository } from '../storage/snippet-repository';
@@ -37,6 +38,20 @@ chrome.runtime.onMessage.addListener(
     return true;
   },
 );
+
+if (chrome.runtime.onUserScriptMessage) {
+  chrome.runtime.onUserScriptMessage.addListener(
+    (message: unknown, _sender, sendResponse) => {
+      void handleTamprDownloadMessage(message)
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    },
+  );
+}
 
 function toErrorResponse(error: unknown): ExtensionResponse {
   return {

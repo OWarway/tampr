@@ -5,10 +5,7 @@ type ObjectUrlApi = {
 
 type BrowserDownloadApi = {
   downloads?: Pick<typeof chrome.downloads, 'download'>;
-  permissions?: Pick<typeof chrome.permissions, 'request'>;
 };
-
-const DOWNLOAD_PERMISSION: chrome.runtime.ManifestPermission = 'downloads';
 
 export type DownloadJsonMode = 'anchor' | 'auto' | 'browser-api';
 
@@ -69,26 +66,8 @@ async function downloadWithBrowserApi({
   mode,
   value,
 }: DownloadWithBrowserApiInput): Promise<boolean> {
-  if (!browserApi?.permissions?.request) {
-    return handleBrowserApiUnavailable(
-      mode,
-      'Browser download API is unavailable.',
-    );
-  }
-
   try {
-    const granted = await browserApi.permissions.request({
-      permissions: [DOWNLOAD_PERMISSION],
-    });
-
-    if (!granted) {
-      return handleBrowserApiUnavailable(
-        mode,
-        'Browser download permission was not granted.',
-      );
-    }
-
-    if (!browserApi.downloads?.download) {
+    if (!browserApi?.downloads?.download) {
       return handleBrowserApiUnavailable(
         mode,
         'Browser download API is unavailable.',

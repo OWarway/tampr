@@ -75,6 +75,28 @@ Opening the workspace from the popup carries sanitized active-page context for
 match-rule presets. Tampr uses Chrome's temporary `activeTab` access for that
 user-invoked handoff rather than broad tab access.
 
+## Script Download API
+
+Snippets that run in the default `USER_SCRIPT` world receive a small global
+Tampr API:
+
+```js
+await Tampr.download({
+  filename: 'report.json',
+  mimeType: 'application/json;charset=utf-8',
+  text: JSON.stringify({ ok: true }, null, 2),
+});
+```
+
+The promise resolves with `{ downloadId }` when Chrome accepts the download.
+Tampr routes the request through `runtime.onUserScriptMessage`, validates it in
+the service worker, and then calls `chrome.downloads.download`.
+
+The V1 API intentionally supports generated text payloads only. It rejects path
+filenames, reserved filename characters, oversized text payloads, and multiline
+or comma-containing MIME types. Main-world snippets do not receive this API
+because page scripts can observe that execution world.
+
 ## Data Portability
 
 The workspace exports snippets as Tampr version 1 JSON with this envelope:
@@ -102,11 +124,11 @@ Prototype exports are intentionally not imported. Tampr is a new app and the
 import path should stay small, native, and easy to trust.
 
 Automatic backups are deferred for V1. Manual workspace export is the supported
-backup path. Tampr requests the optional `downloads` permission only from the
-user-triggered export path so it can save through the browser downloads API; if
-that permission is denied or unavailable, export falls back to the in-page
-download path. See [Trust Checks](./trust-checks.md) for the manual data,
-runtime, and permission checks to run before release.
+backup path. Tampr declares `downloads` because workspace export and
+`Tampr.download()` both need a dependable browser download path. Workspace export
+still falls back to the in-page download path when the browser downloads API is
+unavailable. See [Trust Checks](./trust-checks.md) for the manual data, runtime,
+and permission checks to run before release.
 
 ## Commands
 
