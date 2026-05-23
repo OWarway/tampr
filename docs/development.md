@@ -101,6 +101,11 @@ formats fail with a user-facing error instead of partially writing data.
 Prototype exports are intentionally not imported. Tampr is a new app and the
 import path should stay small, native, and easy to trust.
 
+Automatic backups are deferred for V1. Manual workspace export is the supported
+backup path because it avoids extra permissions, background writes, and backup
+state. See [Trust Checks](./trust-checks.md) for the manual data, runtime, and
+permission checks to run before release.
+
 ## Commands
 
 | Command                 | Purpose                                                    |

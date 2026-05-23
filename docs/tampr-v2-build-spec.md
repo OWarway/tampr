@@ -402,7 +402,7 @@ Deliverables:
 
 - Import/export with versioned payloads.
 - Native Tampr import/export only; prototype migration is out of scope.
-- Backup decision implemented or explicitly deferred.
+- Automatic backups explicitly deferred; manual export is the V1 backup path.
 - Permission explanations and onboarding refinement.
 - Privacy, security, and data-handling docs.
 - User-facing error surfaces for common runtime failures.
@@ -420,7 +420,7 @@ Deliverables:
 - License, contribution guide, security policy, and issue templates.
 - Commit convention and contribution guidance that match the repository checks.
 - Versioning and changelog workflow.
-- Release packaging and store checklist.
+- Release packaging, store checklist, and manual trust checks.
 - Release smoke run and known-limitations note.
 
 Exit gate:

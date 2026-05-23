@@ -30,3 +30,5 @@ stable snippet ID.
 
 The current permission and runtime model is documented in
 [Privacy And Security](./docs/privacy-security.md).
+Manual data, runtime, and permission checks live in
+[Trust Checks](./docs/trust-checks.md).

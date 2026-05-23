@@ -13,6 +13,10 @@ extension storage and runs only CSS or JavaScript the user saves locally.
 Tampr does not currently use accounts, cloud sync, telemetry, remote snippet
 feeds, or a hosted backend.
 
+Tampr does not perform automatic backups in V1. The user-triggered export action
+is the backup path, so the extension does not need background download behavior
+or a downloads permission.
+
 ## Permissions
 
 Tampr declares the smallest permission set needed for the current product:
