@@ -50,7 +50,6 @@ inspect them before enabling them on sensitive sites.
 Tampr does not execute remote snippets or install code from a gallery in the V1
 scope.
 
-MVP imports keep old JavaScript snippets in the `MAIN` world because the MVP ran
-them in the page context. MVP incognito-only snippets import disabled until the
-user reviews them, because v2 does not yet have an incognito-only snippet
-setting.
+Tampr imports only the native Tampr export format. Prototype data is not
+converted automatically, which keeps the import path smaller and avoids silent
+changes to execution behavior.

@@ -28,8 +28,7 @@ V1 includes:
 - Match and exclude rules for deciding where snippets run.
 - Enable, disable, duplicate, rename, delete, and search flows.
 - Clear runtime and permission state, including User Scripts availability.
-- Local storage, import, export, and migration from Tampr MVP exports where
-  practical.
+- Local storage, import, and export through a native Tampr payload format.
 - Automated tests, CI, docs, and release hygiene from the beginning.
 
 V1 does not include:
@@ -155,9 +154,9 @@ Tampr v2 should be built around Chrome's current extension model:
 - Rebuildable registration state derived from stored snippets.
 - Permission and capability detection presented to the UI as explicit state.
 
-The MVP proves the feature set, but v2 should not preserve its injection model as
-the core runtime. The runtime layer should own snippet registration, update,
-unregister, and recovery behavior.
+The prototype proved the feature set, but v2 should not preserve its injection
+model as the core runtime. The runtime layer should own snippet registration,
+update, unregister, and recovery behavior.
 
 ### Suggested Source Layout
 
@@ -402,7 +401,7 @@ Exit gate:
 Deliverables:
 
 - Import/export with versioned payloads.
-- MVP import or migration path where the prior data shape is safe to support.
+- Native Tampr import/export only; prototype migration is out of scope.
 - Backup decision implemented or explicitly deferred.
 - Permission explanations and onboarding refinement.
 - Privacy, security, and data-handling docs.
@@ -457,4 +456,4 @@ For each phase:
 
 Start with Phase 1 only after this spec is accepted. The first implementation
 milestone is a clean extension skeleton with quality gates, not a rushed feature
-port from the MVP.
+port from the prototype.

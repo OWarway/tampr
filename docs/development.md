@@ -77,21 +77,29 @@ user-invoked handoff rather than broad tab access.
 
 ## Data Portability
 
-The workspace exports snippets as `tampr.snippets` version 1 JSON. The export
-contains local snippet records only; it does not include accounts, remote URLs,
-or browser permission grants.
+The workspace exports snippets as Tampr version 1 JSON with this envelope:
+
+```json
+{
+  "format": "tampr",
+  "version": 1,
+  "exportedAt": 1748000000000,
+  "data": {
+    "snippets": []
+  }
+}
+```
+
+The export contains local snippet records only; it does not include accounts,
+remote URLs, or browser permission grants.
 
 Imports are runtime-validated before storage changes. Valid imports merge by
 stable snippet ID: matching IDs are replaced by the imported snippet, unrelated
 local snippets stay in place, and new imported snippets are appended. Unsupported
 formats fail with a user-facing error instead of partially writing data.
 
-Tampr also accepts MVP exports shaped as `{ version, exportedAt, snippets }`,
-where `snippets` is a name-keyed map with `pattern`, `css`, `js`, `enabled`, and
-`incognitoOnly` fields. MVP patterns are converted to v2 web match patterns by
-adding the wildcard web scheme. MVP JavaScript snippets import into the `MAIN`
-world to preserve their old execution model. MVP incognito-only snippets import
-disabled because v2 does not yet carry an incognito-only runtime setting.
+Prototype exports are intentionally not imported. Tampr is a new app and the
+import path should stay small, native, and easy to trust.
 
 ## Commands
 

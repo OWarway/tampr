@@ -5,7 +5,7 @@ import {
 } from '../domain/snippets';
 import {
   mergeImportedSnippets,
-  parseSnippetImport,
+  parseSnippetExport,
 } from '../domain/snippet-export';
 import { derivePageSnippetStatus } from '../domain/page-snippet-status';
 import type { RuntimeStatus } from '../runtime/runtime-status';
@@ -114,13 +114,10 @@ export class WorkspaceController {
 
     if (parsedMessage.data.type === 'snippets/import') {
       try {
-        const snippetExport = parseSnippetImport({
-          now: this.dependencies.now(),
-          value: parsedMessage.data.payload,
-        });
+        const snippetExport = parseSnippetExport(parsedMessage.data.payload);
         const snippets = await this.dependencies.snippets.list();
         await this.dependencies.snippets.replaceAll(
-          mergeImportedSnippets(snippets, snippetExport.snippets),
+          mergeImportedSnippets(snippets, snippetExport.data.snippets),
         );
       } catch (error: unknown) {
         return {
