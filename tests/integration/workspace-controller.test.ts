@@ -200,6 +200,44 @@ describe('WorkspaceController', () => {
     ]);
   });
 
+  it('imports MVP snippet exports before syncing state', async () => {
+    const existing = createSnippet('kept');
+    const snippets = new MemorySnippetStore([existing]);
+    const runtimeSync = new RuntimeSync();
+    const controller = createController({ runtimeSync, snippets });
+
+    const response = await controller.handleMessage({
+      type: 'snippets/import',
+      payload: {
+        version: 1,
+        exportedAt: '2026-05-23T09:30:00.000Z',
+        snippets: {
+          'Legacy proof': {
+            pattern: 'legacy.example.com/*',
+            css: 'body { color: red; }',
+            js: 'window.__legacy = true;',
+            enabled: true,
+            updatedAt: 1_747_000_000_000,
+          },
+        },
+      },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(snippets.values).toHaveLength(2);
+    expect(snippets.values[0]).toEqual(existing);
+    expect(snippets.values[1]).toMatchObject({
+      id: expect.stringMatching(/^mvp-legacy-proof-/),
+      name: 'Legacy proof',
+      enabled: true,
+      matches: ['*://legacy.example.com/*'],
+      css: 'body { color: red; }',
+      js: 'window.__legacy = true;',
+      world: 'MAIN',
+    });
+    expect(runtimeSync.calls.at(-1)).toEqual(snippets.values);
+  });
+
   it('rejects unsupported import payloads without changing snippets', async () => {
     const snippet = createSnippet('snippet-5');
     const snippets = new MemorySnippetStore([snippet]);

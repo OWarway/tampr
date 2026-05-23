@@ -86,6 +86,13 @@ stable snippet ID: matching IDs are replaced by the imported snippet, unrelated
 local snippets stay in place, and new imported snippets are appended. Unsupported
 formats fail with a user-facing error instead of partially writing data.
 
+Tampr also accepts MVP exports shaped as `{ version, exportedAt, snippets }`,
+where `snippets` is a name-keyed map with `pattern`, `css`, `js`, `enabled`, and
+`incognitoOnly` fields. MVP patterns are converted to v2 web match patterns by
+adding the wildcard web scheme. MVP JavaScript snippets import into the `MAIN`
+world to preserve their old execution model. MVP incognito-only snippets import
+disabled because v2 does not yet carry an incognito-only runtime setting.
+
 ## Commands
 
 | Command                 | Purpose                                                    |
