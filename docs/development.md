@@ -51,6 +51,12 @@ changed snippet on that page. Reload Tampr manually from `chrome://extensions`
 after changing manifest permissions if Chrome does not pick the change up from
 the development reload.
 
+Install the Playwright browser once before local extension smoke tests:
+
+```sh
+npx playwright install chromium
+```
+
 ## Runtime Proof
 
 The workspace runtime proof can register a local snippet against a page you grant
@@ -80,7 +86,7 @@ user-invoked handoff rather than broad tab access.
 | `npm run format`        | Format tracked source and docs.                            |
 | `npm run lint`          | Lint TypeScript and config files.                          |
 | `npm test`              | Run unit tests.                                            |
-| `npm run test:e2e`      | Run Playwright tests once extension smoke tests exist.     |
+| `npm run test:e2e`      | Build and run Playwright extension smoke tests.            |
 | `npm run typecheck`     | Run strict TypeScript checking.                            |
 
 ## Component Conventions

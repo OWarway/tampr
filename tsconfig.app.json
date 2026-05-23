@@ -20,5 +20,5 @@
     "types": ["chrome", "vite/client"],
     "useDefineForClassFields": true
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests/integration", "tests/unit"]
 }
