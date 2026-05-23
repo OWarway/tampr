@@ -19,12 +19,28 @@ export function App() {
         </button>
       </header>
 
-      <PageStatus pageState={pageState} />
+      <PageStatus
+        busySnippetId={pageState.busySnippetId}
+        pageState={pageState.pageState}
+        onSetSnippetEnabled={(snippetId, enabled) =>
+          void pageState.setSnippetEnabled(snippetId, enabled)
+        }
+      />
     </main>
   );
 }
 
-function PageStatus({ pageState }: { pageState: PopupPageState }) {
+type PageStatusProps = {
+  busySnippetId: string | undefined;
+  pageState: PopupPageState;
+  onSetSnippetEnabled(snippetId: string, enabled: boolean): void;
+};
+
+function PageStatus({
+  busySnippetId,
+  onSetSnippetEnabled,
+  pageState,
+}: PageStatusProps) {
   if (pageState.state === 'loading') {
     return (
       <section className={styles.status} aria-label="Page snippets">
@@ -60,10 +76,26 @@ function PageStatus({ pageState }: { pageState: PopupPageState }) {
     );
   }
 
-  return <ReadyPageStatus page={pageState.page} />;
+  return (
+    <ReadyPageStatus
+      busySnippetId={busySnippetId}
+      page={pageState.page}
+      onSetSnippetEnabled={onSetSnippetEnabled}
+    />
+  );
 }
 
-function ReadyPageStatus({ page }: { page: PageState }) {
+type ReadyPageStatusProps = {
+  busySnippetId: string | undefined;
+  page: PageState;
+  onSetSnippetEnabled(snippetId: string, enabled: boolean): void;
+};
+
+function ReadyPageStatus({
+  busySnippetId,
+  onSetSnippetEnabled,
+  page,
+}: ReadyPageStatusProps) {
   const blockedMatches = page.enabledMatches
     .map((match) => ({
       match,
@@ -92,8 +124,18 @@ function ReadyPageStatus({ page }: { page: PageState }) {
         <ol className={styles.snippets}>
           {page.savedMatches.slice(0, 3).map((match) => (
             <li key={match.id}>
-              <strong>{match.name}</strong>
-              <span>{match.rule}</span>
+              <div>
+                <strong>{match.name}</strong>
+                <span>{match.rule}</span>
+              </div>
+              <button
+                className={styles.snippetToggle}
+                disabled={busySnippetId === match.id}
+                type="button"
+                onClick={() => onSetSnippetEnabled(match.id, !match.enabled)}
+              >
+                {match.enabled ? 'Disable' : 'Enable'}
+              </button>
             </li>
           ))}
         </ol>

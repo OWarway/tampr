@@ -54,6 +54,7 @@ describe('WorkspaceController', () => {
         pageUrl: 'https://example.com/private/profile',
         savedMatches: [
           {
+            enabled: true,
             id: matchingSnippet.id,
             name: matchingSnippet.name,
             rule: '*://example.com/*',
@@ -61,6 +62,7 @@ describe('WorkspaceController', () => {
         ],
         enabledMatches: [
           {
+            enabled: true,
             id: matchingSnippet.id,
             name: matchingSnippet.name,
             rule: '*://example.com/*',
@@ -115,6 +117,28 @@ describe('WorkspaceController', () => {
       createdAt: original.createdAt,
       updatedAt: 1_748_000_000_000,
     });
+  });
+
+  it('toggles snippets before returning synced state', async () => {
+    const snippet = createSnippet('snippet-toggle');
+    const runtimeSync = new RuntimeSync();
+    const snippets = new MemorySnippetStore([snippet]);
+    const controller = createController({ runtimeSync, snippets });
+
+    const response = await controller.handleMessage({
+      type: 'snippets/set-enabled',
+      snippetId: snippet.id,
+      enabled: false,
+    });
+
+    expect(response.ok).toBe(true);
+    expect(snippets.values[0]).toMatchObject({
+      id: snippet.id,
+      enabled: false,
+      createdAt: snippet.createdAt,
+      updatedAt: 1_748_000_000_000,
+    });
+    expect(runtimeSync.calls.at(-1)).toEqual([snippets.values[0]]);
   });
 
   it('removes a snippet before syncing state', async () => {

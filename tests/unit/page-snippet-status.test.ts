@@ -18,10 +18,12 @@ describe('derivePageSnippetStatus', () => {
       ),
     ).toMatchObject({
       savedMatches: [
-        { id: 'enabled', rule: '*://example.com/*' },
-        { id: 'disabled', rule: '*://example.com/*' },
+        { enabled: true, id: 'enabled', rule: '*://example.com/*' },
+        { enabled: false, id: 'disabled', rule: '*://example.com/*' },
       ],
-      enabledMatches: [{ id: 'enabled', rule: '*://example.com/*' }],
+      enabledMatches: [
+        { enabled: true, id: 'enabled', rule: '*://example.com/*' },
+      ],
     });
   });
 });

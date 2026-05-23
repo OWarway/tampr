@@ -2,6 +2,7 @@ import type { Snippet } from './snippets';
 import { webMatchPatternMatchesUrl } from './web-match-patterns';
 
 export type PageSnippetMatch = {
+  enabled: boolean;
   id: string;
   name: string;
   rule: string;
@@ -28,6 +29,7 @@ export function derivePageSnippetStatus(
     }
 
     const match = {
+      enabled: snippet.enabled,
       id: snippet.id,
       name: snippet.name,
       rule,

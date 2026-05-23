@@ -79,6 +79,14 @@
   padding: 10px 0 0;
 
   li {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+  }
+
+  div {
     display: grid;
     gap: 3px;
     min-width: 0;
@@ -98,6 +106,20 @@
   span {
     color: #53645b;
     font-size: 12px;
+  }
+}
+
+.snippetToggle {
+  background: #fff;
+  border-color: #79a78f;
+  color: #29463d;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 30px;
+  padding: 0 9px;
+
+  &:hover {
+    background: #e2f1e7;
   }
 }
 

@@ -50,6 +50,38 @@ describe('Popup App', () => {
     expect(openOptionsPage).not.toHaveBeenCalled();
   });
 
+  it('toggles matching snippets from the popup', async () => {
+    const sendMessage = vi
+      .fn()
+      .mockResolvedValueOnce(readyPageResponse())
+      .mockResolvedValueOnce(workspaceResponse())
+      .mockResolvedValueOnce(disabledPageResponse());
+
+    vi.stubGlobal('chrome', {
+      runtime: { sendMessage },
+      tabs: {
+        query: vi.fn().mockResolvedValue([
+          {
+            url: 'https://docs.example.com/snippets/new',
+          },
+        ]),
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Disable' }));
+
+    await waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'snippets/set-enabled',
+        enabled: false,
+        snippetId: 'page-snippet',
+      }),
+    );
+    expect(await screen.findByRole('button', { name: 'Enable' })).toBeTruthy();
+  });
+
   it('falls back to the options page outside web pages', async () => {
     const openOptionsPage = vi.fn().mockResolvedValue(undefined);
 
@@ -88,6 +120,7 @@ function readyPageResponse() {
       savedMatches: [
         {
           id: 'page-snippet',
+          enabled: true,
           name: 'Current page cleanup',
           rule: '*://docs.example.com/*',
         },
@@ -95,6 +128,7 @@ function readyPageResponse() {
       enabledMatches: [
         {
           id: 'page-snippet',
+          enabled: true,
           name: 'Current page cleanup',
           rule: '*://docs.example.com/*',
         },
@@ -102,6 +136,45 @@ function readyPageResponse() {
       runtime: {
         state: 'ready',
         registrations: 1,
+        skipped: [],
+        errors: [],
+      },
+    },
+  };
+}
+
+function disabledPageResponse() {
+  return {
+    ok: true,
+    state: {
+      pageUrl: 'https://docs.example.com/snippets/new',
+      savedMatches: [
+        {
+          id: 'page-snippet',
+          enabled: false,
+          name: 'Current page cleanup',
+          rule: '*://docs.example.com/*',
+        },
+      ],
+      enabledMatches: [],
+      runtime: {
+        state: 'ready',
+        registrations: 0,
+        skipped: [{ snippetId: 'page-snippet', reason: 'disabled' }],
+        errors: [],
+      },
+    },
+  };
+}
+
+function workspaceResponse() {
+  return {
+    ok: true,
+    state: {
+      snippets: [],
+      runtime: {
+        state: 'ready',
+        registrations: 0,
         skipped: [],
         errors: [],
       },

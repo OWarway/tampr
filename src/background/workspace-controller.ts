@@ -70,6 +70,43 @@ export class WorkspaceController {
       };
     }
 
+    if (parsedMessage.data.type === 'snippets/set-enabled') {
+      const previous = await this.dependencies.snippets.find(
+        parsedMessage.data.snippetId,
+      );
+
+      if (!previous) {
+        return {
+          ok: false,
+          error: 'Snippet not found.',
+        };
+      }
+
+      await this.dependencies.snippets.save(
+        buildSnippet({
+          draft: {
+            id: previous.id,
+            name: previous.name,
+            enabled: parsedMessage.data.enabled,
+            matches: previous.matches,
+            excludeMatches: previous.excludeMatches,
+            css: previous.css,
+            js: previous.js,
+            runAt: previous.runAt,
+            world: previous.world,
+          },
+          id: previous.id,
+          now: this.dependencies.now(),
+          previous,
+        }),
+      );
+
+      return {
+        ok: true,
+        state: await this.readState(),
+      };
+    }
+
     const draft = SnippetDraftSchema.parse(parsedMessage.data.draft);
     const previous = draft.id
       ? await this.dependencies.snippets.find(draft.id)
