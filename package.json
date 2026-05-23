@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Lightweight, local-first CSS and JavaScript browser mods.",
+  "license": "MIT",
   "engines": {
     "node": ">=24.0.0",
     "npm": ">=11.0.0"

@@ -3,32 +3,126 @@
 Tampr is the lightweight, local-first Chrome extension for writing clear,
 personal CSS and JavaScript browser mods.
 
-The project is in active v2 development. The product and engineering direction
-is captured in [the build spec](./docs/tampr-v2-build-spec.md).
+Status: active pre-release development. The product and engineering direction is
+captured in [the build spec](./docs/tampr-v2-build-spec.md).
 
-## Development
+## What It Does
 
-Install dependencies and run the local quality gates:
+- Creates and edits local CSS and JavaScript snippets.
+- Targets snippets with Chrome web match rules and exclude rules.
+- Shows what matches the current page from the popup.
+- Enables and disables matching snippets quickly.
+- Registers snippets through Chrome's User Scripts runtime.
+- Exports and imports native Tampr JSON.
+- Explains local data, runtime, and host-access state in the workspace.
+
+Tampr does not use accounts, cloud sync, telemetry, hosted snippet feeds, or
+remote snippet execution.
+
+## Install From Source
 
 ```sh
 npm install
-npm run check
-```
-
-Build the unpacked Chrome extension:
-
-```sh
 npm run build
 ```
 
-Load the generated `dist` directory from Chrome's extension developer mode. See
-[the development guide](./docs/development.md) for the current workflow.
+Then in Chrome:
 
-Tampr stores snippets locally and can export them as versioned JSON from the
-workspace header. Imports are validated before they touch storage and merge by
-stable snippet ID.
+1. Open `chrome://extensions`.
+2. Enable Developer mode.
+3. Choose Load unpacked.
+4. Select this repository's generated `dist` directory.
 
-The current permission and runtime model is documented in
-[Privacy And Security](./docs/privacy-security.md).
-Manual data, runtime, and permission checks live in
-[Trust Checks](./docs/trust-checks.md).
+Chrome 138 or newer is required. Chrome may also require the Tampr extension
+detail page's User Scripts toggle before snippets can run.
+
+## Development
+
+```sh
+npm run dev:extension
+```
+
+Load or reload `dist` once after the first development build. Development builds
+include a small reload watcher so Tampr reloads when Vite writes the next build.
+
+Run the local quality gates:
+
+```sh
+npm run check
+npm run test:e2e
+```
+
+Useful commands:
+
+| Command                 | Purpose                                                    |
+| ----------------------- | ---------------------------------------------------------- |
+| `npm run build`         | Typecheck and build the extension into `dist`.             |
+| `npm run check`         | Run formatting, linting, typecheck, tests, and build.      |
+| `npm run dev`           | Preview popup and workspace HTML through Vite.             |
+| `npm run dev:extension` | Rebuild unpacked output and trigger dev extension reloads. |
+| `npm run format`        | Format tracked source and docs.                            |
+| `npm run lint`          | Lint TypeScript and config files.                          |
+| `npm test`              | Run unit and integration tests.                            |
+| `npm run test:e2e`      | Build and run Playwright extension smoke tests.            |
+| `npm run typecheck`     | Run strict TypeScript checking.                            |
+
+See [Development](./docs/development.md) for the full local workflow.
+
+## Architecture
+
+```text
+src/
+  background/  service-worker message orchestration
+  chrome/      thin typed adapters around Chrome APIs
+  domain/      snippet models, match rules, import/export, pure logic
+  popup/       current-page control surface
+  runtime/     Chrome User Scripts registration behavior
+  shared/      contracts shared across extension surfaces
+  storage/     versioned local persistence
+  workspace/   full snippet editor UI
+tests/
+  e2e/
+  integration/
+  unit/
+docs/
+```
+
+The service worker stays direct and framework-light. React belongs to the popup
+and workspace UI. Runtime, storage, import/export, and match-rule behavior stay
+typed and testable outside the browser where possible.
+
+## Data And Trust
+
+Tampr stores snippets in Chrome local extension storage. The workspace exports
+native Tampr version 1 JSON:
+
+```json
+{
+  "format": "tampr",
+  "version": 1,
+  "exportedAt": 1748000000000,
+  "data": {
+    "snippets": []
+  }
+}
+```
+
+Imports are runtime-validated before storage changes and merge by stable snippet
+ID. Manual export is the V1 backup path; automatic backups are deferred to avoid
+extra permissions and background writes.
+
+Read more:
+
+- [Privacy And Security](./docs/privacy-security.md)
+- [Trust Checks](./docs/trust-checks.md)
+- [Release Checklist](./docs/release.md)
+
+## Contributing
+
+Start with [Contributing](./CONTRIBUTING.md). Pull requests should keep Tampr
+local-first, permission-conscious, and lightweight. Commit messages follow
+Conventional Commits and are linted locally.
+
+## License
+
+Tampr is released under the [MIT License](./LICENSE).
