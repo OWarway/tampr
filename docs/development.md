@@ -102,9 +102,11 @@ Prototype exports are intentionally not imported. Tampr is a new app and the
 import path should stay small, native, and easy to trust.
 
 Automatic backups are deferred for V1. Manual workspace export is the supported
-backup path because it avoids extra permissions, background writes, and backup
-state. See [Trust Checks](./trust-checks.md) for the manual data, runtime, and
-permission checks to run before release.
+backup path. Tampr requests the optional `downloads` permission only from the
+user-triggered export path so it can save through the browser downloads API; if
+that permission is denied or unavailable, export falls back to the in-page
+download path. See [Trust Checks](./trust-checks.md) for the manual data,
+runtime, and permission checks to run before release.
 
 ## Commands
 

@@ -227,6 +227,8 @@ Tampr modifies pages. That deserves a plain permission story.
 Initial permission decisions:
 
 - Use the narrowest required permission set for implemented features.
+- Keep non-essential capabilities such as browser downloads optional and tied to
+  explicit user actions.
 - Prefer runtime host permission flows where they keep the product usable.
 - Explain access state in onboarding, popup, docs, and store copy.
 - Do not add future-facing permissions just because later features might need

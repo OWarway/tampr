@@ -29,7 +29,7 @@ export type UseWorkspaceResult = {
   clearEditor(): void;
   deleteEditor(): Promise<void>;
   duplicateCurrentEditor(): void;
-  exportWorkspace(): void;
+  exportWorkspace(): Promise<void>;
   importWorkspaceFile(file: File): Promise<void>;
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
@@ -144,7 +144,7 @@ export function useWorkspace(): UseWorkspaceResult {
     setNotice('Snippet duplicated. Save the copy to sync it.');
   }
 
-  function exportWorkspace(): void {
+  async function exportWorkspace(): Promise<void> {
     if (!workspace) {
       setNotice('Workspace is still loading.');
       return;
@@ -155,11 +155,24 @@ export function useWorkspace(): UseWorkspaceResult {
       snippets: workspace.snippets,
     });
 
-    downloadJson({
-      filename: exportFilename(snippetExport.exportedAt),
-      value: snippetExport,
-    });
-    setNotice(`${workspace.snippets.length} snippets exported.`);
+    setBusy(true);
+
+    try {
+      const result = await downloadJson({
+        filename: exportFilename(snippetExport.exportedAt),
+        value: snippetExport,
+      });
+
+      setNotice(
+        result.mode === 'browser-api'
+          ? `${workspace.snippets.length} snippets exported with browser downloads.`
+          : `${workspace.snippets.length} snippets exported.`,
+      );
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function importWorkspaceFile(file: File): Promise<void> {

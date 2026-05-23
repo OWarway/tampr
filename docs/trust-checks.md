@@ -8,10 +8,11 @@ while the app is still moving quickly.
 
 V1 uses manual JSON export only. Automatic backups are explicitly deferred.
 
-That keeps Tampr lightweight because it avoids the `downloads` permission,
-scheduled background work, extra backup state, and quiet writes outside the
-user's immediate action. The workspace export button is the supported backup
-path for now.
+That keeps Tampr lightweight because it avoids scheduled background work, extra
+backup state, and quiet writes outside the user's immediate action. The
+workspace export button is the supported backup path for now. Export can request
+optional `downloads` access to use the browser downloads API, and falls back to
+the in-page object URL download when access is denied or unavailable.
 
 Revisit automatic backups only if users need it enough to justify:
 
@@ -26,6 +27,10 @@ Revisit automatic backups only if users need it enough to justify:
 Before release, exercise:
 
 - Export an empty workspace and confirm the JSON envelope is `format: "tampr"`.
+- Export with optional downloads access granted and confirm the browser download
+  path succeeds.
+- Export with optional downloads access denied and confirm the fallback download
+  path succeeds.
 - Export multiple snippets and confirm CSS, JavaScript, match rules, run timing,
   world, enabled state, and timestamps are present.
 - Import a valid Tampr export into an empty workspace.
@@ -62,6 +67,8 @@ Before release, verify:
   path context.
 - Saving a snippet requests host access for its match rules.
 - Denying host access leaves the snippet saved but not registered.
+- Workspace export requests optional downloads access only from the export
+  action.
 - The workspace trust strip explains local data, runtime state, and host access.
 
 ## Known Limits For V1

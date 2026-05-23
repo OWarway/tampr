@@ -108,8 +108,10 @@ native Tampr version 1 JSON:
 ```
 
 Imports are runtime-validated before storage changes and merge by stable snippet
-ID. Manual export is the V1 backup path; automatic backups are deferred to avoid
-extra permissions and background writes.
+ID. Manual export is the V1 backup path; Tampr can use the optional browser
+downloads API for that user-triggered export and falls back to an in-page
+download when that permission is unavailable. Automatic backups are deferred to
+avoid scheduled background writes.
 
 Read more:
 

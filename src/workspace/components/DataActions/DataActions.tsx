@@ -6,7 +6,7 @@ import styles from './DataActions.module.scss';
 type DataActionsProps = {
   busy: boolean;
   exportDisabled: boolean;
-  onExport(): void;
+  onExport(): Promise<void> | void;
   onImport(file: File): void;
 };
 
@@ -37,7 +37,7 @@ export function DataActions({
         className={styles.button}
         disabled={busy || exportDisabled}
         type="button"
-        onClick={onExport}
+        onClick={() => void onExport()}
       >
         Export
       </button>

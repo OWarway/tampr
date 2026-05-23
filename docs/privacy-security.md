@@ -14,8 +14,8 @@ Tampr does not currently use accounts, cloud sync, telemetry, remote snippet
 feeds, or a hosted backend.
 
 Tampr does not perform automatic backups in V1. The user-triggered export action
-is the backup path, so the extension does not need background download behavior
-or a downloads permission.
+is the backup path, so the extension does not need background download behavior.
+Browser downloads access is optional and requested only from that export action.
 
 ## Permissions
 
@@ -26,6 +26,9 @@ Tampr declares the smallest permission set needed for the current product:
   Chrome's User Scripts API.
 - `activeTab` reads the active page URL only after the user opens the popup, so
   the workspace can offer useful match-rule presets.
+- Optional `downloads` access lets user-triggered workspace exports save through
+  the browser downloads API. If the user denies it, Tampr falls back to an
+  in-page download.
 - `optional_host_permissions` lets Tampr request access to the sites a saved
   snippet targets. Host access is requested at save time for the snippet's match
   rules instead of being granted broadly up front.

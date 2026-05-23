@@ -5,6 +5,7 @@
   "minimum_chrome_version": "138",
   "description": "Lightweight, local-first CSS and JavaScript browser mods.",
   "permissions": ["activeTab", "storage", "userScripts"],
+  "optional_permissions": ["downloads"],
   "optional_host_permissions": ["*://*/*"],
   "action": {
     "default_popup": "popup.html",
