@@ -1,4 +1,5 @@
 import type { WorkspaceState } from '../shared/workspace-messages';
+import { runtimeActionNotice } from '../shared/runtime-trust';
 
 export function runtimeLabel(workspace: WorkspaceState | undefined): string {
   if (!workspace) {
@@ -19,24 +20,32 @@ export function runtimeNotice(
   fallback: string,
   snippetId?: string | undefined,
 ): string {
-  if (workspace?.runtime.errors[0]) {
-    return workspace.runtime.errors[0].message;
+  if (!workspace) {
+    return fallback;
   }
 
-  if (workspace?.runtime.state === 'user-scripts-unavailable') {
-    return 'User Scripts are unavailable for Tampr.';
+  if (workspace.runtime.state === 'sync-error') {
+    return runtimeActionNotice(workspace.runtime);
+  }
+
+  if (workspace.runtime.state === 'user-scripts-unavailable') {
+    return runtimeActionNotice(workspace.runtime);
   }
 
   const skipped = snippetId
-    ? workspace?.runtime.skipped.find((skip) => skip.snippetId === snippetId)
-    : workspace?.runtime.skipped[0];
+    ? workspace.runtime.skipped.find((skip) => skip.snippetId === snippetId)
+    : workspace.runtime.skipped[0];
 
   if (skipped?.reason === 'host-access') {
-    return 'Host access is still needed before a matching snippet runs.';
+    return runtimeActionNotice(workspace.runtime, skipped.reason);
   }
 
   if (skipped?.reason === 'invalid-matches') {
-    return 'A saved match rule cannot be registered.';
+    return runtimeActionNotice(workspace.runtime, skipped.reason);
+  }
+
+  if (skipped?.reason === 'no-code') {
+    return runtimeActionNotice(workspace.runtime, skipped.reason);
   }
 
   return fallback;

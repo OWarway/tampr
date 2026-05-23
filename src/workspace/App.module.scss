@@ -2,7 +2,7 @@
   background:
     linear-gradient(90deg, rgb(20 89 77 / 12%), transparent 34%), #f2f6f3;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   min-height: 100vh;
 }
 

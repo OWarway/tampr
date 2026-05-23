@@ -59,7 +59,7 @@ describe('SnippetEditor', () => {
     );
 
     expect(screen.getByRole('status').textContent).toBe(
-      'Host access is still needed before a matching snippet runs.',
+      'This page matches a snippet, but Chrome host access has not been granted for its rule yet.',
     );
   });
 

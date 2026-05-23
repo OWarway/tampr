@@ -1,6 +1,7 @@
 import { DataActions } from './components/DataActions/DataActions';
 import { SnippetEditor } from './components/SnippetEditor/SnippetEditor';
 import { SnippetRail } from './components/SnippetRail/SnippetRail';
+import { TrustStrip } from './components/TrustStrip/TrustStrip';
 import { WorkspaceHeader } from './components/WorkspaceHeader/WorkspaceHeader';
 import { buildPageRulePresets } from '../domain/page-rule-presets';
 import { getWorkspaceSourcePageUrl } from '../shared/workspace-source-page';
@@ -28,6 +29,7 @@ export function App() {
         }
         workspace={state.workspace}
       />
+      <TrustStrip workspace={state.workspace} />
 
       <section className={styles.body} aria-label="Snippet workspace">
         <SnippetRail

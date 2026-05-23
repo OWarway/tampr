@@ -110,6 +110,28 @@ describe('Popup App', () => {
 
     expect(await screen.findByText('Web page needed')).toBeTruthy();
   });
+
+  it('explains unavailable User Scripts setup on matching pages', async () => {
+    vi.stubGlobal('chrome', {
+      runtime: { sendMessage: vi.fn().mockResolvedValue(setupPageResponse()) },
+      tabs: {
+        query: vi.fn().mockResolvedValue([
+          {
+            url: 'https://docs.example.com/snippets/new',
+          },
+        ]),
+      },
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText('Setup')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Enable User Scripts for Tampr in Chrome extension details before snippets can run.',
+      ),
+    ).toBeTruthy();
+  });
 });
 
 function readyPageResponse() {
@@ -161,6 +183,37 @@ function disabledPageResponse() {
         state: 'ready',
         registrations: 0,
         skipped: [{ snippetId: 'page-snippet', reason: 'disabled' }],
+        errors: [],
+      },
+    },
+  };
+}
+
+function setupPageResponse() {
+  return {
+    ok: true,
+    state: {
+      pageUrl: 'https://docs.example.com/snippets/new',
+      savedMatches: [
+        {
+          id: 'page-snippet',
+          enabled: true,
+          name: 'Current page cleanup',
+          rule: '*://docs.example.com/*',
+        },
+      ],
+      enabledMatches: [
+        {
+          id: 'page-snippet',
+          enabled: true,
+          name: 'Current page cleanup',
+          rule: '*://docs.example.com/*',
+        },
+      ],
+      runtime: {
+        state: 'user-scripts-unavailable',
+        registrations: 0,
+        skipped: [],
         errors: [],
       },
     },

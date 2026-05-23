@@ -1,4 +1,8 @@
 import { openWorkspace } from '../chrome/workspace';
+import {
+  runtimeActionNotice,
+  runtimeBadgeLabel,
+} from '../shared/runtime-trust';
 import type { PageState } from '../shared/workspace-messages';
 import { usePageState, type PopupPageState } from './use-page-state';
 
@@ -143,7 +147,7 @@ function ReadyPageStatus({
 
       {runtimeBlocked || blockedMatches[0] ? (
         <p className={styles.runtimeNote}>
-          {runtimeBlockNotice(page, blockedMatches[0]?.skip?.reason)}
+          {runtimeActionNotice(page.runtime, blockedMatches[0]?.skip?.reason)}
         </p>
       ) : null}
     </section>
@@ -151,32 +155,5 @@ function ReadyPageStatus({
 }
 
 function runtimeBadge(page: PageState): string {
-  if (page.runtime.state === 'user-scripts-unavailable') {
-    return 'Unavailable';
-  }
-
-  return page.runtime.state === 'sync-error' ? 'Error' : 'Ready';
-}
-
-function runtimeBlockNotice(
-  page: PageState,
-  skipReason?: PageState['runtime']['skipped'][number]['reason'],
-): string {
-  if (page.runtime.state === 'user-scripts-unavailable') {
-    return 'Enable User Scripts for Tampr before matches can run.';
-  }
-
-  if (page.runtime.state === 'sync-error') {
-    return 'A runtime sync error blocks a matching snippet.';
-  }
-
-  if (skipReason === 'host-access') {
-    return 'Host access is still needed for a matching snippet.';
-  }
-
-  if (skipReason === 'no-code') {
-    return 'A matching snippet has no CSS or JavaScript yet.';
-  }
-
-  return 'A matching snippet is disabled or cannot be registered.';
+  return runtimeBadgeLabel(page.runtime);
 }

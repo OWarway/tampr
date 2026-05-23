@@ -27,3 +27,6 @@ Load the generated `dist` directory from Chrome's extension developer mode. See
 Tampr stores snippets locally and can export them as versioned JSON from the
 workspace header. Imports are validated before they touch storage and merge by
 stable snippet ID.
+
+The current permission and runtime model is documented in
+[Privacy And Security](./docs/privacy-security.md).
