@@ -1,0 +1,42 @@
+.actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.button {
+  background: #17472e;
+  border: 1px solid #17472e;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  min-height: 34px;
+  padding: 0 12px;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #0f3020;
+    border-color: #0f3020;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+  }
+}
+
+.fileInput {
+  block-size: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  inline-size: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}

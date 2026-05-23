@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react';
 import { requestHostAccess } from '../../chrome/host-access';
 import {
   getWorkspaceState,
+  importSnippetExport,
   removeSnippet,
   saveSnippetDraft,
 } from '../../chrome/workspace-state';
+import { createSnippetExport } from '../../domain/snippet-export';
 import type { WorkspaceState } from '../../shared/workspace-messages';
+import { downloadJson } from '../download-json';
 import {
   duplicateEditor,
   findSavedSnippet,
@@ -26,6 +29,8 @@ export type UseWorkspaceResult = {
   clearEditor(): void;
   deleteEditor(): Promise<void>;
   duplicateCurrentEditor(): void;
+  exportWorkspace(): void;
+  importWorkspaceFile(file: File): Promise<void>;
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
   updateEditor(editor: EditorState): void;
@@ -139,6 +144,47 @@ export function useWorkspace(): UseWorkspaceResult {
     setNotice('Snippet duplicated. Save the copy to sync it.');
   }
 
+  function exportWorkspace(): void {
+    if (!workspace) {
+      setNotice('Workspace is still loading.');
+      return;
+    }
+
+    const snippetExport = createSnippetExport({
+      now: Date.now(),
+      snippets: workspace.snippets,
+    });
+
+    downloadJson({
+      filename: exportFilename(snippetExport.exportedAt),
+      value: snippetExport,
+    });
+    setNotice(`${workspace.snippets.length} snippets exported.`);
+  }
+
+  async function importWorkspaceFile(file: File): Promise<void> {
+    setBusy(true);
+
+    try {
+      const payload = parseJson(await file.text());
+      const nextWorkspace = await importSnippetExport(payload);
+
+      setWorkspace(nextWorkspace);
+      setEditor(
+        nextWorkspace.snippets[0]
+          ? toEditorState(nextWorkspace.snippets[0])
+          : newSnippetEditor,
+      );
+      setNotice(
+        `${nextWorkspace.snippets.length} snippets ready after import.`,
+      );
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function selectEditor(nextEditor: EditorState): void {
     if (shouldKeepUnsavedEditor(nextEditor)) {
       setNotice('Save or clear unsaved changes before switching snippets.');
@@ -169,6 +215,8 @@ export function useWorkspace(): UseWorkspaceResult {
     clearEditor,
     deleteEditor,
     duplicateCurrentEditor,
+    exportWorkspace,
+    importWorkspaceFile,
     saveEditor,
     selectEditor,
     updateEditor: setEditor,
@@ -177,4 +225,17 @@ export function useWorkspace(): UseWorkspaceResult {
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw new Error('Import file is not valid JSON.');
+  }
+}
+
+function exportFilename(exportedAt: number): string {
+  const day = new Date(exportedAt).toISOString().slice(0, 10);
+  return `tampr-snippets-${day}.json`;
 }

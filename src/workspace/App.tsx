@@ -1,3 +1,4 @@
+import { DataActions } from './components/DataActions/DataActions';
 import { SnippetEditor } from './components/SnippetEditor/SnippetEditor';
 import { SnippetRail } from './components/SnippetRail/SnippetRail';
 import { WorkspaceHeader } from './components/WorkspaceHeader/WorkspaceHeader';
@@ -16,7 +17,17 @@ export function App() {
 
   return (
     <main className={styles.workspace}>
-      <WorkspaceHeader workspace={state.workspace} />
+      <WorkspaceHeader
+        actions={
+          <DataActions
+            busy={state.busy}
+            exportDisabled={!state.workspace}
+            onExport={state.exportWorkspace}
+            onImport={(file) => void state.importWorkspaceFile(file)}
+          />
+        }
+        workspace={state.workspace}
+      />
 
       <section className={styles.body} aria-label="Snippet workspace">
         <SnippetRail

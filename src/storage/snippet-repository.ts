@@ -40,6 +40,13 @@ export class SnippetRepository {
     return snippets;
   }
 
+  async replaceAll(snippets: readonly Snippet[]): Promise<Snippet[]> {
+    const state = await this.readState();
+    const validSnippets = SnippetSchema.array().parse(snippets);
+    await this.writeState({ ...state, snippets: validSnippets });
+    return validSnippets;
+  }
+
   private async readState(): Promise<SnippetState> {
     const stored = await this.storageArea.get(SNIPPET_STORAGE_KEY);
     const value = stored[SNIPPET_STORAGE_KEY];

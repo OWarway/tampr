@@ -3,6 +3,10 @@ import {
   SnippetDraftSchema,
   type Snippet,
 } from '../domain/snippets';
+import {
+  mergeImportedSnippets,
+  parseSnippetExport,
+} from '../domain/snippet-export';
 import { derivePageSnippetStatus } from '../domain/page-snippet-status';
 import type { RuntimeStatus } from '../runtime/runtime-status';
 import {
@@ -16,6 +20,7 @@ export type WorkspaceSnippetStore = {
   find(snippetId: string): Promise<Snippet | undefined>;
   save(snippet: Snippet): Promise<Snippet[]>;
   remove(snippetId: string): Promise<Snippet[]>;
+  replaceAll(snippets: readonly Snippet[]): Promise<Snippet[]>;
 };
 
 export type WorkspaceRuntimeSync = (
@@ -107,6 +112,26 @@ export class WorkspaceController {
       };
     }
 
+    if (parsedMessage.data.type === 'snippets/import') {
+      try {
+        const snippetExport = parseSnippetExport(parsedMessage.data.payload);
+        const snippets = await this.dependencies.snippets.list();
+        await this.dependencies.snippets.replaceAll(
+          mergeImportedSnippets(snippets, snippetExport.snippets),
+        );
+      } catch (error: unknown) {
+        return {
+          ok: false,
+          error: toErrorMessage(error),
+        };
+      }
+
+      return {
+        ok: true,
+        state: await this.readState(),
+      };
+    }
+
     const draft = SnippetDraftSchema.parse(parsedMessage.data.draft);
     const previous = draft.id
       ? await this.dependencies.snippets.find(draft.id)
@@ -140,4 +165,8 @@ export class WorkspaceController {
       runtime: await this.dependencies.runtimeSync(snippets),
     };
   }
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -34,6 +34,26 @@ describe('SnippetRepository', () => {
     expect(await repository.list()).toEqual([]);
   });
 
+  it('replaces all snippets with validated imported snippets', async () => {
+    const storage = new MemoryStorage();
+    const repository = new SnippetRepository(storage);
+    const snippet = buildSnippet({
+      id: 'imported-snippet',
+      now: 1_748_000_000_000,
+      draft: SnippetDraftSchema.parse({
+        name: 'Imported',
+        matches: ['*://example.com/*'],
+        css: 'body { color: green; }',
+      }),
+    });
+
+    await expect(repository.replaceAll([snippet])).resolves.toEqual([snippet]);
+    expect(storage.values[SNIPPET_STORAGE_KEY]).toMatchObject({
+      version: 1,
+      snippets: [snippet],
+    });
+  });
+
   it('rejects invalid stored state instead of overwriting it', async () => {
     const repository = new SnippetRepository(
       new MemoryStorage({

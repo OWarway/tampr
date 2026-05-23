@@ -9,6 +9,7 @@ import {
   SnippetDraftSchema,
   type Snippet,
 } from '../../src/domain/snippets';
+import { createSnippetExport } from '../../src/domain/snippet-export';
 import type { RuntimeStatus } from '../../src/runtime/runtime-status';
 
 describe('WorkspaceController', () => {
@@ -164,6 +165,58 @@ describe('WorkspaceController', () => {
     expect(runtimeSync.calls).toEqual([[]]);
   });
 
+  it('imports supported snippet exports before syncing state', async () => {
+    const kept = createSnippet('kept');
+    const replaced = createSnippet('replaced', { name: 'Original' });
+    const importedReplacement = createSnippet('replaced', {
+      css: 'body { color: green; }',
+      name: 'Imported',
+    });
+    const importedNew = createSnippet('imported');
+    const snippets = new MemorySnippetStore([kept, replaced]);
+    const runtimeSync = new RuntimeSync();
+    const controller = createController({ runtimeSync, snippets });
+
+    const response = await controller.handleMessage({
+      type: 'snippets/import',
+      payload: createSnippetExport({
+        now: 1_748_000_000_000,
+        snippets: [importedReplacement, importedNew],
+      }),
+    });
+
+    expect(response).toEqual({
+      ok: true,
+      state: {
+        snippets: [kept, importedReplacement, importedNew],
+        runtime: readyRuntime(3),
+      },
+    });
+    expect(snippets.values).toEqual([kept, importedReplacement, importedNew]);
+    expect(runtimeSync.calls.at(-1)).toEqual([
+      kept,
+      importedReplacement,
+      importedNew,
+    ]);
+  });
+
+  it('rejects unsupported import payloads without changing snippets', async () => {
+    const snippet = createSnippet('snippet-5');
+    const snippets = new MemorySnippetStore([snippet]);
+    const controller = createController({ snippets });
+
+    const response = await controller.handleMessage({
+      type: 'snippets/import',
+      payload: { format: 'tampr.snippets', version: 2, snippets: [] },
+    });
+
+    expect(response).toEqual({
+      ok: false,
+      error: 'Import file is not a supported Tampr export.',
+    });
+    expect(snippets.values).toEqual([snippet]);
+  });
+
   it('rejects unsupported messages', async () => {
     const controller = createController();
 
@@ -208,7 +261,9 @@ function createController({
 }
 
 type SnippetOverrides = {
+  css?: string;
   excludeMatches?: string[];
+  name?: string;
 };
 
 function createSnippet(id: string, overrides: SnippetOverrides = {}): Snippet {
@@ -216,10 +271,10 @@ function createSnippet(id: string, overrides: SnippetOverrides = {}): Snippet {
     id,
     now: 1_747_000_000_000,
     draft: SnippetDraftSchema.parse({
-      name: 'Existing proof',
+      name: overrides.name ?? 'Existing proof',
       matches: ['*://example.com/*'],
       excludeMatches: overrides.excludeMatches,
-      css: 'body { color: blue; }',
+      css: overrides.css ?? 'body { color: blue; }',
     }),
   });
 }
@@ -267,6 +322,11 @@ class MemorySnippetStore implements WorkspaceSnippetStore {
 
   async remove(snippetId: string): Promise<Snippet[]> {
     this.values = this.values.filter((snippet) => snippet.id !== snippetId);
+    return this.values;
+  }
+
+  async replaceAll(snippets: readonly Snippet[]): Promise<Snippet[]> {
+    this.values = [...snippets];
     return this.values;
   }
 }

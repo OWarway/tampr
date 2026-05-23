@@ -20,6 +20,12 @@ export async function removeSnippet(
   return sendWorkspaceMessage({ type: 'snippets/remove', snippetId });
 }
 
+export async function importSnippetExport(
+  payload: unknown,
+): Promise<WorkspaceState> {
+  return sendWorkspaceMessage({ type: 'snippets/import', payload });
+}
+
 async function sendWorkspaceMessage(message: unknown): Promise<WorkspaceState> {
   const response = (await chrome.runtime.sendMessage(message)) as
     | WorkspaceStateResponse

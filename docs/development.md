@@ -75,6 +75,17 @@ Opening the workspace from the popup carries sanitized active-page context for
 match-rule presets. Tampr uses Chrome's temporary `activeTab` access for that
 user-invoked handoff rather than broad tab access.
 
+## Data Portability
+
+The workspace exports snippets as `tampr.snippets` version 1 JSON. The export
+contains local snippet records only; it does not include accounts, remote URLs,
+or browser permission grants.
+
+Imports are runtime-validated before storage changes. Valid imports merge by
+stable snippet ID: matching IDs are replaced by the imported snippet, unrelated
+local snippets stay in place, and new imported snippets are appended. Unsupported
+formats fail with a user-facing error instead of partially writing data.
+
 ## Commands
 
 | Command                 | Purpose                                                    |

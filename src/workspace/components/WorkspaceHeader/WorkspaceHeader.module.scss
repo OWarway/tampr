@@ -31,3 +31,22 @@
   color: #17472e;
   padding: 7px 10px;
 }
+
+.meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .meta {
+    justify-content: flex-start;
+  }
+}

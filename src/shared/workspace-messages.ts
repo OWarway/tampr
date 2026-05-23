@@ -35,12 +35,18 @@ export const SetSnippetEnabledMessageSchema = z.object({
   snippetId: SnippetIdSchema,
 });
 
+export const ImportSnippetsMessageSchema = z.object({
+  type: z.literal('snippets/import'),
+  payload: z.unknown(),
+});
+
 export const ExtensionMessageSchema = z.union([
   GetWorkspaceStateMessageSchema,
   GetPageStateMessageSchema,
   SaveSnippetMessageSchema,
   RemoveSnippetMessageSchema,
   SetSnippetEnabledMessageSchema,
+  ImportSnippetsMessageSchema,
 ]);
 
 export type ExtensionMessage = z.infer<typeof ExtensionMessageSchema>;
