@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import type { PageRulePreset } from '../../../domain/page-rule-presets';
-import type { Snippet } from '../../../domain/snippets';
+import { DEFAULT_SNIPPET_FOLDER, type Snippet } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import {
   appendEditorRuleLine,
@@ -15,6 +15,7 @@ import { CodeEditor } from '../CodeEditor/CodeEditor';
 import styles from './SnippetEditor.module.scss';
 
 const EDITOR_MODES = ['rules', 'css', 'javascript'] as const;
+const CUSTOM_FOLDER_VALUE = '__tampr_custom_folder__';
 
 type EditorMode = (typeof EDITOR_MODES)[number];
 
@@ -51,9 +52,14 @@ export function SnippetEditor({
     false,
   );
   const matchRuleIssues = validateEditorRuleLines(editor.matches, true);
-  const folderOptions = workspace
-    ? uniqueFolders(workspace.snippets, editor.folder)
-    : [editor.folder];
+  const folderOptions =
+    workspace && workspace.snippets.length > 0
+      ? uniqueFolders(workspace.snippets)
+      : [editor.folder.trim() || DEFAULT_SNIPPET_FOLDER];
+  const folderSelectValue = folderOptions.includes(editor.folder.trim())
+    ? editor.folder.trim()
+    : CUSTOM_FOLDER_VALUE;
+  const editingCustomFolder = folderSelectValue === CUSTOM_FOLDER_VALUE;
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -95,21 +101,40 @@ export function SnippetEditor({
             />
           </label>
 
-          <label className={`${styles.field} ${styles.folder}`}>
+          <div className={`${styles.field} ${styles.folder}`}>
             <span>Folder</span>
-            <input
-              list="tampr-folder-options"
-              value={editor.folder}
-              onChange={(event) =>
-                onUpdate({ ...editor, folder: event.target.value })
-              }
-            />
-          </label>
-          <datalist id="tampr-folder-options">
-            {folderOptions.map((folder) => (
-              <option key={folder} value={folder} />
-            ))}
-          </datalist>
+            <div className={styles.folderControls}>
+              <select
+                aria-label="Folder"
+                value={folderSelectValue}
+                onChange={(event) => {
+                  onUpdate({
+                    ...editor,
+                    folder:
+                      event.target.value === CUSTOM_FOLDER_VALUE
+                        ? ''
+                        : event.target.value,
+                  });
+                }}
+              >
+                {folderOptions.map((folder) => (
+                  <option key={folder} value={folder}>
+                    {folder}
+                  </option>
+                ))}
+                <option value={CUSTOM_FOLDER_VALUE}>New folder...</option>
+              </select>
+              {editingCustomFolder ? (
+                <input
+                  aria-label="Folder name"
+                  value={editor.folder}
+                  onChange={(event) =>
+                    onUpdate({ ...editor, folder: event.target.value })
+                  }
+                />
+              ) : null}
+            </div>
+          </div>
 
           <label className={styles.toggle}>
             <input
@@ -283,15 +308,8 @@ export function SnippetEditor({
   );
 }
 
-function uniqueFolders(
-  snippets: readonly Snippet[],
-  currentFolder: string,
-): string[] {
+function uniqueFolders(snippets: readonly Snippet[]): string[] {
   const folders = new Set<string>();
-
-  if (currentFolder.trim()) {
-    folders.add(currentFolder.trim());
-  }
 
   for (const snippet of snippets) {
     folders.add(snippet.folder);

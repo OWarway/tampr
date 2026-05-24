@@ -28,6 +28,24 @@
   align-self: stretch;
 }
 
+.folderControls {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+
+  input {
+    flex: 1 1 150px;
+  }
+
+  select {
+    flex: 1 1 0;
+  }
+
+  select:not(:only-child) {
+    flex: 0 0 140px;
+  }
+}
+
 .tabs {
   border-bottom: 1px solid #dbe3de;
   display: flex;

@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { buildSnippet, SnippetDraftSchema } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import { newSnippetEditor } from '../../editor-state';
 import { SnippetEditor } from './SnippetEditor';
@@ -32,19 +33,12 @@ describe('SnippetEditor', () => {
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Updated proof' },
     });
-    fireEvent.change(screen.getByLabelText('Folder'), {
-      target: { value: 'Reading' },
-    });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
 
-    expect(onUpdate).toHaveBeenNthCalledWith(1, {
+    expect(onUpdate).toHaveBeenCalledWith({
       ...newSnippetEditor,
       name: 'Updated proof',
-    });
-    expect(onUpdate).toHaveBeenNthCalledWith(2, {
-      ...newSnippetEditor,
-      folder: 'Reading',
     });
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledTimes(1);
@@ -124,6 +118,75 @@ describe('SnippetEditor', () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
+  it('shows saved folders in an explicit folder menu', () => {
+    const onUpdate = vi.fn();
+
+    render(
+      <SnippetEditor
+        busy={false}
+        dirty={false}
+        editor={newSnippetEditor}
+        notice="Ready."
+        workspace={{
+          runtime: readyRuntime(),
+          snippets: [
+            createSnippet('snippet-1', 'General'),
+            createSnippet('snippet-2', 'Design'),
+          ],
+        }}
+        onDelete={() => undefined}
+        onDuplicate={() => undefined}
+        onSave={() => undefined}
+        onUpdate={onUpdate}
+      />,
+    );
+
+    const savedFolders = screen.getByLabelText('Folder') as HTMLSelectElement;
+
+    expect([...savedFolders.options].map((option) => option.text)).toEqual([
+      'Design',
+      'General',
+      'New folder...',
+    ]);
+
+    fireEvent.change(savedFolders, { target: { value: 'Design' } });
+
+    expect(onUpdate).toHaveBeenCalledWith({
+      ...newSnippetEditor,
+      folder: 'Design',
+    });
+  });
+
+  it('shows a folder name field for unsaved custom folders', () => {
+    const onUpdate = vi.fn();
+
+    render(
+      <SnippetEditor
+        busy={false}
+        dirty={true}
+        editor={{ ...newSnippetEditor, folder: 'Reading' }}
+        notice="Ready."
+        workspace={{
+          runtime: readyRuntime(),
+          snippets: [createSnippet('snippet-1', 'General')],
+        }}
+        onDelete={() => undefined}
+        onDuplicate={() => undefined}
+        onSave={() => undefined}
+        onUpdate={onUpdate}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Folder name'), {
+      target: { value: 'Workflows' },
+    });
+
+    expect(onUpdate).toHaveBeenCalledWith({
+      ...newSnippetEditor,
+      folder: 'Workflows',
+    });
+  });
+
   it('validates rule lines and appends current page presets', () => {
     const onUpdate = vi.fn();
 
@@ -166,11 +229,32 @@ describe('SnippetEditor', () => {
 function createHostAccessState(): WorkspaceState {
   return {
     snippets: [],
-    runtime: {
-      state: 'ready',
-      registrations: 0,
-      skipped: [{ snippetId: 'snippet-editor-proof', reason: 'host-access' }],
-      errors: [],
-    },
+    runtime: readyRuntime([
+      { snippetId: 'snippet-editor-proof', reason: 'host-access' },
+    ]),
+  };
+}
+
+function createSnippet(id: string, folder: string) {
+  return buildSnippet({
+    id,
+    now: 1_748_000_000_000,
+    draft: SnippetDraftSchema.parse({
+      name: id,
+      folder,
+      matches: ['*://example.com/*'],
+      css: '',
+    }),
+  });
+}
+
+function readyRuntime(
+  skipped: WorkspaceState['runtime']['skipped'] = [],
+): WorkspaceState['runtime'] {
+  return {
+    state: 'ready',
+    registrations: 0,
+    skipped,
+    errors: [],
   };
 }
