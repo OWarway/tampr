@@ -13,13 +13,19 @@ captured in [the build spec](./docs/tampr-v2-build-spec.md).
 - Shows what matches the current page from the popup.
 - Enables and disables matching snippets quickly.
 - Registers snippets through Chrome's User Scripts runtime.
-- Lets user-script world snippets save generated text files with a constrained
-  `Tampr.download()` API.
+- Lets user-script world snippets save generated text or validated http/https
+  URL downloads with a constrained `Tampr.download()` API.
 - Exports and imports native Tampr JSON.
 - Explains local data, runtime, and host-access state in the workspace.
 
 Tampr does not use accounts, cloud sync, telemetry, hosted snippet feeds, or
 remote snippet execution.
+
+## Screenshots
+
+![Tampr workspace showing the snippet editor and runtime trust state.](./docs/assets/workspace.png)
+
+![Tampr popup showing current-page status and the workspace action.](./docs/assets/popup.png)
 
 ## Install From Source
 

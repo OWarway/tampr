@@ -63,9 +63,10 @@ scope.
 Tampr's script download API accepts either generated text or an http/https URL.
 Both shapes share a validated relative filename (subpaths allowed under
 Downloads, no parent segments or absolute paths) and an optional `saveAs`
-choice. URL downloads are not scoped to the snippet's granted hosts — a snippet
-that calls `Tampr.download({ url })` can fetch any http/https resource the
-service worker can reach. Treat URL-mode calls in imported snippets accordingly.
+choice. URL downloads are not scoped to the snippet's granted hosts, so a
+snippet that calls `Tampr.download({ url })` can fetch any http/https resource
+the service worker can reach. Treat URL-mode calls in imported snippets
+accordingly.
 
 Tampr imports only the native Tampr export format. Prototype data is not
 converted automatically, which keeps the import path smaller and avoids silent

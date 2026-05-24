@@ -27,6 +27,22 @@ npm run test:e2e
 
 Then run the manual checks in [Trust Checks](./trust-checks.md).
 
+## Phase 5 Preflight
+
+Before a release commit, verify the five release-readiness areas:
+
+1. Manual trust pass: complete the data, runtime, and permission checks in
+   [Trust Checks](./trust-checks.md) on the packaged `dist` build.
+2. README release polish: keep screenshots current, confirm install steps work,
+   and make the lightweight/local-first value clear in the first screen.
+3. Release workflow: update versions, changelog, package output, and tag only
+   after the final smoke run.
+4. Store and open-source confidence: keep permission wording, known limits,
+   contribution docs, security policy, issue templates, and CI aligned with the
+   shipped behavior.
+5. UI sanity pass: inspect popup and workspace empty, loading, unsupported,
+   denied, unsaved, import/export, and runtime-error states in Chrome.
+
 ## Package The Extension
 
 1. Remove any local development artifacts.

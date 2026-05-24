@@ -78,7 +78,7 @@ user-invoked handoff rather than broad tab access.
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global
-Tampr API with two payload shapes — generated text or a remote URL:
+Tampr API with two payload shapes: generated text or a remote URL.
 
 ```js
 await Tampr.download({
