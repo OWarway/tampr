@@ -121,7 +121,7 @@ describe('WorkspaceController', () => {
   });
 
   it('toggles snippets before returning synced state', async () => {
-    const snippet = createSnippet('snippet-toggle');
+    const snippet = createSnippet('snippet-toggle', { folder: 'Reading' });
     const runtimeSync = new RuntimeSync();
     const snippets = new MemorySnippetStore([snippet]);
     const controller = createController({ runtimeSync, snippets });
@@ -135,6 +135,7 @@ describe('WorkspaceController', () => {
     expect(response.ok).toBe(true);
     expect(snippets.values[0]).toMatchObject({
       id: snippet.id,
+      folder: 'Reading',
       enabled: false,
       createdAt: snippet.createdAt,
       updatedAt: 1_748_000_000_000,
@@ -263,6 +264,7 @@ function createController({
 type SnippetOverrides = {
   css?: string;
   excludeMatches?: string[];
+  folder?: string;
   name?: string;
 };
 
@@ -272,6 +274,7 @@ function createSnippet(id: string, overrides: SnippetOverrides = {}): Snippet {
     now: 1_747_000_000_000,
     draft: SnippetDraftSchema.parse({
       name: overrides.name ?? 'Existing proof',
+      folder: overrides.folder,
       matches: ['*://example.com/*'],
       excludeMatches: overrides.excludeMatches,
       css: overrides.css ?? 'body { color: blue; }',

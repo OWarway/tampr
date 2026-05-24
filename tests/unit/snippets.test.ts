@@ -16,6 +16,7 @@ describe('createEmptySnippet', () => {
     ).toEqual({
       id: 'snippet-1',
       name: 'Untitled snippet',
+      folder: 'General',
       enabled: true,
       matches: [],
       excludeMatches: [],
@@ -57,6 +58,33 @@ describe('createEmptySnippet', () => {
     });
 
     expect(snippet.matches).toEqual(['*://example.com/*']);
+    expect(snippet.folder).toBe('General');
     expect(snippet.runAt).toBe('document_start');
+  });
+
+  it('trims custom folders from drafts', () => {
+    const snippet = buildSnippet({
+      draft: SnippetDraftSchema.parse({
+        name: 'Example highlight',
+        folder: '  Workflows  ',
+        matches: ['*://example.com/*'],
+        css: '',
+      }),
+      id: 'snippet-4',
+      now: 1_748_000_000_003,
+    });
+
+    expect(snippet.folder).toBe('Workflows');
+  });
+
+  it('returns empty folders to the default group', () => {
+    const draft = SnippetDraftSchema.parse({
+      name: 'Example highlight',
+      folder: '   ',
+      matches: ['*://example.com/*'],
+      css: '',
+    });
+
+    expect(draft.folder).toBe('General');
   });
 });

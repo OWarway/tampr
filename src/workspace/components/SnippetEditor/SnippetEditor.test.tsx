@@ -32,12 +32,19 @@ describe('SnippetEditor', () => {
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Updated proof' },
     });
+    fireEvent.change(screen.getByLabelText('Folder'), {
+      target: { value: 'Reading' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
 
-    expect(onUpdate).toHaveBeenCalledWith({
+    expect(onUpdate).toHaveBeenNthCalledWith(1, {
       ...newSnippetEditor,
       name: 'Updated proof',
+    });
+    expect(onUpdate).toHaveBeenNthCalledWith(2, {
+      ...newSnippetEditor,
+      folder: 'Reading',
     });
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledTimes(1);

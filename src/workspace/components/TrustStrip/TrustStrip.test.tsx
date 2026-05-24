@@ -32,6 +32,7 @@ function createWorkspaceState(): WorkspaceState {
       {
         id: 'snippet-1',
         name: 'One',
+        folder: 'General',
         enabled: true,
         matches: ['*://example.com/*'],
         excludeMatches: [],
@@ -45,6 +46,7 @@ function createWorkspaceState(): WorkspaceState {
       {
         id: 'snippet-2',
         name: 'Two',
+        folder: 'Docs',
         enabled: true,
         matches: ['*://docs.example.com/*'],
         excludeMatches: [],

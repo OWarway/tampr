@@ -49,8 +49,12 @@ describe('SnippetRail', () => {
       <SnippetRail
         editor={newSnippetEditor}
         snippets={[
-          createSnippet(),
-          createSnippet('Route cleaner', '*://docs.example.com/*'),
+          createSnippet({ name: 'Example proof' }),
+          createSnippet({
+            folder: 'Docs',
+            name: 'Route cleaner',
+            match: '*://docs.example.com/*',
+          }),
         ]}
         onCreate={() => undefined}
         onSelect={() => undefined}
@@ -62,6 +66,7 @@ describe('SnippetRail', () => {
     });
 
     expect(screen.getByRole('button', { name: /Route cleaner/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Docs 1' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Example proof/ })).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Search'), {
@@ -70,14 +75,49 @@ describe('SnippetRail', () => {
 
     expect(screen.getByText('No snippets match.')).toBeTruthy();
   });
+
+  it('groups snippets by folder and searches folder names', () => {
+    render(
+      <SnippetRail
+        editor={newSnippetEditor}
+        snippets={[
+          createSnippet({ folder: 'Design', name: 'Theme cleanup' }),
+          createSnippet({ name: 'Default proof' }),
+        ]}
+        onCreate={() => undefined}
+        onSelect={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'General 1' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Design 1' })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Search'), {
+      target: { value: 'design' },
+    });
+
+    expect(screen.getByRole('button', { name: /Theme cleanup/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Default proof/ })).toBeNull();
+  });
 });
 
-function createSnippet(name = 'Example proof', match = '*://example.com/*') {
+type CreateSnippetInput = {
+  folder?: string;
+  match?: string;
+  name?: string;
+};
+
+function createSnippet({
+  folder = 'General',
+  match = '*://example.com/*',
+  name = 'Example proof',
+}: CreateSnippetInput = {}) {
   return buildSnippet({
     id: name.toLocaleLowerCase().replaceAll(' ', '-'),
     now: 1_748_000_000_000,
     draft: SnippetDraftSchema.parse({
       name,
+      folder,
       matches: [match],
       css: 'body { color: red; }',
     }),

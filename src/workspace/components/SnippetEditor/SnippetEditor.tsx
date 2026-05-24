@@ -51,6 +51,9 @@ export function SnippetEditor({
     false,
   );
   const matchRuleIssues = validateEditorRuleLines(editor.matches, true);
+  const folderOptions = workspace
+    ? uniqueFolders(workspace.snippets, editor.folder)
+    : [editor.folder];
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -91,6 +94,22 @@ export function SnippetEditor({
               }
             />
           </label>
+
+          <label className={`${styles.field} ${styles.folder}`}>
+            <span>Folder</span>
+            <input
+              list="tampr-folder-options"
+              value={editor.folder}
+              onChange={(event) =>
+                onUpdate({ ...editor, folder: event.target.value })
+              }
+            />
+          </label>
+          <datalist id="tampr-folder-options">
+            {folderOptions.map((folder) => (
+              <option key={folder} value={folder} />
+            ))}
+          </datalist>
 
           <label className={styles.toggle}>
             <input
@@ -262,6 +281,23 @@ export function SnippetEditor({
       </form>
     </section>
   );
+}
+
+function uniqueFolders(
+  snippets: readonly Snippet[],
+  currentFolder: string,
+): string[] {
+  const folders = new Set<string>();
+
+  if (currentFolder.trim()) {
+    folders.add(currentFolder.trim());
+  }
+
+  for (const snippet of snippets) {
+    folders.add(snippet.folder);
+  }
+
+  return [...folders].sort((left, right) => left.localeCompare(right));
 }
 
 function modeLabel(mode: EditorMode): string {

@@ -25,6 +25,7 @@ V1 includes:
 - A compact popup for the current page and active snippets.
 - A full workspace for snippet creation and editing.
 - User-authored CSS and JavaScript snippets.
+- Folder grouping for keeping local snippets organized.
 - Match and exclude rules for deciding where snippets run.
 - Enable, disable, duplicate, rename, delete, and search flows.
 - Clear runtime and permission state, including User Scripts availability.
@@ -201,6 +202,7 @@ The initial snippet model should support:
 type Snippet = {
   id: string;
   name: string;
+  folder: string;
   enabled: boolean;
   matches: string[];
   excludeMatches: string[];
@@ -216,6 +218,8 @@ type Snippet = {
 Design notes:
 
 - Store stable IDs so rename does not become delete-and-recreate behavior.
+- Treat folders as lightweight labels on snippets, not a separate hierarchy in
+  V1.
 - Prefer arrays of match rules so one useful snippet can target several routes.
 - Keep CSS and JavaScript optional in product behavior even if storage uses empty
   strings initially.
@@ -266,6 +270,7 @@ The workspace is the primary product surface.
 It should provide:
 
 - A searchable snippet rail.
+- Folder grouping in the snippet rail.
 - A focused editor region with CodeMirror.
 - CSS and JavaScript modes that make the current editing context obvious.
 - Match and exclude rule editing with validation and preview.

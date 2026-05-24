@@ -20,6 +20,40 @@
   }
 }
 
+.groups {
+  display: grid;
+  gap: 14px;
+}
+
+.group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+
+  h3 {
+    align-items: center;
+    color: #29463d;
+    display: flex;
+    font-size: 12px;
+    gap: 8px;
+    justify-content: space-between;
+    letter-spacing: 0;
+    line-height: 1.2;
+    margin: 0;
+    text-transform: uppercase;
+
+    span:last-child {
+      background: #e2f1e7;
+      border: 1px solid #b9cac1;
+      border-radius: 8px;
+      color: #29463d;
+      min-width: 24px;
+      padding: 3px 7px;
+      text-align: center;
+    }
+  }
+}
+
 .list {
   display: grid;
   gap: 8px;

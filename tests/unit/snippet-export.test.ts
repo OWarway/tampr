@@ -58,6 +58,42 @@ describe('snippet exports', () => {
     });
   });
 
+  it('defaults folders when parsing older native exports', () => {
+    expect(
+      parseSnippetExport({
+        data: {
+          snippets: [
+            {
+              id: 'older-snippet',
+              name: 'Older snippet',
+              enabled: true,
+              matches: ['*://example.com/*'],
+              excludeMatches: [],
+              css: '',
+              js: '',
+              runAt: 'document_idle',
+              world: 'USER_SCRIPT',
+              createdAt: 1_747_000_000_000,
+              updatedAt: 1_747_000_000_000,
+            },
+          ],
+        },
+        exportedAt: 1_747_000_000_000,
+        format: TAMPR_EXPORT_FORMAT,
+        version: TAMPR_EXPORT_VERSION,
+      }),
+    ).toMatchObject({
+      data: {
+        snippets: [
+          {
+            id: 'older-snippet',
+            folder: 'General',
+          },
+        ],
+      },
+    });
+  });
+
   it('rejects non-native import shapes', () => {
     expect(() =>
       parseSnippetExport({
@@ -111,18 +147,24 @@ describe('snippet exports', () => {
 
 type SnippetOverrides = {
   css?: string;
+  folder?: string;
   name?: string;
 };
 
 function createSnippet(
   id: string,
-  { css = 'body { color: blue; }', name = 'Example' }: SnippetOverrides = {},
+  {
+    css = 'body { color: blue; }',
+    folder = 'General',
+    name = 'Example',
+  }: SnippetOverrides = {},
 ): Snippet {
   return buildSnippet({
     id,
     now: 1_747_000_000_000,
     draft: SnippetDraftSchema.parse({
       name,
+      folder,
       matches: ['*://example.com/*'],
       css,
     }),

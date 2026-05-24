@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SNIPPET_FOLDER,
   SnippetDraftSchema,
   type Snippet,
   type SnippetDraft,
@@ -9,6 +10,7 @@ import type { WorkspaceState } from '../shared/workspace-messages';
 export type EditorState = {
   id?: string;
   name: string;
+  folder: string;
   enabled: boolean;
   matches: string;
   excludeMatches: string;
@@ -20,6 +22,7 @@ export type EditorState = {
 
 export const newSnippetEditor: EditorState = {
   name: 'Example highlight',
+  folder: DEFAULT_SNIPPET_FOLDER,
   enabled: true,
   matches: '*://example.com/*',
   excludeMatches: '',
@@ -115,6 +118,7 @@ export function toEditorState(snippet: Snippet): EditorState {
   return {
     id: snippet.id,
     name: snippet.name,
+    folder: snippet.folder,
     enabled: snippet.enabled,
     matches: snippet.matches.join('\n'),
     excludeMatches: snippet.excludeMatches.join('\n'),
@@ -130,6 +134,7 @@ export function duplicateEditor(value: EditorState): EditorState {
     css: value.css,
     enabled: value.enabled,
     excludeMatches: value.excludeMatches,
+    folder: value.folder,
     js: value.js,
     matches: value.matches,
     name: duplicateName(value.name),
@@ -182,6 +187,7 @@ function editorsEqual(left: EditorState, right: EditorState): boolean {
   return (
     left.id === right.id &&
     left.name === right.name &&
+    left.folder === right.folder &&
     left.enabled === right.enabled &&
     left.matches === right.matches &&
     left.excludeMatches === right.excludeMatches &&

@@ -20,7 +20,12 @@
   align-items: end;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 220px) auto auto;
+}
+
+.name,
+.folder {
+  align-self: stretch;
 }
 
 .tabs {

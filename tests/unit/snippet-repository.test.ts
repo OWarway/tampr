@@ -54,6 +54,38 @@ describe('SnippetRepository', () => {
     });
   });
 
+  it('defaults folders for older local snippet records', async () => {
+    const repository = new SnippetRepository(
+      new MemoryStorage({
+        [SNIPPET_STORAGE_KEY]: {
+          version: 1,
+          snippets: [
+            {
+              id: 'older-snippet',
+              name: 'Older snippet',
+              enabled: true,
+              matches: ['*://example.com/*'],
+              excludeMatches: [],
+              css: '',
+              js: '',
+              runAt: 'document_idle',
+              world: 'USER_SCRIPT',
+              createdAt: 1_748_000_000_000,
+              updatedAt: 1_748_000_000_000,
+            },
+          ],
+        },
+      }),
+    );
+
+    await expect(repository.list()).resolves.toMatchObject([
+      {
+        id: 'older-snippet',
+        folder: 'General',
+      },
+    ]);
+  });
+
   it('rejects invalid stored state instead of overwriting it', async () => {
     const repository = new SnippetRepository(
       new MemoryStorage({

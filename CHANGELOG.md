@@ -17,6 +17,7 @@ group changes under the headings below.
 - Popup current-page status with enable and disable controls.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.
+- Lightweight folder grouping for workspace snippets.
 - Browser downloads support for workspace exports.
 - Constrained `Tampr.download()` runtime API for user-script world snippets,
   supporting generated text and validated http/https URL downloads.

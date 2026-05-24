@@ -29,8 +29,8 @@ Before release, exercise:
 
 - Export an empty workspace and confirm the JSON envelope is `format: "tampr"`.
 - Export from the workspace and confirm the browser download path succeeds.
-- Export multiple snippets and confirm CSS, JavaScript, match rules, run timing,
-  world, enabled state, and timestamps are present.
+- Export multiple snippets and confirm folder, CSS, JavaScript, match rules, run
+  timing, world, enabled state, and timestamps are present.
 - Import a valid Tampr export into an empty workspace.
 - Import a valid Tampr export over existing snippets and confirm matching IDs are
   replaced while unrelated snippets remain.
@@ -47,6 +47,8 @@ Before release, exercise:
 - Fresh install with User Scripts disabled.
 - Extension startup after Chrome restart.
 - Create, edit, enable, disable, duplicate, and delete snippet flows.
+- Create snippets in at least two folders and confirm the rail groups them.
+- Edit a saved snippet's folder and confirm it moves groups after save.
 - A matching CSS snippet on `https://example.com`.
 - A matching JavaScript snippet in the default user-script world.
 - A default user-script world snippet that calls

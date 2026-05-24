@@ -92,6 +92,7 @@ export class WorkspaceController {
           draft: {
             id: previous.id,
             name: previous.name,
+            folder: previous.folder,
             enabled: parsedMessage.data.enabled,
             matches: previous.matches,
             excludeMatches: previous.excludeMatches,

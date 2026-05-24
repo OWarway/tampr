@@ -14,6 +14,7 @@ describe('editor state', () => {
     const duplicate = duplicateEditor(toEditorState(createSnippet()));
 
     expect(duplicate).toMatchObject({
+      folder: 'Daily',
       name: 'Daily cleanup copy',
       matches: '*://example.com/*',
     });
@@ -26,9 +27,10 @@ describe('editor state', () => {
 
     expect(hasUnsavedChanges(savedEditor, [snippet])).toBe(false);
     expect(
-      hasUnsavedChanges({ ...savedEditor, css: 'main { display: grid; }' }, [
-        snippet,
-      ]),
+      hasUnsavedChanges(
+        { ...savedEditor, folder: 'Focus', css: 'main { display: grid; }' },
+        [snippet],
+      ),
     ).toBe(true);
     expect(hasUnsavedChanges(duplicateEditor(savedEditor), [snippet])).toBe(
       true,
@@ -65,6 +67,7 @@ function createSnippet() {
     now: 1_748_000_000_000,
     draft: SnippetDraftSchema.parse({
       name: 'Daily cleanup',
+      folder: 'Daily',
       matches: ['*://example.com/*'],
       css: 'main { outline: 1px solid red; }',
     }),
