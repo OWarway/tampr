@@ -1,11 +1,24 @@
 export const TAMPR_DOWNLOAD_MESSAGE = 'tampr/api/download';
 
-export type TamprDownloadPayload = {
+export type TamprDownloadTextPayload = {
   filename: string;
   mimeType?: string;
   saveAs?: boolean;
   text: string;
+  url?: never;
 };
+
+export type TamprDownloadUrlPayload = {
+  filename: string;
+  mimeType?: never;
+  saveAs?: boolean;
+  text?: never;
+  url: string;
+};
+
+export type TamprDownloadPayload =
+  | TamprDownloadTextPayload
+  | TamprDownloadUrlPayload;
 
 export type TamprDownloadMessage = {
   type: typeof TAMPR_DOWNLOAD_MESSAGE;

@@ -51,6 +51,13 @@ Before release, exercise:
 - A matching JavaScript snippet in the default user-script world.
 - A default user-script world snippet that calls
   `Tampr.download({ filename: 'tampr-test.txt', text: 'ok' })`.
+- A default user-script world snippet that calls
+  `Tampr.download({ filename: 'tampr-test.bin', url: 'https://...' })` against
+  an http or https resource and confirms the file lands in Downloads.
+- A `Tampr.download()` call with a relative subpath filename (e.g.
+  `Tampr/test.txt`) and confirm Chrome creates the subfolder under Downloads.
+- A `Tampr.download()` call with a `file://`, `data:`, or `chrome://` URL and
+  confirm the script receives a validation error.
 - A main-world JavaScript snippet after intentionally choosing `MAIN`.
 - Host access granted after save.
 - Host access denied after save.
@@ -75,7 +82,6 @@ Before release, verify:
 
 - No accounts, cloud sync, telemetry, or hosted snippet gallery.
 - No automatic backups.
-- No script download API for remote URLs.
 - No cross-browser support before Chrome is dependable.
 - No imported prototype data conversion.
 - No incognito-only snippet setting yet.

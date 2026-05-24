@@ -57,6 +57,75 @@ describe('Tampr download API', () => {
     );
   });
 
+  it('downloads remote URLs through the browser downloads API', async () => {
+    const download = vi.fn().mockResolvedValue(9);
+
+    await expect(
+      handleTamprDownloadMessage(
+        {
+          type: TAMPR_DOWNLOAD_MESSAGE,
+          snippetId: 'snippet-1',
+          payload: {
+            filename: 'clip.mp4',
+            saveAs: false,
+            url: 'https://cdn.example.com/videos/clip.mp4',
+          },
+        },
+        { download },
+      ),
+    ).resolves.toEqual({ ok: true, downloadId: 9 });
+
+    expect(download).toHaveBeenCalledWith({
+      conflictAction: 'uniquify',
+      filename: 'clip.mp4',
+      saveAs: false,
+      url: 'https://cdn.example.com/videos/clip.mp4',
+    });
+  });
+
+  it('accepts relative subpath filenames so downloads can target a subfolder', async () => {
+    const download = vi.fn().mockResolvedValue(11);
+
+    await handleTamprDownloadMessage(
+      {
+        type: TAMPR_DOWNLOAD_MESSAGE,
+        snippetId: 'snippet-1',
+        payload: {
+          filename: 'Tampr/videos/clip.mp4',
+          url: 'https://cdn.example.com/clip.mp4',
+        },
+      },
+      { download },
+    );
+
+    expect(download).toHaveBeenCalledWith(
+      expect.objectContaining({ filename: 'Tampr/videos/clip.mp4' }),
+    );
+  });
+
+  it('rejects URL downloads with non-http schemes', async () => {
+    const download = vi.fn();
+
+    await expect(
+      handleTamprDownloadMessage(
+        {
+          type: TAMPR_DOWNLOAD_MESSAGE,
+          snippetId: 'snippet-1',
+          payload: {
+            filename: 'config.txt',
+            url: 'file:///etc/passwd',
+          },
+        },
+        { download },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: 'Invalid Tampr download request.',
+    });
+
+    expect(download).not.toHaveBeenCalled();
+  });
+
   it('rejects filenames that try to leave the downloads root', async () => {
     const download = vi.fn();
 
@@ -68,6 +137,76 @@ describe('Tampr download API', () => {
           payload: {
             filename: '../report.json',
             text: 'hello',
+          },
+        },
+        { download },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: 'Invalid Tampr download request.',
+    });
+
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('rejects absolute filenames', async () => {
+    const download = vi.fn();
+
+    await expect(
+      handleTamprDownloadMessage(
+        {
+          type: TAMPR_DOWNLOAD_MESSAGE,
+          snippetId: 'snippet-1',
+          payload: {
+            filename: '/etc/passwd',
+            text: 'hello',
+          },
+        },
+        { download },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: 'Invalid Tampr download request.',
+    });
+
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('rejects backslash path separators', async () => {
+    const download = vi.fn();
+
+    await expect(
+      handleTamprDownloadMessage(
+        {
+          type: TAMPR_DOWNLOAD_MESSAGE,
+          snippetId: 'snippet-1',
+          payload: {
+            filename: 'Tampr\\clip.mp4',
+            url: 'https://cdn.example.com/clip.mp4',
+          },
+        },
+        { download },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: 'Invalid Tampr download request.',
+    });
+
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('rejects payloads that mix text and url', async () => {
+    const download = vi.fn();
+
+    await expect(
+      handleTamprDownloadMessage(
+        {
+          type: TAMPR_DOWNLOAD_MESSAGE,
+          snippetId: 'snippet-1',
+          payload: {
+            filename: 'mixed.txt',
+            text: 'hello',
+            url: 'https://example.com/clip.mp4',
           },
         },
         { download },

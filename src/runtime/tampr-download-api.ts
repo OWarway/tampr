@@ -8,6 +8,8 @@ import {
 
 const DEFAULT_MIME_TYPE = 'text/plain;charset=utf-8';
 const MAX_DOWNLOAD_TEXT_LENGTH = 5_000_000;
+const MAX_DOWNLOAD_URL_LENGTH = 2_000;
+const ALLOWED_URL_PROTOCOLS = new Set(['http:', 'https:']);
 
 type DownloadsApi = Pick<typeof chrome.downloads, 'download'>;
 
@@ -18,7 +20,7 @@ const DownloadFilenameSchema = z
   .max(180)
   .refine(isSafeDownloadFilename, {
     message:
-      'Download filenames must be simple filenames without paths or reserved characters.',
+      'Download filenames must be relative paths without parent segments or reserved characters.',
   });
 
 const DownloadMimeTypeSchema = z
@@ -31,7 +33,16 @@ const DownloadMimeTypeSchema = z
   })
   .default(DEFAULT_MIME_TYPE);
 
-export const TamprDownloadPayloadSchema = z
+const DownloadUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_DOWNLOAD_URL_LENGTH)
+  .refine(isSafeDownloadUrl, {
+    message: 'Download URLs must use http or https.',
+  });
+
+const TamprDownloadTextPayloadSchema = z
   .object({
     filename: DownloadFilenameSchema,
     mimeType: DownloadMimeTypeSchema,
@@ -39,6 +50,19 @@ export const TamprDownloadPayloadSchema = z
     text: z.string().max(MAX_DOWNLOAD_TEXT_LENGTH),
   })
   .strict();
+
+const TamprDownloadUrlPayloadSchema = z
+  .object({
+    filename: DownloadFilenameSchema,
+    saveAs: z.boolean().default(true),
+    url: DownloadUrlSchema,
+  })
+  .strict();
+
+export const TamprDownloadPayloadSchema = z.union([
+  TamprDownloadTextPayloadSchema,
+  TamprDownloadUrlPayloadSchema,
+]);
 
 export const TamprDownloadMessageSchema = z
   .object({
@@ -62,13 +86,17 @@ export async function handleTamprDownloadMessage(
   }
 
   const { payload } = validation.data;
+  const url =
+    'url' in payload
+      ? payload.url
+      : buildTextDataUrl(payload.mimeType, payload.text);
 
   try {
     const downloadId = await downloadsApi.download({
       conflictAction: 'uniquify',
       filename: payload.filename,
       saveAs: payload.saveAs,
-      url: buildTextDataUrl(payload.mimeType, payload.text),
+      url,
     });
 
     return {
@@ -88,16 +116,34 @@ function buildTextDataUrl(mimeType: string, text: string): string {
 }
 
 function isSafeDownloadFilename(filename: string): boolean {
-  if (filename === '.' || filename === '..') {
+  if (filename.includes('\\') || filename.startsWith('/')) {
     return false;
   }
 
-  if (/[<>:"/\\|?*]/.test(filename)) {
+  const segments = filename.split('/');
+
+  for (const segment of segments) {
+    if (!isSafeFilenameSegment(segment)) {
+      return false;
+    }
+  }
+
+  const lastSegment = segments[segments.length - 1];
+
+  return lastSegment !== undefined && lastSegment.length > 0;
+}
+
+function isSafeFilenameSegment(segment: string): boolean {
+  if (segment.length === 0 || segment === '.' || segment === '..') {
     return false;
   }
 
-  for (let index = 0; index < filename.length; index += 1) {
-    if (filename.charCodeAt(index) < 32) {
+  if (/[<>:"|?*]/.test(segment)) {
+    return false;
+  }
+
+  for (let index = 0; index < segment.length; index += 1) {
+    if (segment.charCodeAt(index) < 32) {
       return false;
     }
   }
@@ -112,6 +158,18 @@ function isSafeMimeType(mimeType: string): boolean {
     !mimeType.includes('\r') &&
     !mimeType.includes('\n')
   );
+}
+
+function isSafeDownloadUrl(url: string): boolean {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  return ALLOWED_URL_PROTOCOLS.has(parsed.protocol);
 }
 
 function toErrorMessage(error: unknown): string {

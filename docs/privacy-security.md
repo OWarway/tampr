@@ -9,8 +9,8 @@ extension storage and runs only CSS or JavaScript the user saves locally.
   JavaScript, and timestamps.
 - Exported backups as user-downloaded JSON when the workspace export action is
   used.
-- Generated text files when a user-authored `USER_SCRIPT` snippet calls
-  `Tampr.download()`.
+- Generated text files, or files fetched from an http/https URL, when a
+  user-authored `USER_SCRIPT` snippet calls `Tampr.download()`.
 
 Tampr does not currently use accounts, cloud sync, telemetry, remote snippet
 feeds, or a hosted backend.
@@ -30,8 +30,8 @@ Tampr declares the smallest permission set needed for the current product:
 - `activeTab` reads the active page URL only after the user opens the popup, so
   the workspace can offer useful match-rule presets.
 - `downloads` lets user-triggered workspace exports and validated
-  `Tampr.download()` calls save generated text files through the browser
-  downloads API.
+  `Tampr.download()` calls save generated text or remote http/https URLs
+  through the browser downloads API.
 - `optional_host_permissions` lets Tampr request access to the sites a saved
   snippet targets. Host access is requested at save time for the snippet's match
   rules instead of being granted broadly up front.
@@ -60,9 +60,12 @@ inspect them before enabling them on sensitive sites.
 Tampr does not execute remote snippets or install code from a gallery in the V1
 scope.
 
-Tampr's V1 script download API does not download remote URLs. It accepts only
-generated text, a simple filename, an optional MIME type, and an optional
-`saveAs` choice.
+Tampr's script download API accepts either generated text or an http/https URL.
+Both shapes share a validated relative filename (subpaths allowed under
+Downloads, no parent segments or absolute paths) and an optional `saveAs`
+choice. URL downloads are not scoped to the snippet's granted hosts — a snippet
+that calls `Tampr.download({ url })` can fetch any http/https resource the
+service worker can reach. Treat URL-mode calls in imported snippets accordingly.
 
 Tampr imports only the native Tampr export format. Prototype data is not
 converted automatically, which keeps the import path smaller and avoids silent

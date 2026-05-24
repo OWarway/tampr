@@ -44,7 +44,7 @@ The listing should make these points plainly:
 - Tampr does not use accounts, telemetry, cloud sync, or remote snippet feeds.
 - Host access is requested for user-authored match rules.
 - Downloads access is used for user-triggered exports and the constrained
-  `Tampr.download()` API for generated text files.
+  `Tampr.download()` API for generated text or validated http/https URLs.
 - User Scripts may need to be enabled in Chrome extension details.
 - Imported snippets should be reviewed like source code.
 

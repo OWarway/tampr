@@ -78,7 +78,7 @@ user-invoked handoff rather than broad tab access.
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global
-Tampr API:
+Tampr API with two payload shapes — generated text or a remote URL:
 
 ```js
 await Tampr.download({
@@ -86,16 +86,25 @@ await Tampr.download({
   mimeType: 'application/json;charset=utf-8',
   text: JSON.stringify({ ok: true }, null, 2),
 });
+
+await Tampr.download({
+  filename: 'Tampr/videos/clip.mp4',
+  url: 'https://cdn.example.com/videos/clip.mp4',
+});
 ```
 
 The promise resolves with `{ downloadId }` when Chrome accepts the download.
 Tampr routes the request through `runtime.onUserScriptMessage`, validates it in
 the service worker, and then calls `chrome.downloads.download`.
 
-The V1 API intentionally supports generated text payloads only. It rejects path
-filenames, reserved filename characters, oversized text payloads, and multiline
-or comma-containing MIME types. Main-world snippets do not receive this API
-because page scripts can observe that execution world.
+Filenames may include forward-slash subpaths (Chrome creates them under the user's
+Downloads folder). The validator still rejects absolute paths, parent segments
+(`..`), reserved filename characters, control characters, oversized text payloads,
+and multiline or comma-containing MIME types. URL payloads must use `http` or
+`https` and stay under 2,000 characters; the snippet's host permission grant is
+not consulted, so a snippet authorized for one site can download from any HTTP
+origin. Main-world snippets do not receive this API because page scripts can
+observe that execution world.
 
 ## Data Portability
 
@@ -125,7 +134,8 @@ import path should stay small, native, and easy to trust.
 
 Automatic backups are deferred for V1. Manual workspace export is the supported
 backup path. Tampr declares `downloads` because workspace export and
-`Tampr.download()` both need a dependable browser download path. Workspace export
+`Tampr.download()` (text and URL payloads) both need a dependable browser
+download path. Workspace export
 still falls back to the in-page download path when the browser downloads API is
 unavailable. See [Trust Checks](./trust-checks.md) for the manual data, runtime,
 and permission checks to run before release.

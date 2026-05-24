@@ -112,8 +112,9 @@ native Tampr version 1 JSON:
 Imports are runtime-validated before storage changes and merge by stable snippet
 ID. Manual export is the V1 backup path. Tampr uses Chrome downloads access for
 workspace exports and for the user-script world `Tampr.download()` API, which
-only accepts generated text payloads and simple filenames. Automatic backups are
-deferred to avoid scheduled background writes.
+accepts generated text payloads or validated http/https URLs together with a
+relative downloads-folder filename. Automatic backups are deferred to avoid
+scheduled background writes.
 
 Read more:
 

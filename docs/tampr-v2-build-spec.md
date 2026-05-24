@@ -30,7 +30,8 @@ V1 includes:
 - Clear runtime and permission state, including User Scripts availability.
 - Local storage, import, and export through a native Tampr payload format.
 - A constrained `Tampr.download()` API for user-script world snippets to save
-  generated text files.
+  generated text files or fetch http/https URLs through the browser downloads
+  API.
 - Automated tests, CI, docs, and release hygiene from the beginning.
 
 V1 does not include:
@@ -230,13 +231,13 @@ Initial permission decisions:
 
 - Use the narrowest required permission set for implemented features.
 - Include `downloads` only because V1 supports workspace export and a
-  user-script-world `Tampr.download()` API for generated text files.
+  user-script-world `Tampr.download()` API for generated text and validated
+  http/https URLs.
 - Prefer runtime host permission flows where they keep the product usable.
 - Explain access state in onboarding, popup, docs, and store copy.
 - Do not add future-facing permissions just because later features might need
   them.
 - Keep remote code and hosted snippet execution out of V1.
-- Keep remote URL downloads out of the V1 script API.
 
 Permission-denied and capability-disabled states must be designed. They are not
 console-only errors.
@@ -407,7 +408,8 @@ Deliverables:
 
 - Import/export with versioned payloads.
 - Native Tampr import/export only; prototype migration is out of scope.
-- A validated script download API that accepts generated text, not remote URLs.
+- A validated script download API that accepts generated text or an http/https
+  URL through `chrome.downloads.download`.
 - Automatic backups explicitly deferred; manual export is the V1 backup path.
 - Permission explanations and onboarding refinement.
 - Privacy, security, and data-handling docs.
