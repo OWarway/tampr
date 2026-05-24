@@ -28,6 +28,7 @@ type SnippetEditorProps = {
   workspace: WorkspaceState | undefined;
   onDelete(): void;
   onDuplicate(): void;
+  onFolderChange(folder: string): void;
   onSave(): void;
   onUpdate(editor: EditorState): void;
 };
@@ -41,6 +42,7 @@ export function SnippetEditor({
   workspace,
   onDelete,
   onDuplicate,
+  onFolderChange,
   onSave,
   onUpdate,
 }: SnippetEditorProps) {
@@ -108,13 +110,17 @@ export function SnippetEditor({
                 aria-label="Folder"
                 value={folderSelectValue}
                 onChange={(event) => {
-                  onUpdate({
-                    ...editor,
-                    folder:
-                      event.target.value === CUSTOM_FOLDER_VALUE
-                        ? ''
-                        : event.target.value,
-                  });
+                  const nextFolder =
+                    event.target.value === CUSTOM_FOLDER_VALUE
+                      ? ''
+                      : event.target.value;
+
+                  if (event.target.value === CUSTOM_FOLDER_VALUE) {
+                    onUpdate({ ...editor, folder: nextFolder });
+                    return;
+                  }
+
+                  onFolderChange(nextFolder);
                 }}
               >
                 {folderOptions.map((folder) => (
@@ -131,6 +137,13 @@ export function SnippetEditor({
                   onChange={(event) =>
                     onUpdate({ ...editor, folder: event.target.value })
                   }
+                  onBlur={(event) => onFolderChange(event.currentTarget.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      onFolderChange(event.currentTarget.value);
+                    }
+                  }}
                 />
               ) : null}
             </div>

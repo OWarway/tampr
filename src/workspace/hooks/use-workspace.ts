@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { requestHostAccess } from '../../chrome/host-access';
 import {
@@ -8,6 +8,7 @@ import {
   saveSnippetDraft,
 } from '../../chrome/workspace-state';
 import { createSnippetExport } from '../../domain/snippet-export';
+import { SnippetDraftSchema, type Snippet } from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
 import { downloadJson } from '../download-json';
 import {
@@ -34,6 +35,7 @@ export type UseWorkspaceResult = {
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
   updateEditor(editor: EditorState): void;
+  updateEditorFolder(folder: string): void;
 };
 
 export function useWorkspace(): UseWorkspaceResult {
@@ -41,6 +43,7 @@ export function useWorkspace(): UseWorkspaceResult {
   const [editor, setEditor] = useState<EditorState>(newSnippetEditor);
   const [notice, setNotice] = useState('Loading local snippets.');
   const [busy, setBusy] = useState(true);
+  const folderSaveIdRef = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -207,6 +210,70 @@ export function useWorkspace(): UseWorkspaceResult {
     setEditor(nextEditor);
   }
 
+  function updateEditorFolder(folder: string): void {
+    const result = SnippetDraftSchema.pick({ folder: true }).safeParse({
+      folder,
+    });
+
+    if (!result.success) {
+      setNotice(result.error.issues[0]?.message ?? 'Folder is invalid.');
+      return;
+    }
+
+    const nextFolder = result.data.folder;
+    const nextEditor = { ...editor, folder: nextFolder };
+
+    setEditor(nextEditor);
+
+    if (!editor.id || !workspace) {
+      return;
+    }
+
+    const savedSnippet = workspace.snippets.find(
+      (snippet) => snippet.id === editor.id,
+    );
+
+    if (!savedSnippet || savedSnippet.folder === nextFolder) {
+      return;
+    }
+
+    void saveFolderChange(savedSnippet, nextFolder);
+  }
+
+  async function saveFolderChange(
+    savedSnippet: Snippet,
+    folder: string,
+  ): Promise<void> {
+    const saveId = folderSaveIdRef.current + 1;
+    folderSaveIdRef.current = saveId;
+
+    try {
+      const nextWorkspace = await saveSnippetDraft(
+        SnippetDraftSchema.parse({
+          id: savedSnippet.id,
+          name: savedSnippet.name,
+          folder,
+          enabled: savedSnippet.enabled,
+          matches: savedSnippet.matches,
+          excludeMatches: savedSnippet.excludeMatches,
+          css: savedSnippet.css,
+          js: savedSnippet.js,
+          runAt: savedSnippet.runAt,
+          world: savedSnippet.world,
+        }),
+      );
+
+      if (folderSaveIdRef.current === saveId) {
+        setWorkspace(nextWorkspace);
+        setNotice('Folder saved.');
+      }
+    } catch (error: unknown) {
+      if (folderSaveIdRef.current === saveId) {
+        setNotice(toErrorMessage(error));
+      }
+    }
+  }
+
   function shouldKeepUnsavedEditor(nextEditor: EditorState): boolean {
     if (!workspace || editor.id === nextEditor.id) {
       return false;
@@ -233,6 +300,7 @@ export function useWorkspace(): UseWorkspaceResult {
     saveEditor,
     selectEditor,
     updateEditor: setEditor,
+    updateEditorFolder,
   };
 }
 

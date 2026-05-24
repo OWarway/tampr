@@ -13,6 +13,7 @@ afterEach(cleanup);
 describe('SnippetEditor', () => {
   it('emits field updates and form actions', () => {
     const onDelete = vi.fn();
+    const onFolderChange = vi.fn();
     const onSave = vi.fn();
     const onUpdate = vi.fn();
 
@@ -25,6 +26,7 @@ describe('SnippetEditor', () => {
         workspace={undefined}
         onDelete={onDelete}
         onDuplicate={() => undefined}
+        onFolderChange={onFolderChange}
         onSave={onSave}
         onUpdate={onUpdate}
       />,
@@ -41,6 +43,7 @@ describe('SnippetEditor', () => {
       name: 'Updated proof',
     });
     expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onFolderChange).not.toHaveBeenCalled();
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
@@ -54,6 +57,7 @@ describe('SnippetEditor', () => {
         workspace={createHostAccessState()}
         onDelete={() => undefined}
         onDuplicate={() => undefined}
+        onFolderChange={() => undefined}
         onSave={() => undefined}
         onUpdate={() => undefined}
       />,
@@ -74,6 +78,7 @@ describe('SnippetEditor', () => {
         workspace={undefined}
         onDelete={() => undefined}
         onDuplicate={() => undefined}
+        onFolderChange={() => undefined}
         onSave={() => undefined}
         onUpdate={() => undefined}
       />,
@@ -100,6 +105,7 @@ describe('SnippetEditor', () => {
         workspace={undefined}
         onDelete={onDelete}
         onDuplicate={onDuplicate}
+        onFolderChange={() => undefined}
         onSave={() => undefined}
         onUpdate={() => undefined}
       />,
@@ -119,6 +125,7 @@ describe('SnippetEditor', () => {
   });
 
   it('shows saved folders in an explicit folder menu', () => {
+    const onFolderChange = vi.fn();
     const onUpdate = vi.fn();
 
     render(
@@ -136,6 +143,7 @@ describe('SnippetEditor', () => {
         }}
         onDelete={() => undefined}
         onDuplicate={() => undefined}
+        onFolderChange={onFolderChange}
         onSave={() => undefined}
         onUpdate={onUpdate}
       />,
@@ -151,13 +159,12 @@ describe('SnippetEditor', () => {
 
     fireEvent.change(savedFolders, { target: { value: 'Design' } });
 
-    expect(onUpdate).toHaveBeenCalledWith({
-      ...newSnippetEditor,
-      folder: 'Design',
-    });
+    expect(onFolderChange).toHaveBeenCalledWith('Design');
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it('shows a folder name field for unsaved custom folders', () => {
+    const onFolderChange = vi.fn();
     const onUpdate = vi.fn();
 
     render(
@@ -172,6 +179,7 @@ describe('SnippetEditor', () => {
         }}
         onDelete={() => undefined}
         onDuplicate={() => undefined}
+        onFolderChange={onFolderChange}
         onSave={() => undefined}
         onUpdate={onUpdate}
       />,
@@ -185,6 +193,12 @@ describe('SnippetEditor', () => {
       ...newSnippetEditor,
       folder: 'Workflows',
     });
+
+    fireEvent.blur(screen.getByLabelText('Folder name'), {
+      target: { value: 'Workflows' },
+    });
+
+    expect(onFolderChange).toHaveBeenCalledWith('Workflows');
   });
 
   it('validates rule lines and appends current page presets', () => {
@@ -206,6 +220,7 @@ describe('SnippetEditor', () => {
         workspace={undefined}
         onDelete={() => undefined}
         onDuplicate={() => undefined}
+        onFolderChange={() => undefined}
         onSave={() => undefined}
         onUpdate={onUpdate}
       />,

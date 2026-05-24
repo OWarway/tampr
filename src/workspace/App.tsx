@@ -47,6 +47,7 @@ export function App() {
           workspace={state.workspace}
           onDelete={() => void state.deleteEditor()}
           onDuplicate={state.duplicateCurrentEditor}
+          onFolderChange={state.updateEditorFolder}
           onSave={() => void state.saveEditor()}
           onUpdate={state.updateEditor}
         />

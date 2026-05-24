@@ -48,7 +48,8 @@ Before release, exercise:
 - Extension startup after Chrome restart.
 - Create, edit, enable, disable, duplicate, and delete snippet flows.
 - Create snippets in at least two folders and confirm the rail groups them.
-- Edit a saved snippet's folder and confirm it moves groups after save.
+- Edit a saved snippet's folder and confirm it auto-saves and moves groups
+  without saving unrelated unsaved code edits.
 - A matching CSS snippet on `https://example.com`.
 - A matching JavaScript snippet in the default user-script world.
 - A default user-script world snippet that calls

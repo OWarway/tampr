@@ -18,6 +18,7 @@ group changes under the headings below.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.
 - Lightweight folder grouping for workspace snippets.
+- Auto-save when moving saved snippets between folders.
 - Browser downloads support for workspace exports.
 - Constrained `Tampr.download()` runtime API for user-script world snippets,
   supporting generated text and validated http/https URL downloads.
