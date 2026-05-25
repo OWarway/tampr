@@ -92,6 +92,35 @@ describe('SnippetEditor', () => {
     expect(screen.queryByRole('textbox', { name: 'CSS code' })).toBeNull();
   });
 
+  it('explains runtime fields with help tooltips', () => {
+    render(
+      <SnippetEditor
+        busy={false}
+        dirty={true}
+        editor={newSnippetEditor}
+        notice="Ready."
+        workspace={undefined}
+        onDelete={() => undefined}
+        onDuplicate={() => undefined}
+        onFolderChange={() => undefined}
+        onSave={() => undefined}
+        onUpdate={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rules' }));
+
+    expect(screen.getByRole('button', { name: 'Enabled help' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Run help' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'World help' })).toBeTruthy();
+    expect(
+      screen.getByText(/Document idle is safest; document start runs earlier/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/User script runs in Chrome isolated script space/),
+    ).toBeTruthy();
+  });
+
   it('duplicates drafts and confirms saved snippet deletes', () => {
     const onDelete = vi.fn();
     const onDuplicate = vi.fn();

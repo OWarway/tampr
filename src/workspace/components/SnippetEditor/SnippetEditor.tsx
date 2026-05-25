@@ -16,6 +16,20 @@ import styles from './SnippetEditor.module.scss';
 
 const EDITOR_MODES = ['rules', 'css', 'javascript'] as const;
 const CUSTOM_FOLDER_VALUE = '__tampr_custom_folder__';
+const FIELD_HELP = {
+  enabled:
+    'Enabled snippets can run after their match rules and Chrome permissions allow them.',
+  excludeRules:
+    'Exclude rules stop this snippet on specific pages even when a match rule applies.',
+  folder:
+    'Folders are lightweight labels for keeping local snippets organized.',
+  matchRules:
+    'Match rules decide which pages can run this snippet. Use Chrome match patterns such as *://example.com/*.',
+  name: 'A short local name for finding and recognizing this snippet.',
+  run: 'Choose when JavaScript runs. Document idle is safest; document start runs earlier while the page is still loading.',
+  world:
+    'User script runs in Chrome isolated script space and gets Tampr APIs. Main runs beside page scripts and should be used only when a page integration needs it.',
+} as const;
 
 type EditorMode = (typeof EDITOR_MODES)[number];
 
@@ -93,21 +107,34 @@ export function SnippetEditor({
     <section className={styles.shell} aria-label="Snippet editor">
       <form className={styles.form} onSubmit={submit}>
         <div className={styles.identity}>
-          <label className={`${styles.field} ${styles.name}`}>
-            <span>Name</span>
+          <div className={`${styles.field} ${styles.name}`}>
+            <FieldLabel
+              help={FIELD_HELP.name}
+              helpId="snippet-name-help"
+              htmlFor="snippet-name"
+              label="Name"
+            />
             <input
+              aria-describedby="snippet-name-help"
+              id="snippet-name"
               value={editor.name}
               onChange={(event) =>
                 onUpdate({ ...editor, name: event.target.value })
               }
             />
-          </label>
+          </div>
 
           <div className={`${styles.field} ${styles.folder}`}>
-            <span>Folder</span>
+            <FieldLabel
+              help={FIELD_HELP.folder}
+              helpId="snippet-folder-help"
+              htmlFor="snippet-folder"
+              label="Folder"
+            />
             <div className={styles.folderControls}>
               <select
-                aria-label="Folder"
+                aria-describedby="snippet-folder-help"
+                id="snippet-folder"
                 value={folderSelectValue}
                 onChange={(event) => {
                   const nextFolder =
@@ -149,16 +176,25 @@ export function SnippetEditor({
             </div>
           </div>
 
-          <label className={styles.toggle}>
-            <input
-              checked={editor.enabled}
-              type="checkbox"
-              onChange={(event) =>
-                onUpdate({ ...editor, enabled: event.target.checked })
-              }
+          <div className={styles.toggle}>
+            <label htmlFor="snippet-enabled">
+              <input
+                aria-describedby="snippet-enabled-help"
+                checked={editor.enabled}
+                id="snippet-enabled"
+                type="checkbox"
+                onChange={(event) =>
+                  onUpdate({ ...editor, enabled: event.target.checked })
+                }
+              />
+              <span>Enabled</span>
+            </label>
+            <FieldHelp
+              help={FIELD_HELP.enabled}
+              helpId="snippet-enabled-help"
+              label="Enabled"
             />
-            <span>Enabled</span>
-          </label>
+          </div>
 
           <span
             className={`${styles.saveState} ${dirty ? styles.unsaved : ''}`}
@@ -186,28 +222,42 @@ export function SnippetEditor({
         {mode === 'rules' ? (
           <div className={styles.rules}>
             <div className={styles.ruleField}>
-              <label className={styles.field}>
-                <span>Match rules</span>
+              <div className={styles.field}>
+                <FieldLabel
+                  help={FIELD_HELP.matchRules}
+                  helpId="snippet-match-rules-help"
+                  htmlFor="snippet-match-rules"
+                  label="Match rules"
+                />
                 <textarea
+                  aria-describedby="snippet-match-rules-help"
+                  id="snippet-match-rules"
                   value={editor.matches}
                   onChange={(event) =>
                     onUpdate({ ...editor, matches: event.target.value })
                   }
                 />
-              </label>
+              </div>
               <RuleIssues issues={matchRuleIssues} />
             </div>
 
             <div className={styles.ruleField}>
-              <label className={styles.field}>
-                <span>Exclude rules</span>
+              <div className={styles.field}>
+                <FieldLabel
+                  help={FIELD_HELP.excludeRules}
+                  helpId="snippet-exclude-rules-help"
+                  htmlFor="snippet-exclude-rules"
+                  label="Exclude rules"
+                />
                 <textarea
+                  aria-describedby="snippet-exclude-rules-help"
+                  id="snippet-exclude-rules"
                   value={editor.excludeMatches}
                   onChange={(event) =>
                     onUpdate({ ...editor, excludeMatches: event.target.value })
                   }
                 />
-              </label>
+              </div>
               <RuleIssues issues={excludeRuleIssues} />
             </div>
 
@@ -232,9 +282,16 @@ export function SnippetEditor({
             </div>
 
             <div className={styles.settings}>
-              <label className={styles.setting}>
-                <span>Run</span>
+              <div className={styles.setting}>
+                <FieldLabel
+                  help={FIELD_HELP.run}
+                  helpId="snippet-run-help"
+                  htmlFor="snippet-run"
+                  label="Run"
+                />
                 <select
+                  aria-describedby="snippet-run-help"
+                  id="snippet-run"
                   value={editor.runAt}
                   onChange={(event) =>
                     onUpdate({
@@ -246,11 +303,18 @@ export function SnippetEditor({
                   <option value="document_idle">Document idle</option>
                   <option value="document_start">Document start</option>
                 </select>
-              </label>
+              </div>
 
-              <label className={styles.setting}>
-                <span>World</span>
+              <div className={styles.setting}>
+                <FieldLabel
+                  help={FIELD_HELP.world}
+                  helpId="snippet-world-help"
+                  htmlFor="snippet-world"
+                  label="World"
+                />
                 <select
+                  aria-describedby="snippet-world-help"
+                  id="snippet-world"
                   value={editor.world}
                   onChange={(event) =>
                     onUpdate({
@@ -262,7 +326,7 @@ export function SnippetEditor({
                   <option value="USER_SCRIPT">User script</option>
                   <option value="MAIN">Main</option>
                 </select>
-              </label>
+              </div>
             </div>
           </div>
         ) : (
@@ -318,6 +382,46 @@ export function SnippetEditor({
         </footer>
       </form>
     </section>
+  );
+}
+
+type FieldLabelProps = {
+  help: string;
+  helpId: string;
+  htmlFor: string;
+  label: string;
+};
+
+function FieldLabel({ help, helpId, htmlFor, label }: FieldLabelProps) {
+  return (
+    <div className={styles.labelRow}>
+      <label htmlFor={htmlFor}>{label}</label>
+      <FieldHelp help={help} helpId={helpId} label={label} />
+    </div>
+  );
+}
+
+type FieldHelpProps = {
+  help: string;
+  helpId: string;
+  label: string;
+};
+
+function FieldHelp({ help, helpId, label }: FieldHelpProps) {
+  return (
+    <span className={styles.help}>
+      <button
+        aria-describedby={helpId}
+        aria-label={`${label} help`}
+        className={styles.helpButton}
+        type="button"
+      >
+        ?
+      </button>
+      <span className={styles.tooltip} id={helpId} role="tooltip">
+        {help}
+      </span>
+    </span>
   );
 }
 

@@ -101,6 +101,79 @@
   }
 }
 
+.labelRow {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+
+  label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.help {
+  display: inline-flex;
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.helpButton {
+  align-items: center;
+  background: #edf4ef;
+  border-color: #b9cac1;
+  border-radius: 50%;
+  color: #29463d;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 18px;
+  justify-content: center;
+  min-height: 18px;
+  padding: 0;
+  width: 18px;
+
+  &:hover,
+  &:focus-visible {
+    background: #14594d;
+    border-color: #14594d;
+    color: #f7fbf8;
+  }
+}
+
+.tooltip {
+  background: #14201b;
+  border: 1px solid #29463d;
+  border-radius: 8px;
+  bottom: calc(100% + 8px);
+  box-shadow: 0 10px 28px rgb(20 32 27 / 18%);
+  color: #f7fbf8;
+  font-size: 12px;
+  font-weight: 700;
+  left: 50%;
+  line-height: 1.45;
+  max-width: min(280px, 68vw);
+  opacity: 0;
+  padding: 9px 10px;
+  pointer-events: none;
+  position: absolute;
+  text-transform: none;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  width: max-content;
+  z-index: 20;
+}
+
+.help:hover .tooltip,
+.help:focus-within .tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .rules {
   align-content: start;
   display: grid;
@@ -196,6 +269,12 @@
   display: flex;
   gap: 8px;
   min-height: 42px;
+
+  label {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+  }
 
   input {
     accent-color: #14594d;
