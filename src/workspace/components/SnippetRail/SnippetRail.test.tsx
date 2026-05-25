@@ -11,7 +11,10 @@ import {
 } from '../../editor-state';
 import { SnippetRail } from './SnippetRail';
 
-afterEach(cleanup);
+afterEach(() => {
+  window.localStorage.clear();
+  cleanup();
+});
 
 describe('SnippetRail', () => {
   it('creates a new editor and selects saved snippets', () => {
@@ -114,6 +117,26 @@ describe('SnippetRail', () => {
     expect(screen.getByRole('button', { name: /Theme cleanup/ })).toBeTruthy();
   });
 
+  it('keeps collapsed folder state across workspace mounts', () => {
+    const snippets = [
+      createSnippet({ folder: 'Design', name: 'Theme cleanup' }),
+      createSnippet({ name: 'Default proof' }),
+    ];
+    const { unmount } = renderRail({ snippets });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Collapse Design folder' }),
+    );
+
+    unmount();
+    renderRail({ snippets });
+
+    expect(screen.queryByRole('button', { name: /Theme cleanup/ })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Expand Design folder' }),
+    ).toBeTruthy();
+  });
+
   it('renames folder sections', () => {
     const onRenameFolder = vi.fn();
 
@@ -122,6 +145,13 @@ describe('SnippetRail', () => {
       onRenameFolder,
     });
 
+    expect(
+      screen.queryByRole('button', { name: 'Rename Design folder' }),
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Manage Design folder' }),
+    );
     fireEvent.click(
       screen.getByRole('button', { name: 'Rename Design folder' }),
     );
@@ -144,10 +174,17 @@ describe('SnippetRail', () => {
       onDeleteFolder,
     });
 
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Manage General folder' }),
+    );
+
     expect(
       screen.queryByRole('button', { name: 'Delete General folder' }),
     ).toBeNull();
 
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Manage Design folder' }),
+    );
     fireEvent.click(
       screen.getByRole('button', { name: 'Delete Design folder' }),
     );

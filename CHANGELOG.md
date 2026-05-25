@@ -17,7 +17,7 @@ group changes under the headings below.
 - Popup current-page status with enable and disable controls.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.
-- Lightweight, collapsible folder grouping for workspace snippets.
+- Lightweight, persistent, collapsible folder grouping for workspace snippets.
 - Folder rename and delete-to-General management from the workspace rail.
 - Auto-save when moving saved snippets between folders.
 - Browser downloads support for workspace exports.

@@ -49,6 +49,8 @@ Before release, exercise:
 - Create, edit, enable, disable, duplicate, and delete snippet flows.
 - Create snippets in at least two folders and confirm the rail groups them into
   collapsible sections.
+- Collapse a folder section, reopen the workspace, and confirm the collapsed
+  state is retained.
 - Rename a folder from the rail and confirm its snippets move under the new
   section without changing their code.
 - Delete a non-General folder from the rail and confirm its snippets move back

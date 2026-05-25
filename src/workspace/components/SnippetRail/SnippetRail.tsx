@@ -5,6 +5,8 @@ import { toEditorState, type EditorState } from '../../editor-state';
 
 import styles from './SnippetRail.module.scss';
 
+const COLLAPSED_FOLDERS_STORAGE_KEY = 'tampr.workspace.collapsedFolders';
+
 type SnippetRailProps = {
   editor: EditorState;
   snippets: readonly Snippet[];
@@ -22,9 +24,9 @@ export function SnippetRail({
   onRenameFolder,
   onSelect,
 }: SnippetRailProps) {
-  const [collapsedFolders, setCollapsedFolders] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  const [collapsedFolders, setCollapsedFolders] =
+    useState<ReadonlySet<string>>(readCollapsedFolders);
+  const [managedFolder, setManagedFolder] = useState<string>();
   const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string>();
   const [editingFolder, setEditingFolder] = useState<{
     folder: string;
@@ -45,11 +47,21 @@ export function SnippetRail({
         nextFolders.add(folder);
       }
 
+      writeCollapsedFolders(nextFolders);
       return nextFolders;
     });
   }
 
+  function toggleFolderMenu(folder: string): void {
+    setEditingFolder(undefined);
+    setPendingDeleteFolder(undefined);
+    setManagedFolder((currentFolder) =>
+      currentFolder === folder ? undefined : folder,
+    );
+  }
+
   function startFolderRename(folder: string): void {
+    setManagedFolder(undefined);
     setPendingDeleteFolder(undefined);
     setEditingFolder({ folder, value: folder });
   }
@@ -81,6 +93,7 @@ export function SnippetRail({
       return;
     }
 
+    setManagedFolder(undefined);
     setEditingFolder(undefined);
     setPendingDeleteFolder(folder);
   }
@@ -133,7 +146,20 @@ export function SnippetRail({
                   </span>
                 </button>
 
-                <div className={styles.folderActions}>
+                <button
+                  aria-expanded={managedFolder === group.folder}
+                  aria-label={`Manage ${group.folder} folder`}
+                  className={styles.menuButton}
+                  title={`Manage ${group.folder} folder`}
+                  type="button"
+                  onClick={() => toggleFolderMenu(group.folder)}
+                >
+                  ...
+                </button>
+              </div>
+
+              {managedFolder === group.folder ? (
+                <div className={styles.folderMenu}>
                   <button
                     aria-label={`Rename ${group.folder} folder`}
                     className={styles.manageButton}
@@ -153,7 +179,7 @@ export function SnippetRail({
                     </button>
                   ) : null}
                 </div>
-              </div>
+              ) : null}
 
               {editingFolder?.folder === group.folder ? (
                 <form
@@ -290,4 +316,47 @@ function compareFolders(left: string, right: string): number {
   }
 
   return left.localeCompare(right);
+}
+
+function readCollapsedFolders(): ReadonlySet<string> {
+  try {
+    const storedFolders = window.localStorage.getItem(
+      COLLAPSED_FOLDERS_STORAGE_KEY,
+    );
+
+    if (!storedFolders) {
+      return new Set();
+    }
+
+    const parsedFolders = JSON.parse(storedFolders) as unknown;
+
+    if (!Array.isArray(parsedFolders)) {
+      return new Set();
+    }
+
+    return new Set(
+      parsedFolders.filter(
+        (folder): folder is string =>
+          typeof folder === 'string' && folder.trim().length > 0,
+      ),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function writeCollapsedFolders(folders: ReadonlySet<string>): void {
+  try {
+    if (folders.size === 0) {
+      window.localStorage.removeItem(COLLAPSED_FOLDERS_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      COLLAPSED_FOLDERS_STORAGE_KEY,
+      JSON.stringify([...folders]),
+    );
+  } catch {
+    // Folder collapse state is a convenience, so storage failures stay silent.
+  }
 }
