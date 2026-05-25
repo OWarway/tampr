@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 
 import { requestHostAccess } from '../../chrome/host-access';
 import {
+  deleteSnippetFolder,
   getWorkspaceState,
   importSnippetExport,
+  renameSnippetFolder,
   removeSnippet,
   saveSnippetDraft,
 } from '../../chrome/workspace-state';
 import { createSnippetExport } from '../../domain/snippet-export';
-import { SnippetDraftSchema, type Snippet } from '../../domain/snippets';
+import {
+  DEFAULT_SNIPPET_FOLDER,
+  SnippetDraftSchema,
+  type Snippet,
+} from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
 import { downloadJson } from '../download-json';
 import {
@@ -30,12 +36,21 @@ export type UseWorkspaceResult = {
   clearEditor(): void;
   deleteEditor(): Promise<void>;
   duplicateCurrentEditor(): void;
+  deleteFolder(folder: string): Promise<void>;
   exportWorkspace(): Promise<void>;
   importWorkspaceFile(file: File): Promise<void>;
+  renameFolder(folder: string, nextFolder: string): Promise<void>;
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
   updateEditor(editor: EditorState): void;
   updateEditorFolder(folder: string): void;
+};
+
+type UpdateFolderLabelsInput = {
+  folder: string;
+  nextFolder: string;
+  save: () => Promise<WorkspaceState>;
+  successNotice: string;
 };
 
 export function useWorkspace(): UseWorkspaceResult {
@@ -240,6 +255,76 @@ export function useWorkspace(): UseWorkspaceResult {
     void saveFolderChange(savedSnippet, nextFolder);
   }
 
+  async function renameFolder(
+    folder: string,
+    nextFolder: string,
+  ): Promise<void> {
+    const result = SnippetDraftSchema.pick({ folder: true }).safeParse({
+      folder: nextFolder,
+    });
+
+    if (!result.success) {
+      setNotice(result.error.issues[0]?.message ?? 'Folder is invalid.');
+      return;
+    }
+
+    const parsedNextFolder = result.data.folder;
+
+    if (folder === parsedNextFolder) {
+      return;
+    }
+
+    await updateFolderLabels({
+      folder,
+      nextFolder: parsedNextFolder,
+      save: () => renameSnippetFolder(folder, parsedNextFolder),
+      successNotice: `Folder renamed to ${parsedNextFolder}.`,
+    });
+  }
+
+  async function deleteFolder(folder: string): Promise<void> {
+    if (folder === DEFAULT_SNIPPET_FOLDER) {
+      return;
+    }
+
+    await updateFolderLabels({
+      folder,
+      nextFolder: DEFAULT_SNIPPET_FOLDER,
+      save: () => deleteSnippetFolder(folder),
+      successNotice: `Folder moved to ${DEFAULT_SNIPPET_FOLDER}.`,
+    });
+  }
+
+  async function updateFolderLabels({
+    folder,
+    nextFolder,
+    save,
+    successNotice,
+  }: UpdateFolderLabelsInput): Promise<void> {
+    if (!workspace) {
+      setNotice('Workspace is still loading.');
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const nextWorkspace = await save();
+
+      setWorkspace(nextWorkspace);
+      setEditor((currentEditor) =>
+        currentEditor.folder === folder
+          ? { ...currentEditor, folder: nextFolder }
+          : currentEditor,
+      );
+      setNotice(successNotice);
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function saveFolderChange(
     savedSnippet: Snippet,
     folder: string,
@@ -294,9 +379,11 @@ export function useWorkspace(): UseWorkspaceResult {
     workspace,
     clearEditor,
     deleteEditor,
+    deleteFolder,
     duplicateCurrentEditor,
     exportWorkspace,
     importWorkspaceFile,
+    renameFolder,
     saveEditor,
     selectEditor,
     updateEditor: setEditor,

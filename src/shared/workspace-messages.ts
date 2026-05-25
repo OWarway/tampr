@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import {
   SnippetDraftSchema,
+  SnippetFolderSchema,
   SnippetIdSchema,
   SnippetSchema,
 } from '../domain/snippets';
@@ -40,6 +41,17 @@ export const ImportSnippetsMessageSchema = z.object({
   payload: z.unknown(),
 });
 
+export const RenameFolderMessageSchema = z.object({
+  type: z.literal('folders/rename'),
+  folder: SnippetFolderSchema,
+  nextFolder: SnippetFolderSchema,
+});
+
+export const DeleteFolderMessageSchema = z.object({
+  type: z.literal('folders/delete'),
+  folder: SnippetFolderSchema,
+});
+
 export const ExtensionMessageSchema = z.union([
   GetWorkspaceStateMessageSchema,
   GetPageStateMessageSchema,
@@ -47,6 +59,8 @@ export const ExtensionMessageSchema = z.union([
   RemoveSnippetMessageSchema,
   SetSnippetEnabledMessageSchema,
   ImportSnippetsMessageSchema,
+  RenameFolderMessageSchema,
+  DeleteFolderMessageSchema,
 ]);
 
 export type ExtensionMessage = z.infer<typeof ExtensionMessageSchema>;

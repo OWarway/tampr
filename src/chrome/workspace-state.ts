@@ -20,6 +20,23 @@ export async function removeSnippet(
   return sendWorkspaceMessage({ type: 'snippets/remove', snippetId });
 }
 
+export async function renameSnippetFolder(
+  folder: string,
+  nextFolder: string,
+): Promise<WorkspaceState> {
+  return sendWorkspaceMessage({
+    type: 'folders/rename',
+    folder,
+    nextFolder,
+  });
+}
+
+export async function deleteSnippetFolder(
+  folder: string,
+): Promise<WorkspaceState> {
+  return sendWorkspaceMessage({ type: 'folders/delete', folder });
+}
+
 export async function importSnippetExport(
   payload: unknown,
 ): Promise<WorkspaceState> {

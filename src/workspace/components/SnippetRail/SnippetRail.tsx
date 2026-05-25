@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 
 import { DEFAULT_SNIPPET_FOLDER, type Snippet } from '../../../domain/snippets';
 import { toEditorState, type EditorState } from '../../editor-state';
@@ -9,6 +9,8 @@ type SnippetRailProps = {
   editor: EditorState;
   snippets: readonly Snippet[];
   onCreate(): void;
+  onDeleteFolder(folder: string): void;
+  onRenameFolder(folder: string, nextFolder: string): void;
   onSelect(editor: EditorState): void;
 };
 
@@ -16,11 +18,77 @@ export function SnippetRail({
   editor,
   snippets,
   onCreate,
+  onDeleteFolder,
+  onRenameFolder,
   onSelect,
 }: SnippetRailProps) {
+  const [collapsedFolders, setCollapsedFolders] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string>();
+  const [editingFolder, setEditingFolder] = useState<{
+    folder: string;
+    value: string;
+  }>();
   const [query, setQuery] = useState('');
   const visibleSnippets = filterSnippets(snippets, query);
   const folderGroups = groupSnippetsByFolder(visibleSnippets);
+  const searching = query.trim().length > 0;
+
+  function toggleFolder(folder: string): void {
+    setCollapsedFolders((folders) => {
+      const nextFolders = new Set(folders);
+
+      if (nextFolders.has(folder)) {
+        nextFolders.delete(folder);
+      } else {
+        nextFolders.add(folder);
+      }
+
+      return nextFolders;
+    });
+  }
+
+  function startFolderRename(folder: string): void {
+    setPendingDeleteFolder(undefined);
+    setEditingFolder({ folder, value: folder });
+  }
+
+  function submitFolderRename(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+
+    if (!editingFolder) {
+      return;
+    }
+
+    const nextFolder = editingFolder.value.trim();
+
+    if (!nextFolder) {
+      return;
+    }
+
+    if (nextFolder === editingFolder.folder) {
+      setEditingFolder(undefined);
+      return;
+    }
+
+    onRenameFolder(editingFolder.folder, nextFolder);
+    setEditingFolder(undefined);
+  }
+
+  function startFolderDelete(folder: string): void {
+    if (folder === DEFAULT_SNIPPET_FOLDER) {
+      return;
+    }
+
+    setEditingFolder(undefined);
+    setPendingDeleteFolder(folder);
+  }
+
+  function confirmFolderDelete(folder: string): void {
+    onDeleteFolder(folder);
+    setPendingDeleteFolder(undefined);
+  }
 
   return (
     <aside className={styles.rail} aria-label="Snippets">
@@ -39,36 +107,126 @@ export function SnippetRail({
         />
       </label>
       <div className={styles.groups}>
-        {folderGroups.map((group) => (
-          <section
-            aria-label={`${group.folder} snippets`}
-            className={styles.group}
-            key={group.folder}
-          >
-            <h3 aria-label={`${group.folder} ${group.snippets.length}`}>
-              <span>{group.folder}</span>
-              <span>{group.snippets.length}</span>
-            </h3>
-            <ol className={styles.list}>
-              {group.snippets.map((snippet) => (
-                <li key={snippet.id}>
+        {folderGroups.map((group) => {
+          const expanded = searching || !collapsedFolders.has(group.folder);
+
+          return (
+            <section
+              aria-label={`${group.folder} snippets`}
+              className={styles.group}
+              key={group.folder}
+            >
+              <div className={styles.groupHeader}>
+                <button
+                  aria-expanded={expanded}
+                  aria-label={`${expanded ? 'Collapse' : 'Expand'} ${
+                    group.folder
+                  } folder`}
+                  className={styles.folderToggle}
+                  type="button"
+                  onClick={() => toggleFolder(group.folder)}
+                >
+                  <span className={styles.chevron} aria-hidden="true" />
+                  <span className={styles.folderName}>{group.folder}</span>
+                  <span className={styles.count} aria-hidden="true">
+                    {group.snippets.length}
+                  </span>
+                </button>
+
+                <div className={styles.folderActions}>
                   <button
-                    className={`${styles.item} ${
-                      snippet.id === editor.id ? styles.selected : ''
-                    }`}
+                    aria-label={`Rename ${group.folder} folder`}
+                    className={styles.manageButton}
                     type="button"
-                    onClick={() => onSelect(toEditorState(snippet))}
+                    onClick={() => startFolderRename(group.folder)}
                   >
-                    <strong>{snippet.name}</strong>
-                    <span className={styles.meta}>
-                      {snippet.matches[0] ?? 'No match rule'}
-                    </span>
+                    Rename
                   </button>
-                </li>
-              ))}
-            </ol>
-          </section>
-        ))}
+                  {group.folder !== DEFAULT_SNIPPET_FOLDER ? (
+                    <button
+                      aria-label={`Delete ${group.folder} folder`}
+                      className={`${styles.manageButton} ${styles.dangerButton}`}
+                      type="button"
+                      onClick={() => startFolderDelete(group.folder)}
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {editingFolder?.folder === group.folder ? (
+                <form
+                  className={styles.folderForm}
+                  onSubmit={submitFolderRename}
+                >
+                  <input
+                    aria-label={`Folder name for ${group.folder}`}
+                    maxLength={80}
+                    required
+                    value={editingFolder.value}
+                    onChange={(event) =>
+                      setEditingFolder({
+                        ...editingFolder,
+                        value: event.target.value,
+                      })
+                    }
+                  />
+                  <button type="submit">Save folder</button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingFolder(undefined)}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : null}
+
+              {pendingDeleteFolder === group.folder ? (
+                <div className={styles.folderDelete}>
+                  <span>
+                    Move {group.snippets.length}{' '}
+                    {group.snippets.length === 1 ? 'snippet' : 'snippets'} to{' '}
+                    {DEFAULT_SNIPPET_FOLDER}.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => confirmFolderDelete(group.folder)}
+                  >
+                    Move snippets to {DEFAULT_SNIPPET_FOLDER}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingDeleteFolder(undefined)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
+
+              {expanded ? (
+                <ol className={styles.list}>
+                  {group.snippets.map((snippet) => (
+                    <li key={snippet.id}>
+                      <button
+                        className={`${styles.item} ${
+                          snippet.id === editor.id ? styles.selected : ''
+                        }`}
+                        type="button"
+                        onClick={() => onSelect(toEditorState(snippet))}
+                      >
+                        <strong>{snippet.name}</strong>
+                        <span className={styles.meta}>
+                          {snippet.matches[0] ?? 'No match rule'}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </section>
+          );
+        })}
       </div>
       {snippets.length === 0 ? (
         <p className={styles.empty}>No snippets yet.</p>

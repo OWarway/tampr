@@ -36,6 +36,10 @@ export function App() {
           editor={state.editor}
           snippets={state.workspace?.snippets ?? []}
           onCreate={state.clearEditor}
+          onDeleteFolder={(folder) => void state.deleteFolder(folder)}
+          onRenameFolder={(folder, nextFolder) =>
+            void state.renameFolder(folder, nextFolder)
+          }
           onSelect={state.selectEditor}
         />
         <SnippetEditor

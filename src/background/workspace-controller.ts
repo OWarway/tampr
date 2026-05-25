@@ -1,5 +1,6 @@
 import {
   buildSnippet,
+  DEFAULT_SNIPPET_FOLDER,
   SnippetDraftSchema,
   type Snippet,
 } from '../domain/snippets';
@@ -133,6 +134,30 @@ export class WorkspaceController {
       };
     }
 
+    if (parsedMessage.data.type === 'folders/rename') {
+      await this.updateSnippetFolders(
+        parsedMessage.data.folder,
+        parsedMessage.data.nextFolder,
+      );
+
+      return {
+        ok: true,
+        state: await this.readState(),
+      };
+    }
+
+    if (parsedMessage.data.type === 'folders/delete') {
+      await this.updateSnippetFolders(
+        parsedMessage.data.folder,
+        DEFAULT_SNIPPET_FOLDER,
+      );
+
+      return {
+        ok: true,
+        state: await this.readState(),
+      };
+    }
+
     const draft = SnippetDraftSchema.parse(parsedMessage.data.draft);
     const previous = draft.id
       ? await this.dependencies.snippets.find(draft.id)
@@ -156,6 +181,27 @@ export class WorkspaceController {
     return this.dependencies.runtimeSync(
       await this.dependencies.snippets.list(),
     );
+  }
+
+  private async updateSnippetFolders(
+    folder: string,
+    nextFolder: string,
+  ): Promise<void> {
+    if (folder === nextFolder) {
+      return;
+    }
+
+    const snippets = await this.dependencies.snippets.list();
+    const now = this.dependencies.now();
+    const nextSnippets = snippets.map((snippet) =>
+      snippet.folder === folder
+        ? { ...snippet, folder: nextFolder, updatedAt: now }
+        : snippet,
+    );
+
+    if (nextSnippets.some((snippet, index) => snippet !== snippets[index])) {
+      await this.dependencies.snippets.replaceAll(nextSnippets);
+    }
   }
 
   private async readState(): Promise<WorkspaceState> {

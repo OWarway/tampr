@@ -47,7 +47,12 @@ Before release, exercise:
 - Fresh install with User Scripts disabled.
 - Extension startup after Chrome restart.
 - Create, edit, enable, disable, duplicate, and delete snippet flows.
-- Create snippets in at least two folders and confirm the rail groups them.
+- Create snippets in at least two folders and confirm the rail groups them into
+  collapsible sections.
+- Rename a folder from the rail and confirm its snippets move under the new
+  section without changing their code.
+- Delete a non-General folder from the rail and confirm its snippets move back
+  to General.
 - Edit a saved snippet's folder and confirm it auto-saves and moves groups
   without saving unrelated unsaved code edits.
 - A matching CSS snippet on `https://example.com`.

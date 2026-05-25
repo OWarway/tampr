@@ -9,7 +9,7 @@ captured in [the build spec](./docs/tampr-v2-build-spec.md).
 ## What It Does
 
 - Creates and edits local CSS and JavaScript snippets.
-- Groups snippets into lightweight folders in the workspace.
+- Groups snippets into collapsible, lightweight folders in the workspace.
 - Targets snippets with Chrome web match rules and exclude rules.
 - Shows what matches the current page from the popup.
 - Enables and disables matching snippets quickly.

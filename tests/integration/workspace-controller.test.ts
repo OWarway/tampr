@@ -6,6 +6,7 @@ import {
 } from '../../src/background/workspace-controller';
 import {
   buildSnippet,
+  DEFAULT_SNIPPET_FOLDER,
   SnippetDraftSchema,
   type Snippet,
 } from '../../src/domain/snippets';
@@ -199,6 +200,63 @@ describe('WorkspaceController', () => {
       importedReplacement,
       importedNew,
     ]);
+  });
+
+  it('renames folder labels before syncing state', async () => {
+    const design = createSnippet('design-snippet', { folder: 'Design' });
+    const general = createSnippet('general-snippet');
+    const renamed = {
+      ...design,
+      folder: 'Research',
+      updatedAt: 1_748_000_000_000,
+    };
+    const snippets = new MemorySnippetStore([design, general]);
+    const runtimeSync = new RuntimeSync();
+    const controller = createController({ runtimeSync, snippets });
+
+    const response = await controller.handleMessage({
+      type: 'folders/rename',
+      folder: 'Design',
+      nextFolder: 'Research',
+    });
+
+    expect(response).toEqual({
+      ok: true,
+      state: {
+        snippets: [renamed, general],
+        runtime: readyRuntime(2),
+      },
+    });
+    expect(snippets.values).toEqual([renamed, general]);
+    expect(runtimeSync.calls.at(-1)).toEqual([renamed, general]);
+  });
+
+  it('moves deleted folder labels back to General before syncing state', async () => {
+    const archived = createSnippet('archived-snippet', { folder: 'Archived' });
+    const other = createSnippet('other-snippet', { folder: 'Design' });
+    const moved = {
+      ...archived,
+      folder: DEFAULT_SNIPPET_FOLDER,
+      updatedAt: 1_748_000_000_000,
+    };
+    const snippets = new MemorySnippetStore([archived, other]);
+    const runtimeSync = new RuntimeSync();
+    const controller = createController({ runtimeSync, snippets });
+
+    const response = await controller.handleMessage({
+      type: 'folders/delete',
+      folder: 'Archived',
+    });
+
+    expect(response).toEqual({
+      ok: true,
+      state: {
+        snippets: [moved, other],
+        runtime: readyRuntime(2),
+      },
+    });
+    expect(snippets.values).toEqual([moved, other]);
+    expect(runtimeSync.calls.at(-1)).toEqual([moved, other]);
   });
 
   it('rejects unsupported import payloads without changing snippets', async () => {

@@ -29,28 +29,145 @@
   display: grid;
   gap: 8px;
   min-width: 0;
+}
 
-  h3 {
-    align-items: center;
-    color: #29463d;
-    display: flex;
+.groupHeader {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.folderToggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #29463d;
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  letter-spacing: 0;
+  line-height: 1.2;
+  min-height: 32px;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  text-transform: uppercase;
+  width: 100%;
+
+  &:hover {
+    background: transparent;
+    color: #14594d;
+  }
+
+  &:hover .folderName {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.chevron {
+  border-bottom: 2px solid currentcolor;
+  border-right: 2px solid currentcolor;
+  height: 7px;
+  justify-self: center;
+  transform: rotate(-45deg);
+  transition: transform 140ms ease;
+  width: 7px;
+}
+
+.folderToggle[aria-expanded='true'] .chevron {
+  transform: rotate(45deg);
+}
+
+.folderName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  background: #e2f1e7;
+  border: 1px solid #b9cac1;
+  border-radius: 8px;
+  color: #29463d;
+  min-width: 24px;
+  padding: 3px 7px;
+  text-align: center;
+}
+
+.folderActions {
+  display: flex;
+  gap: 4px;
+  justify-self: start;
+}
+
+.manageButton {
+  background: rgb(255 255 255 / 76%);
+  border-color: #b9cac1;
+  color: #29463d;
+  font-size: 12px;
+  min-height: 30px;
+  padding: 0 8px;
+  white-space: nowrap;
+
+  &:hover {
+    background: #f7fbf8;
+    border-color: #79a78f;
+  }
+}
+
+.dangerButton {
+  color: #8b2f20;
+
+  &:hover {
+    border-color: #d44d3a;
+  }
+}
+
+.folderForm {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+
+  input {
+    background: rgb(255 255 255 / 86%);
+    border: 1px solid #b9cac1;
+    border-radius: 6px;
+    color: #14201b;
+    min-height: 36px;
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  button {
     font-size: 12px;
-    gap: 8px;
-    justify-content: space-between;
-    letter-spacing: 0;
-    line-height: 1.2;
-    margin: 0;
-    text-transform: uppercase;
+    min-height: 36px;
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+}
 
-    span:last-child {
-      background: #e2f1e7;
-      border: 1px solid #b9cac1;
-      border-radius: 8px;
-      color: #29463d;
-      min-width: 24px;
-      padding: 3px 7px;
-      text-align: center;
-    }
+.folderDelete {
+  align-items: center;
+  background: #fff8f3;
+  border: 1px solid #e0b7a7;
+  border-radius: 8px;
+  color: #5a2e24;
+  display: grid;
+  font-size: 12px;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  line-height: 1.4;
+  padding: 8px;
+
+  button {
+    font-size: 12px;
+    min-height: 32px;
+    padding: 0 8px;
+    white-space: nowrap;
   }
 }
 
@@ -126,5 +243,10 @@
   .rail {
     border-bottom: 1px solid #c7d2cc;
     border-right: 0;
+  }
+
+  .folderDelete,
+  .folderForm {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
