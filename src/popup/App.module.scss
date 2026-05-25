@@ -22,6 +22,19 @@
   }
 }
 
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+
+  img {
+    flex: 0 0 auto;
+    height: 34px;
+    width: 34px;
+  }
+}
+
 .label {
   color: #53645b;
   font-size: 12px;

@@ -13,9 +13,12 @@ type WorkspaceHeaderProps = {
 export function WorkspaceHeader({ actions, workspace }: WorkspaceHeaderProps) {
   return (
     <header className={styles.header}>
-      <div>
-        <p>Tampr</p>
-        <h1>Workspace</h1>
+      <div className={styles.brand}>
+        <img alt="" aria-hidden="true" src="/icons/tampr.svg" />
+        <div>
+          <p>Tampr</p>
+          <h1>Workspace</h1>
+        </div>
       </div>
       <div className={styles.meta}>
         <span className={styles.status}>{runtimeLabel(workspace)}</span>

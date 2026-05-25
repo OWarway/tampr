@@ -24,6 +24,19 @@
   }
 }
 
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+
+  img {
+    flex: 0 0 auto;
+    height: 40px;
+    width: 40px;
+  }
+}
+
 .status {
   background: #f9fcfa;
   border: 1px solid #c7d2cc;

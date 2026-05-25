@@ -14,9 +14,12 @@ export function App() {
   return (
     <main className={styles.popup}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.label}>Current page</p>
-          <h1>Tampr</h1>
+        <div className={styles.brand}>
+          <img alt="" aria-hidden="true" src="/icons/tampr.svg" />
+          <div>
+            <p className={styles.label}>Current page</p>
+            <h1>Tampr</h1>
+          </div>
         </div>
         <button type="button" onClick={() => void openWorkspace()}>
           Workspace
