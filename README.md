@@ -77,6 +77,12 @@ Useful commands:
 
 See [Development](./docs/development.md) for the full local workflow.
 
+## Pre-Releases
+
+Tampr publishes GitHub pre-releases from version tags. Pushing a tag like
+`v0.1.0-alpha.1` runs the release workflow, builds the extension, packages
+`dist`, and attaches `tampr-v0.1.0-alpha.1.zip` to the GitHub release.
+
 ## Architecture
 
 ```text

@@ -154,6 +154,20 @@ and permission checks to run before release.
 | `npm run test:e2e`      | Build and run Playwright extension smoke tests.            |
 | `npm run typecheck`     | Run strict TypeScript checking.                            |
 
+## Pre-Releases
+
+GitHub pre-releases are created from version tags. The release workflow runs the
+same quality gates as CI, installs Chromium for the extension smoke test, builds
+`dist`, and uploads a zip of the unpacked extension.
+
+```sh
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
+```
+
+Use a new tag for each pre-release; do not move published tags unless a release
+was created by mistake and has already been deleted.
+
 ## Component Conventions
 
 Feature components live in their own folders with their source, SCSS module, and
