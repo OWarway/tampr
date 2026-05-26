@@ -56,8 +56,8 @@ fix: preserve editor state on failed save
 docs: define trust checks
 ```
 
-Keep commits coherent and reviewable. Do not include AI attribution trailers or
-AI-specific wording in commit messages.
+Keep commits coherent and reviewable. Do not include generated attribution
+trailers or tool-specific wording in commit messages.
 
 ## Pull Request Checklist
 

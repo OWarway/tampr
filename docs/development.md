@@ -183,5 +183,5 @@ chore: scaffold the extension foundation
 test: cover snippet defaults
 ```
 
-Keep commits coherent and reviewable. Do not add AI attribution trailers or
-AI-specific wording to commit messages for now.
+Keep commits coherent and reviewable. Do not add generated attribution trailers
+or tool-specific wording to commit messages for now.
