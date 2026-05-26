@@ -1,21 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
   <title id="title">Tampr icon</title>
-  <desc id="desc">A compact Tampr T mark on a deep green rounded square with a warm editing accent.</desc>
+  <desc id="desc">A white Tampr T between blue code chevrons on a dark rounded square.</desc>
   <defs>
-    <linearGradient id="tampr-bg" x1="22" x2="106" y1="14" y2="118" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#176756" />
-      <stop offset="0.62" stop-color="#104c42" />
-      <stop offset="1" stop-color="#0b312c" />
+    <linearGradient id="tile" x1="18" x2="112" y1="12" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#082a58" />
+      <stop offset="0.58" stop-color="#05234b" />
+      <stop offset="1" stop-color="#031936" />
     </linearGradient>
-    <linearGradient id="tampr-shine" x1="24" x2="104" y1="10" y2="70" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffffff" stop-opacity="0.22" />
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    <radialGradient id="glow" cx="34" cy="20" r="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#114d94" stop-opacity="0.65" />
+      <stop offset="0.44" stop-color="#0a3267" stop-opacity="0.24" />
+      <stop offset="1" stop-color="#031936" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="code" x1="31" x2="101" y1="59" y2="77" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0a66ff" />
+      <stop offset="0.5" stop-color="#168cff" />
+      <stop offset="1" stop-color="#0a66ff" />
     </linearGradient>
+    <filter id="soft-shadow" width="150%" height="150%" x="-25%" y="-20%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#010a16" flood-opacity="0.38" />
+    </filter>
   </defs>
-  <rect width="120" height="120" x="4" y="4" fill="url(#tampr-bg)" rx="28" />
-  <path fill="url(#tampr-shine)" d="M32 13h64c10.5 0 19 8.5 19 19v18c-25.8-4.8-56.3-.5-88 12.6L13 68V32c0-10.5 8.5-19 19-19Z" opacity="0.9" />
-  <path fill="#f7fbf8" d="M32 31c0-3.3 2.7-6 6-6h52c3.3 0 6 2.7 6 6v7c0 3.3-2.7 6-6 6H73v52c0 3.3-2.7 6-6 6H55c-3.3 0-6-2.7-6-6V44H38c-3.3 0-6-2.7-6-6v-7Z" />
-  <path fill="#cfe2d6" d="M73 44h17c3.3 0 6-2.7 6-6v-7c0-3.3-2.7-6-6-6H73v19Z" opacity="0.55" />
-  <path fill="#d44d3a" d="M81.5 77.1c1.8-1.8 4.6-.5 4.6 2.1v13.7c0 2.8 3.4 4.1 5.3 2.1l13.3-14.1c1.9-2 .5-5.3-2.2-5.3H89.4c-2.7 0-4.1-3.2-2.3-5.2l13-14.1c1.8-2-.7-4.9-3-3.5L75.9 66c-2.8 1.7-1.6 6 1.7 6h7.1c2.7 0 4 3.2 2.1 5.1h-5.3Z" />
-  <path fill="#08221e" d="M42 109h44c10.2 0 18.8-6.4 22.1-15.4-15.8 9-37.6 15.3-66.1 15.4Z" opacity="0.2" />
+  <rect width="112" height="112" x="8" y="8" fill="url(#tile)" rx="28" />
+  <rect width="112" height="112" x="8" y="8" fill="url(#glow)" rx="28" />
+  <path fill="#fff" filter="url(#soft-shadow)" d="M39 35c0-5 4-9 9-9h32c5 0 9 4 9 9s-4 9-9 9H73v49c0 5-4 9-9 9s-9-4-9-9V44h-7c-5 0-9-4-9-9Z" />
+  <path fill="#f2f6ff" d="M48 26h32c5 0 9 4 9 9s-4 9-9 9H48c-5 0-9-4-9-9s4-9 9-9Z" opacity="0.9" />
+  <path fill="none" stroke="url(#code)" stroke-linecap="round" stroke-linejoin="round" stroke-width="11" d="m49 59-19 11 19 11m30-22 19 11-19 11" filter="url(#soft-shadow)" />
 </svg>
