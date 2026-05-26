@@ -49,7 +49,7 @@ describe('runtime trust copy', () => {
 
     expect(items.map((item) => item.value)).toEqual([
       '0 local snippets',
-      '0 registrations',
+      'Ready',
       '1 rule issue',
     ]);
     expect(items[2]?.tone).toBe('danger');

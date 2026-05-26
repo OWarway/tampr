@@ -128,15 +128,16 @@ function runtimeTrustItem(runtime: RuntimeStatus): TrustItem {
     };
   }
 
+  const hasRegistrations = runtime.registrations > 0;
+
   return {
     id: 'runtime',
     label: 'Runtime',
-    value: `${runtime.registrations} ${plural(
-      runtime.registrations,
-      'registration',
-    )}`,
-    detail: 'Registered from saved local snippets.',
-    tone: runtime.registrations > 0 ? 'ready' : 'neutral',
+    value: hasRegistrations ? 'Synced' : 'Ready',
+    detail: hasRegistrations
+      ? 'Saved local snippets are synced to Chrome runtime.'
+      : 'Chrome runtime is ready for saved snippets.',
+    tone: hasRegistrations ? 'ready' : 'neutral',
   };
 }
 

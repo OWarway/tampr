@@ -7,7 +7,9 @@ export function runtimeLabel(workspace: WorkspaceState | undefined): string {
   }
 
   if (workspace.runtime.state === 'ready') {
-    return `${workspace.runtime.registrations} registrations`;
+    return workspace.runtime.registrations > 0
+      ? 'Runtime synced'
+      : 'Runtime ready';
   }
 
   return workspace.runtime.state === 'sync-error'

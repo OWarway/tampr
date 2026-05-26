@@ -13,7 +13,7 @@ describe('TrustStrip', () => {
     render(<TrustStrip workspace={createWorkspaceState()} />);
 
     expect(screen.getByText('2 local snippets')).toBeTruthy();
-    expect(screen.getByText('1 registration')).toBeTruthy();
+    expect(screen.getByText('Synced')).toBeTruthy();
     expect(screen.getByText('1 needs access')).toBeTruthy();
   });
 

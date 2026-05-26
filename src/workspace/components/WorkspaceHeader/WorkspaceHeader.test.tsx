@@ -9,11 +9,11 @@ import { WorkspaceHeader } from './WorkspaceHeader';
 afterEach(cleanup);
 
 describe('WorkspaceHeader', () => {
-  it('shows runtime registration status', () => {
+  it('shows runtime sync status', () => {
     render(<WorkspaceHeader workspace={createWorkspaceState()} />);
 
     expect(screen.getByRole('heading', { name: 'Workspace' })).toBeTruthy();
-    expect(screen.getByText('2 registrations')).toBeTruthy();
+    expect(screen.getByText('Runtime synced')).toBeTruthy();
   });
 });
 

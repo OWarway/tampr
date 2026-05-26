@@ -22,6 +22,7 @@ group changes under the headings below.
 - Lightweight, persistent, collapsible folder grouping for workspace snippets.
 - Folder rename and delete-to-General management from the workspace rail.
 - Auto-save when moving saved snippets between folders.
+- Runtime status copy that avoids exposing raw registration counts.
 - Browser downloads support for workspace exports.
 - Constrained `Tampr.download()` runtime API for user-script world snippets,
   supporting generated text and validated http/https URL downloads.
