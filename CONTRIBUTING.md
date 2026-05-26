@@ -35,7 +35,7 @@ loads it in Chromium for a smoke test.
 
 ## Project Boundaries
 
-- Keep user data local unless a future spec explicitly changes that.
+- Keep user data local unless a future public proposal explicitly changes that.
 - Do not add broad permissions for hypothetical features.
 - Keep Chrome API usage behind typed boundaries when that improves tests.
 - Prefer pure domain logic for snippet, match-rule, import/export, and runtime
@@ -61,7 +61,7 @@ AI-specific wording in commit messages.
 
 ## Pull Request Checklist
 
-- The change fits the build spec or updates the spec deliberately.
+- The change fits Tampr's local-first, lightweight product boundaries.
 - Tests cover new domain, storage, message, runtime, or UI behavior.
 - Permission, privacy, and runtime-trust implications are documented.
 - `npm run check` passes.

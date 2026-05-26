@@ -178,7 +178,7 @@ Commit messages follow Conventional Commits and are linted by the local
 Examples:
 
 ```text
-docs: define the v2 build spec
+docs: document local development
 chore: scaffold the extension foundation
 test: cover snippet defaults
 ```

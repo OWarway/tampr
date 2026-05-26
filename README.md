@@ -3,8 +3,7 @@
 Tampr is the lightweight, local-first Chrome extension for writing clear,
 personal CSS and JavaScript browser mods.
 
-Status: active pre-release development. The product and engineering direction is
-captured in [the build spec](./docs/tampr-v2-build-spec.md).
+Status: active pre-release development.
 
 ## What It Does
 
@@ -127,7 +126,6 @@ Read more:
 
 - [Privacy And Security](./docs/privacy-security.md)
 - [Trust Checks](./docs/trust-checks.md)
-- [Release Checklist](./docs/release.md)
 
 ## Contributing
 
