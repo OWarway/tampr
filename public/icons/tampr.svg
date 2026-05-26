@@ -1,29 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
   <title id="title">Tampr icon</title>
-  <desc id="desc">A white Tampr T between blue code chevrons on a dark rounded square.</desc>
+  <desc id="desc">A light Tampr T between warm code chevrons on a deep green rounded square.</desc>
   <defs>
     <linearGradient id="tile" x1="18" x2="112" y1="12" y2="118" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#082a58" />
-      <stop offset="0.58" stop-color="#05234b" />
-      <stop offset="1" stop-color="#031936" />
+      <stop stop-color="#14594d" />
+      <stop offset="0.58" stop-color="#0d453c" />
+      <stop offset="1" stop-color="#14201b" />
     </linearGradient>
     <radialGradient id="glow" cx="34" cy="20" r="104" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#114d94" stop-opacity="0.65" />
-      <stop offset="0.44" stop-color="#0a3267" stop-opacity="0.24" />
-      <stop offset="1" stop-color="#031936" stop-opacity="0" />
+      <stop stop-color="#79a78f" stop-opacity="0.5" />
+      <stop offset="0.44" stop-color="#14594d" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#14201b" stop-opacity="0" />
     </radialGradient>
     <linearGradient id="code" x1="17" x2="111" y1="58" y2="78" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0a66ff" />
-      <stop offset="0.5" stop-color="#168cff" />
-      <stop offset="1" stop-color="#0a66ff" />
+      <stop stop-color="#d44d3a" />
+      <stop offset="0.5" stop-color="#f29b8f" />
+      <stop offset="1" stop-color="#d44d3a" />
     </linearGradient>
     <filter id="soft-shadow" width="150%" height="150%" x="-25%" y="-20%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#010a16" flood-opacity="0.38" />
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#06110f" flood-opacity="0.4" />
     </filter>
   </defs>
   <rect width="112" height="112" x="8" y="8" fill="url(#tile)" rx="28" />
   <rect width="112" height="112" x="8" y="8" fill="url(#glow)" rx="28" />
-  <text x="64" y="98" fill="#fff" filter="url(#soft-shadow)" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="88" font-weight="900" letter-spacing="0" text-anchor="middle">T</text>
-  <text x="64" y="98" fill="#f2f6ff" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="88" font-weight="900" letter-spacing="0" opacity="0.92" text-anchor="middle">T</text>
+  <text x="64" y="98" fill="#ffffff" filter="url(#soft-shadow)" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="88" font-weight="900" letter-spacing="0" text-anchor="middle">T</text>
+  <text x="64" y="98" fill="#f7fbf8" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="88" font-weight="900" letter-spacing="0" opacity="0.94" text-anchor="middle">T</text>
   <path fill="none" stroke="url(#code)" stroke-linecap="round" stroke-linejoin="round" stroke-width="9" d="m42 58-22 12 22 12m44-24 22 12-22 12" filter="url(#soft-shadow)" />
 </svg>
