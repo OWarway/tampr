@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildSnippet, SnippetDraftSchema } from '../../src/domain/snippets';
 import {
+  buildBadgeHeartbeatSource,
   buildScriptApiBridgeSource,
   buildSnippetRegistrations,
   buildStyleBridgeSource,
@@ -11,7 +12,7 @@ import {
 } from '../../src/runtime/user-script-runtime';
 
 describe('user script runtime', () => {
-  it('keeps CSS and JavaScript registrations separate', () => {
+  it('adds one heartbeat alongside CSS and JavaScript registrations', () => {
     const snippet = createRuntimeSnippet();
     const registrations = buildSnippetRegistrations(
       snippet,
@@ -20,12 +21,14 @@ describe('user script runtime', () => {
     );
 
     expect(registrations.map((registration) => registration.id)).toEqual([
+      'tampr-heartbeat-snippet-1',
       'tampr-style-snippet-1',
       'tampr-script-snippet-1',
     ]);
     expect(registrations[0]?.world).toBe('USER_SCRIPT');
-    expect(registrations[1]?.world).toBe('MAIN');
-    expect(registrations[1]?.js).toEqual([
+    expect(registrations[1]?.world).toBe('USER_SCRIPT');
+    expect(registrations[2]?.world).toBe('MAIN');
+    expect(registrations[2]?.js).toEqual([
       `document.documentElement.dataset.tampr = 'active';`,
     ]);
   });
@@ -38,9 +41,9 @@ describe('user script runtime', () => {
       snippet.excludeMatches,
     );
 
-    expect(registrations[1]?.js[0]).toContain("globalThis, 'Tampr'");
-    expect(registrations[1]?.js[0]).toContain('tampr/api/download');
-    expect(registrations[1]?.js[1]).toBe(
+    expect(registrations[2]?.js[0]).toContain("globalThis, 'Tampr'");
+    expect(registrations[2]?.js[0]).toContain('tampr/api/download');
+    expect(registrations[2]?.js[1]).toBe(
       `document.documentElement.dataset.tampr = 'active';`,
     );
   });
@@ -56,10 +59,10 @@ describe('user script runtime', () => {
 
     expect(userScripts.unregisteredIds).toEqual(['tampr-stale']);
     expect(userScripts.configureWorldCalls).toBe(1);
-    expect(userScripts.registered).toHaveLength(2);
+    expect(userScripts.registered).toHaveLength(3);
     expect(status).toMatchObject({
       state: 'ready',
-      registrations: 2,
+      registrations: 3,
     });
   });
 
@@ -91,6 +94,15 @@ describe('user script runtime', () => {
     expect(source).toContain(`const snippetId = "snippet-1"`);
     expect(source).toContain(`chrome.runtime.sendMessage`);
     expect(source).toContain(`Object.freeze({ download })`);
+  });
+
+  it('builds a best-effort badge heartbeat bridge', () => {
+    const source = buildBadgeHeartbeatSource('snippet-1');
+
+    expect(source).toContain(`type: "tampr/runtime/hit"`);
+    expect(source).toContain(`snippetId: "snippet-1"`);
+    expect(source).toContain(`chrome.runtime.sendMessage`);
+    expect(source).toContain(`catch`);
   });
 });
 

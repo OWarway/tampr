@@ -50,6 +50,11 @@ JavaScript, or target sites where Chrome host access has not been granted. The
 popup and workspace surface these states so a runtime failure is visible rather
 than hidden in developer tools.
 
+Registered snippets also include a small user-script-world heartbeat that tells
+the service worker which snippet ran in a tab. Tampr uses that local message to
+show the extension badge count; it does not include page URLs, snippet code, or
+remote network calls, and it does not require the broad `tabs` permission.
+
 ## Risk Boundaries
 
 Tampr is a code tool. User-authored JavaScript can change pages that match its

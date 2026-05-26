@@ -59,6 +59,8 @@ Before release, exercise:
   without saving unrelated unsaved code edits.
 - A matching CSS snippet on `https://example.com`.
 - A matching JavaScript snippet in the default user-script world.
+- The extension badge shows the number of snippets that ran on a matching page
+  and clears after navigating the tab away.
 - A default user-script world snippet that calls
   `Tampr.download({ filename: 'tampr-test.txt', text: 'ok' })`.
 - A default user-script world snippet that calls

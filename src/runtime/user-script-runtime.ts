@@ -1,6 +1,9 @@
 import type { Snippet } from '../domain/snippets';
 import { validateWebMatchPattern } from '../domain/web-match-patterns';
-import { TAMPR_DOWNLOAD_MESSAGE } from '../shared/tampr-api';
+import {
+  TAMPR_BADGE_HIT_MESSAGE,
+  TAMPR_DOWNLOAD_MESSAGE,
+} from '../shared/tampr-api';
 import type {
   RuntimeRegistrationError,
   RuntimeSkip,
@@ -149,8 +152,21 @@ export function buildSnippetRegistrations(
   excludeMatches: string[],
 ): RuntimeRegistration[] {
   const registrations: RuntimeRegistration[] = [];
+  const hasCss = snippet.css.trim().length > 0;
+  const hasJs = snippet.js.trim().length > 0;
 
-  if (snippet.css.trim()) {
+  if (hasCss || hasJs) {
+    registrations.push({
+      id: heartbeatRegistrationId(snippet.id),
+      matches,
+      excludeMatches,
+      js: [buildBadgeHeartbeatSource(snippet.id)],
+      runAt: snippet.runAt,
+      world: 'USER_SCRIPT',
+    });
+  }
+
+  if (hasCss) {
     registrations.push({
       id: styleRegistrationId(snippet.id),
       matches,
@@ -161,7 +177,7 @@ export function buildSnippetRegistrations(
     });
   }
 
-  if (snippet.js.trim()) {
+  if (hasJs) {
     registrations.push({
       id: scriptRegistrationId(snippet.id),
       matches,
@@ -176,6 +192,23 @@ export function buildSnippetRegistrations(
   }
 
   return registrations;
+}
+
+export function buildBadgeHeartbeatSource(snippetId: string): string {
+  return `(() => {
+  try {
+    const result = chrome.runtime.sendMessage({
+      type: ${JSON.stringify(TAMPR_BADGE_HIT_MESSAGE)},
+      snippetId: ${JSON.stringify(snippetId)},
+    });
+
+    if (result && typeof result.catch === 'function') {
+      result.catch(() => {});
+    }
+  } catch {
+    // Badge updates are best-effort and must never affect user snippets.
+  }
+})();`;
 }
 
 export function buildScriptApiBridgeSource(snippetId: string): string {
@@ -282,6 +315,10 @@ function getValidPatterns(patterns: readonly string[]): string[] {
 
 function styleRegistrationId(snippetId: string): string {
   return `${REGISTRATION_PREFIX}style-${snippetId}`;
+}
+
+function heartbeatRegistrationId(snippetId: string): string {
+  return `${REGISTRATION_PREFIX}heartbeat-${snippetId}`;
 }
 
 function scriptRegistrationId(snippetId: string): string {
