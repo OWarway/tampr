@@ -45,6 +45,8 @@ Before release, exercise:
 
 - Fresh install with User Scripts enabled.
 - Fresh install with User Scripts disabled.
+- User Scripts disabled state shows setup actions in the popup and workspace,
+  and opens Tampr's Chrome extension details page.
 - Extension startup after Chrome restart.
 - Create, edit, enable, disable, duplicate, and delete snippet flows.
 - Create snippets in at least two folders and confirm the rail groups them into

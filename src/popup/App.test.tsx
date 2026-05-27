@@ -112,9 +112,15 @@ describe('Popup App', () => {
   });
 
   it('explains unavailable User Scripts setup on matching pages', async () => {
+    const create = vi.fn().mockResolvedValue(undefined);
+
     vi.stubGlobal('chrome', {
-      runtime: { sendMessage: vi.fn().mockResolvedValue(setupPageResponse()) },
+      runtime: {
+        id: 'tampr-extension-id',
+        sendMessage: vi.fn().mockResolvedValue(setupPageResponse()),
+      },
       tabs: {
+        create,
         query: vi.fn().mockResolvedValue([
           {
             url: 'https://docs.example.com/snippets/new',
@@ -131,6 +137,16 @@ describe('Popup App', () => {
         'Enable User Scripts for Tampr in Chrome extension details before snippets can run.',
       ),
     ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open extension details' }),
+    );
+
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith({
+        url: 'chrome://extensions/?id=tampr-extension-id',
+      }),
+    );
   });
 });
 

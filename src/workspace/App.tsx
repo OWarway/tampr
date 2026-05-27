@@ -1,8 +1,10 @@
 import { DataActions } from './components/DataActions/DataActions';
 import { SnippetEditor } from './components/SnippetEditor/SnippetEditor';
 import { SnippetRail } from './components/SnippetRail/SnippetRail';
+import { RuntimeSetup } from './components/RuntimeSetup/RuntimeSetup';
 import { TrustStrip } from './components/TrustStrip/TrustStrip';
 import { WorkspaceHeader } from './components/WorkspaceHeader/WorkspaceHeader';
+import { openExtensionDetails } from '../chrome/extension-settings';
 import { buildPageRulePresets } from '../domain/page-rule-presets';
 import { getWorkspaceSourcePageUrl } from '../shared/workspace-source-page';
 import { useWorkspace } from './hooks/use-workspace';
@@ -30,6 +32,12 @@ export function App() {
         workspace={state.workspace}
       />
       <TrustStrip workspace={state.workspace} />
+      <div className={styles.setupSlot}>
+        <RuntimeSetup
+          workspace={state.workspace}
+          onOpenExtensionDetails={() => void openExtensionDetails()}
+        />
+      </div>
 
       <section className={styles.body} aria-label="Snippet workspace">
         <SnippetRail

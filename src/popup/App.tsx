@@ -1,4 +1,5 @@
 import { openWorkspace } from '../chrome/workspace';
+import { openExtensionDetails } from '../chrome/extension-settings';
 import {
   runtimeActionNotice,
   runtimeBadgeLabel,
@@ -29,6 +30,7 @@ export function App() {
       <PageStatus
         busySnippetId={pageState.busySnippetId}
         pageState={pageState.pageState}
+        onOpenExtensionDetails={() => void openExtensionDetails()}
         onSetSnippetEnabled={(snippetId, enabled) =>
           void pageState.setSnippetEnabled(snippetId, enabled)
         }
@@ -40,11 +42,13 @@ export function App() {
 type PageStatusProps = {
   busySnippetId: string | undefined;
   pageState: PopupPageState;
+  onOpenExtensionDetails(): void;
   onSetSnippetEnabled(snippetId: string, enabled: boolean): void;
 };
 
 function PageStatus({
   busySnippetId,
+  onOpenExtensionDetails,
   onSetSnippetEnabled,
   pageState,
 }: PageStatusProps) {
@@ -86,6 +90,7 @@ function PageStatus({
   return (
     <ReadyPageStatus
       busySnippetId={busySnippetId}
+      onOpenExtensionDetails={onOpenExtensionDetails}
       page={pageState.page}
       onSetSnippetEnabled={onSetSnippetEnabled}
     />
@@ -94,12 +99,14 @@ function PageStatus({
 
 type ReadyPageStatusProps = {
   busySnippetId: string | undefined;
+  onOpenExtensionDetails(): void;
   page: PageState;
   onSetSnippetEnabled(snippetId: string, enabled: boolean): void;
 };
 
 function ReadyPageStatus({
   busySnippetId,
+  onOpenExtensionDetails,
   onSetSnippetEnabled,
   page,
 }: ReadyPageStatusProps) {
@@ -152,6 +159,16 @@ function ReadyPageStatus({
         <p className={styles.runtimeNote}>
           {runtimeActionNotice(page.runtime, blockedMatches[0]?.skip?.reason)}
         </p>
+      ) : null}
+
+      {page.runtime.state === 'user-scripts-unavailable' ? (
+        <button
+          className={styles.setupButton}
+          type="button"
+          onClick={onOpenExtensionDetails}
+        >
+          Open extension details
+        </button>
       ) : null}
     </section>
   );

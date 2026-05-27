@@ -12,6 +12,7 @@ Status: active pre-release development.
 - Targets snippets with Chrome web match rules and exclude rules.
 - Shows what matches the current page from the popup.
 - Shows a per-tab extension badge count when snippets run on the current page.
+- Guides users to enable Chrome User Scripts when the browser setting is off.
 - Enables and disables matching snippets quickly.
 - Registers snippets through Chrome's User Scripts runtime.
 - Lets user-script world snippets save generated text or validated http/https

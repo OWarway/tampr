@@ -16,6 +16,7 @@ group changes under the headings below.
 - Chrome User Scripts runtime sync with host-access and capability states.
 - Popup current-page status with enable and disable controls.
 - Per-tab extension badge count when snippets run on the current page.
+- User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.
 - Tampr application mark and Chrome extension icons.
