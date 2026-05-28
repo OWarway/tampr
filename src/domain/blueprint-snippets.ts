@@ -1,6 +1,8 @@
 import { buildPageRulePresets } from './page-rule-presets';
 import { SnippetDraftSchema, type SnippetDraft } from './snippets';
 import type { BlueprintSelectorMeta } from './blueprint-selectors';
+import { buildCssBlueprintRecipe } from './blueprints/recipe';
+import { compileBlueprintCss } from './blueprints/compiler';
 
 export const BLUEPRINT_SNIPPET_FOLDER = 'Blueprints';
 export const BLUEPRINT_ACTIONS = ['hide', 'highlight'] as const;
@@ -26,13 +28,22 @@ export function buildBlueprintSnippetDraft({
   pageUrl,
   pick,
 }: BuildBlueprintSnippetDraftInput): SnippetDraft {
+  const name = `${actionLabel(action)} ${snippetSubject(pick)}`;
+  const recipe = buildCssBlueprintRecipe({
+    id: `${action}-selection`,
+    label: name,
+    selector: pick.selector,
+    selectorMeta: pick.selectorMeta,
+    type: action,
+  });
+
   return SnippetDraftSchema.parse({
-    name: `${actionLabel(action)} ${snippetSubject(pick)}`,
+    name,
     folder: BLUEPRINT_SNIPPET_FOLDER,
     enabled: true,
     matches: [blueprintMatchRule(pageUrl)],
     excludeMatches: [],
-    css: blueprintCss(action, pick.selector),
+    css: compileBlueprintCss(recipe),
     js: '',
     runAt: 'document_idle',
     world: 'USER_SCRIPT',
@@ -61,17 +72,4 @@ function blueprintMatchRule(pageUrl: string): string {
   }
 
   return pattern;
-}
-
-function blueprintCss(action: BlueprintAction, selector: string): string {
-  if (action === 'hide') {
-    return `${selector} {
-  display: none !important;
-}`;
-  }
-
-  return `${selector} {
-  outline: 3px solid #d44d3a !important;
-  outline-offset: 3px !important;
-}`;
 }
