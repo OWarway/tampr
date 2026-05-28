@@ -424,6 +424,7 @@
   padding: 8px 10px;
 }
 
+.moveNode,
 .pickSelector,
 .testSelector,
 .removeNode {
@@ -440,6 +441,15 @@
     background: #fff4e4;
     border-color: #d8ad72;
     color: #7d4a16;
+  }
+}
+
+.moveNode {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #edf4ef;
+    border-color: #79a78f;
+    color: #14594d;
   }
 }
 

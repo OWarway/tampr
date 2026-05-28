@@ -204,6 +204,8 @@ export type BlueprintNodeUpdate = {
   type?: BlueprintNodeType;
 };
 
+export type MoveBlueprintNodeDirection = 'down' | 'up';
+
 export type InsertBlueprintNodeInput = {
   afterNodeId: string;
   label?: string;
@@ -409,6 +411,44 @@ export function removeBlueprintNode(
   });
 }
 
+export function moveBlueprintNode(
+  recipe: BlueprintRecipe,
+  nodeId: string,
+  direction: MoveBlueprintNodeDirection,
+): BlueprintRecipe {
+  const linearNodes = getLinearBlueprintNodes(recipe);
+  const currentIndex = linearNodes.findIndex((node) => node.id === nodeId);
+
+  if (currentIndex === -1) {
+    throw new Error(`Blueprint node ${nodeId} does not exist.`);
+  }
+
+  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+  if (targetIndex < 0 || targetIndex >= linearNodes.length) {
+    return recipe;
+  }
+
+  const nodes = [...linearNodes];
+  const movingNode = nodes[currentIndex];
+
+  if (!movingNode) {
+    throw new Error(`Blueprint node ${nodeId} does not exist.`);
+  }
+
+  nodes.splice(currentIndex, 1);
+  nodes.splice(targetIndex, 0, movingNode);
+
+  return BlueprintRecipeSchema.parse({
+    ...recipe,
+    graph: {
+      nodes,
+      edges: buildLinearEdges(nodes),
+      layout: reflowLinearLayout(recipe, nodes),
+    },
+  });
+}
+
 export function getLinearBlueprintNodes(
   recipe: BlueprintRecipe,
 ): BlueprintNode[] {
@@ -478,6 +518,55 @@ function removeLayoutPoint(
   const layout = { ...recipe.graph.layout };
 
   delete layout[nodeId];
+
+  return layout;
+}
+
+function buildLinearEdges(nodes: readonly BlueprintNode[]): BlueprintEdge[] {
+  const edges: BlueprintEdge[] = [];
+
+  for (let index = 0; index < nodes.length - 1; index += 1) {
+    const fromNode = nodes[index];
+    const toNode = nodes[index + 1];
+
+    if (!fromNode || !toNode) {
+      continue;
+    }
+
+    edges.push({
+      id: `edge-${toNode.id}`,
+      fromNodeId: fromNode.id,
+      fromPort: 'success',
+      toNodeId: toNode.id,
+    });
+  }
+
+  return edges;
+}
+
+function reflowLinearLayout(
+  recipe: BlueprintRecipe,
+  nodes: readonly BlueprintNode[],
+): BlueprintGraph['layout'] {
+  const layout: BlueprintGraph['layout'] = {};
+  const existingPoints = nodes
+    .map((node) => recipe.graph.layout[node.id])
+    .filter((point) => point !== undefined);
+  const originX =
+    existingPoints.length > 0
+      ? Math.min(...existingPoints.map((point) => point.x))
+      : 160;
+  const firstNode = nodes[0];
+  const originY = firstNode
+    ? (recipe.graph.layout[firstNode.id]?.y ?? 120)
+    : 120;
+
+  nodes.forEach((node, index) => {
+    layout[node.id] = {
+      x: originX + index * 220,
+      y: originY,
+    };
+  });
 
   return layout;
 }

@@ -86,10 +86,10 @@ registrations, and opens the new snippet in the workspace.
 Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
 remove an overlay, make an element sticky, widen a content container, or hide an
 element only for print. Keep new Blueprint actions CSS-first until the selector
-and review workflow are proven. The workspace builder can add, remove, relabel,
-switch, enable, and disable nodes while the generated CSS still matches the
-recipe; once users hand-edit CSS, code-changing builder controls lock instead of
-overwriting their work. Workspaces opened from a source page carry a sanitized
+and review workflow are proven. The workspace builder can add, remove, reorder,
+relabel, switch, enable, and disable nodes while the generated CSS still matches
+the recipe; once users hand-edit CSS, code-changing builder controls lock instead
+of overwriting their work. Workspaces opened from a source page carry a sanitized
 source URL and source tab ID so a node can re-pick or test its selector in the
 same tab without granting broad tab access. Selector tests read match and visible
 counts through a temporary `scripting.executeScript` call and do not activate the

@@ -30,9 +30,9 @@ Open the popup on an http or https page and choose Blueprint. Tampr temporarily
 highlights page elements, lets you choose a CSS-first action such as Hide,
 Highlight, Remove overlay, Make sticky, Widen, or Print cleanup, saves the
 result as a normal CSS snippet in the Blueprints folder, and opens it in the
-workspace for review. The workspace Blueprint panel can add, remove, relabel,
-switch CSS action nodes, re-pick selectors, and test selectors against the
-source page while keeping generated code visible and editable.
+workspace for review. The workspace Blueprint panel can add, remove, reorder,
+relabel, switch CSS action nodes, re-pick selectors, and test selectors against
+the source page while keeping generated code visible and editable.
 
 ## Screenshots
 

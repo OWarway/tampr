@@ -238,6 +238,45 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('moves selected nodes and regenerates CSS in flow order', () => {
+    const onChange = vi.fn();
+    const blueprint = twoNodeRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Highlight checkout/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move up' }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              id: 'highlight-checkout',
+            }),
+            expect.objectContaining({
+              id: 'hide-signup',
+            }),
+          ],
+        }),
+      }),
+      `.checkout {
+  outline: 3px solid #d44d3a !important;
+  outline-offset: 3px !important;
+}
+
+#signup {
+  display: none !important;
+}`,
+    );
+  });
+
   it('updates a node selector from the page picker and regenerates CSS', async () => {
     const onChange = vi.fn();
     const onPickSelector = vi.fn().mockResolvedValue({
@@ -376,6 +415,10 @@ describe('BlueprintPreview', () => {
     ).toBe(true);
     expect(
       (screen.getByRole('button', { name: 'Pick again' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Move down' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
   });

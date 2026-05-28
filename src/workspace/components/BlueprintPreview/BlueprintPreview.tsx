@@ -15,8 +15,10 @@ import {
 import {
   getLinearBlueprintNodes,
   insertBlueprintNode,
+  moveBlueprintNode,
   removeBlueprintNode,
   updateBlueprintNode,
+  type MoveBlueprintNodeDirection,
   type BlueprintNode,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
@@ -61,6 +63,9 @@ export function BlueprintPreview({
   const recipe = blueprint;
   const selectedNode =
     nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
+  const selectedNodeIndex = selectedNode
+    ? nodes.findIndex((node) => node.id === selectedNode.id)
+    : -1;
   const cssSourceKnown = css !== undefined;
   const cssInSync = cssSourceKnown ? isBlueprintCssInSync(recipe, css) : true;
   const editable = Boolean(onChange && cssSourceKnown && selectedNode);
@@ -177,6 +182,16 @@ export function BlueprintPreview({
     clearSelectorTestResult(nodeId);
   }
 
+  function moveNode(
+    nodeId: string,
+    direction: MoveBlueprintNodeDirection,
+  ): void {
+    applyGeneratedBlueprint(
+      moveBlueprintNode(recipe, nodeId, direction),
+      nodeId,
+    );
+  }
+
   function clearSelectorTestResult(nodeId: string): void {
     setSelectorTestResults((currentResults) => {
       const nextResults = { ...currentResults };
@@ -233,6 +248,10 @@ export function BlueprintPreview({
 
         {editable && selectedNode ? (
           <BlueprintNodeInspector
+            canMoveDown={
+              selectedNodeIndex >= 0 && selectedNodeIndex < nodes.length - 1
+            }
+            canMoveUp={selectedNodeIndex > 0}
             cssInSync={cssInSync}
             node={selectedNode}
             canRemove={nodes.length > 1}
@@ -242,6 +261,8 @@ export function BlueprintPreview({
             onLabelChange={(label) =>
               editNode(selectedNode.id, { label }, { regeneratesCss: false })
             }
+            onMoveDown={() => moveNode(selectedNode.id, 'down')}
+            onMoveUp={() => moveNode(selectedNode.id, 'up')}
             onTypeChange={(type) =>
               editNode(selectedNode.id, { type }, { regeneratesCss: true })
             }
@@ -352,11 +373,15 @@ function BlueprintPreviewNode({
 }
 
 type BlueprintNodeInspectorProps = {
+  canMoveDown: boolean;
+  canMoveUp: boolean;
   canRemove: boolean;
   cssInSync: boolean;
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
   onLabelChange(label: string): void;
+  onMoveDown(): void;
+  onMoveUp(): void;
   onPickSelector?: (() => void) | undefined;
   onRemove(): void;
   onTestSelector?: (() => void) | undefined;
@@ -367,11 +392,15 @@ type BlueprintNodeInspectorProps = {
 };
 
 function BlueprintNodeInspector({
+  canMoveDown,
+  canMoveUp,
   canRemove,
   cssInSync,
   node,
   onEnabledChange,
   onLabelChange,
+  onMoveDown,
+  onMoveUp,
   onPickSelector,
   onRemove,
   onTestSelector,
@@ -429,6 +458,28 @@ function BlueprintNodeInspector({
         />
         <span>Enabled</span>
       </label>
+
+      <div className={styles.selectorField}>
+        <span>Flow position</span>
+        <div className={styles.selectorActions}>
+          <button
+            className={styles.moveNode}
+            disabled={!cssInSync || !canMoveUp}
+            type="button"
+            onClick={onMoveUp}
+          >
+            Move up
+          </button>
+          <button
+            className={styles.moveNode}
+            disabled={!cssInSync || !canMoveDown}
+            type="button"
+            onClick={onMoveDown}
+          >
+            Move down
+          </button>
+        </div>
+      </div>
 
       <div className={styles.selectorField}>
         <span>Selector</span>

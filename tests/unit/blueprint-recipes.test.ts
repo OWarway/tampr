@@ -10,6 +10,7 @@ import {
   buildCssBlueprintRecipe,
   getLinearBlueprintNodes,
   insertBlueprintNode,
+  moveBlueprintNode,
   removeBlueprintNode,
   updateBlueprintNode,
   type BlueprintNodeType,
@@ -239,6 +240,50 @@ body {
         toNodeId: 'highlight-selection',
       },
     ]);
+  });
+
+  it('moves nodes and rewires the straight-line graph', () => {
+    const { recipe } = insertBlueprintNode(twoNodeRecipe(), {
+      afterNodeId: 'hide-selection',
+      selector: 'aside.subscribe',
+      selectorMeta: selectorMeta(),
+      type: 'print-cleanup',
+    });
+    const updated = moveBlueprintNode(recipe, 'highlight-selection', 'up');
+
+    expect(getLinearBlueprintNodes(updated).map((node) => node.id)).toEqual([
+      'hide-selection',
+      'highlight-selection',
+      'print-cleanup-selection',
+    ]);
+    expect(updated.graph.edges).toEqual([
+      {
+        id: 'edge-highlight-selection',
+        fromNodeId: 'hide-selection',
+        fromPort: 'success',
+        toNodeId: 'highlight-selection',
+      },
+      {
+        id: 'edge-print-cleanup-selection',
+        fromNodeId: 'highlight-selection',
+        fromPort: 'success',
+        toNodeId: 'print-cleanup-selection',
+      },
+    ]);
+    expect(updated.graph.layout).toEqual({
+      'hide-selection': { x: 0, y: 0 },
+      'highlight-selection': { x: 220, y: 0 },
+      'print-cleanup-selection': { x: 440, y: 0 },
+    });
+  });
+
+  it('leaves boundary node moves unchanged', () => {
+    const recipe = twoNodeRecipe();
+
+    expect(moveBlueprintNode(recipe, 'hide-selection', 'up')).toBe(recipe);
+    expect(moveBlueprintNode(recipe, 'highlight-selection', 'down')).toBe(
+      recipe,
+    );
   });
 
   it('keeps at least one node in every recipe', () => {
