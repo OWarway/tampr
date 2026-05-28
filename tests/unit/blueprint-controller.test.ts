@@ -23,6 +23,12 @@ describe('BlueprintController', () => {
               pick: {
                 label: 'Subscribe panel',
                 selector: 'aside.subscribe',
+                selectorMeta: {
+                  matchCount: 1,
+                  segmentCount: 1,
+                  strategy: 'class',
+                  usesNthOfType: false,
+                },
                 tagName: 'aside',
               },
             },

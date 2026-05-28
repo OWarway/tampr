@@ -1,5 +1,6 @@
 import { buildPageRulePresets } from './page-rule-presets';
 import { SnippetDraftSchema, type SnippetDraft } from './snippets';
+import type { BlueprintSelectorMeta } from './blueprint-selectors';
 
 export const BLUEPRINT_SNIPPET_FOLDER = 'Blueprints';
 export const BLUEPRINT_ACTIONS = ['hide', 'highlight'] as const;
@@ -9,6 +10,7 @@ export type BlueprintAction = (typeof BLUEPRINT_ACTIONS)[number];
 export type BlueprintElementPick = {
   label: string;
   selector: string;
+  selectorMeta: BlueprintSelectorMeta;
   tagName: string;
   text?: string;
 };

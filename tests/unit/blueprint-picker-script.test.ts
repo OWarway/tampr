@@ -53,6 +53,12 @@ describe('runTamprBlueprintPicker', () => {
       pick: {
         label: 'Join the list',
         selector: 'aside.subscribe.panel',
+        selectorMeta: {
+          matchCount: 1,
+          segmentCount: 1,
+          strategy: 'class',
+          usesNthOfType: false,
+        },
         tagName: 'aside',
         text: 'Join the list',
       },
@@ -74,6 +80,61 @@ describe('runTamprBlueprintPicker', () => {
       ok: false,
       reason: 'cancelled',
       message: 'Blueprint picking was cancelled.',
+    });
+  });
+
+  it('returns positional selector metadata when stable hooks are unavailable', async () => {
+    document.body.innerHTML = `
+      <main>
+        <section>
+          <button>First</button>
+          <button>Second</button>
+        </section>
+      </main>
+    `;
+    const target = [...document.querySelectorAll('button')][1] as HTMLElement;
+
+    stubElementFromPoint(target);
+    stubRect(target);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    const highlightButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Highlight',
+    );
+
+    highlightButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      action: 'highlight',
+      pick: {
+        selector: 'button:nth-of-type(2)',
+        selectorMeta: {
+          matchCount: 1,
+          segmentCount: 1,
+          strategy: 'position',
+          usesNthOfType: true,
+        },
+      },
     });
   });
 });

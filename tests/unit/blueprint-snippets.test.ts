@@ -14,6 +14,7 @@ describe('blueprint snippet drafts', () => {
         pick: {
           label: 'Subscribe panel',
           selector: 'aside.subscribe',
+          selectorMeta: strongSelectorMeta(),
           tagName: 'aside',
         },
       }),
@@ -40,6 +41,7 @@ describe('blueprint snippet drafts', () => {
         pick: {
           label: 'Primary button',
           selector: 'main > button.primary',
+          selectorMeta: strongSelectorMeta(),
           tagName: 'button',
         },
       }).css,
@@ -57,9 +59,19 @@ describe('blueprint snippet drafts', () => {
         pick: {
           label: 'Extension details',
           selector: 'main',
+          selectorMeta: strongSelectorMeta(),
           tagName: 'main',
         },
       }),
     ).toThrow('Blueprints need an http or https page.');
   });
 });
+
+function strongSelectorMeta() {
+  return {
+    matchCount: 1,
+    segmentCount: 1,
+    strategy: 'attribute' as const,
+    usesNthOfType: false,
+  };
+}

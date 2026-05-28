@@ -278,6 +278,7 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
 
     function describePick(target: Element): BlueprintElementPick {
       const text = visibleText(target);
+      const selector = createSelector(target);
       const label =
         target.getAttribute('aria-label') ??
         target.getAttribute('title') ??
@@ -286,7 +287,8 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
         target.localName.toLowerCase();
       const pick: BlueprintElementPick = {
         label: truncate(label, 80),
-        selector: createSelector(target),
+        selector: selector.value,
+        selectorMeta: selector.meta,
         tagName: target.localName.toLowerCase(),
       };
 
@@ -303,15 +305,52 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       return text ? truncate(text, 120) : undefined;
     }
 
-    function createSelector(target: Element): string {
+    type LocalSelectorStrategy =
+      | 'id'
+      | 'attribute'
+      | 'class'
+      | 'path'
+      | 'position';
+
+    type LocalSelectorSegment = {
+      selector: string;
+      strategy: LocalSelectorStrategy;
+      usesNthOfType: boolean;
+    };
+
+    type LocalSelectorResult = {
+      meta: {
+        matchCount: number;
+        segmentCount: number;
+        strategy: LocalSelectorStrategy;
+        usesNthOfType: boolean;
+      };
+      value: string;
+    };
+
+    function createSelector(target: Element): LocalSelectorResult {
       const rootDocument = target.ownerDocument;
       const directId = idSelector(target);
 
-      if (directId && queryCount(rootDocument, directId) === 1) {
-        return directId;
+      if (directId) {
+        const matchCount = queryCount(rootDocument, directId);
+
+        if (matchCount === 1) {
+          return selectorResult({
+            matchCount,
+            segments: [
+              {
+                selector: directId,
+                strategy: 'id',
+                usesNthOfType: false,
+              },
+            ],
+            value: directId,
+          });
+        }
       }
 
-      const segments: string[] = [];
+      const segments: LocalSelectorSegment[] = [];
       let current: Element | null = target;
 
       while (
@@ -321,35 +360,119 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       ) {
         segments.unshift(selectorSegment(current));
 
-        const selector = segments.join(' > ');
+        const selector = segments
+          .map((segment) => segment.selector)
+          .join(' > ');
+        const matchCount = queryCount(rootDocument, selector);
 
-        if (queryCount(rootDocument, selector) === 1) {
-          return selector;
+        if (matchCount === 1) {
+          return selectorResult({
+            matchCount,
+            segments,
+            value: selector,
+          });
         }
 
         current = current.parentElement;
       }
 
-      return segments.join(' > ') || target.localName.toLowerCase();
+      const fallbackSelector =
+        segments.map((segment) => segment.selector).join(' > ') ||
+        target.localName.toLowerCase();
+
+      return selectorResult({
+        matchCount: queryCount(rootDocument, fallbackSelector),
+        segments:
+          segments.length > 0
+            ? segments
+            : [
+                {
+                  selector: fallbackSelector,
+                  strategy: 'path',
+                  usesNthOfType: false,
+                },
+              ],
+        value: fallbackSelector,
+      });
     }
 
-    function selectorSegment(element: Element): string {
+    function selectorSegment(element: Element): LocalSelectorSegment {
       const tagName = element.localName.toLowerCase();
       const id = idSelector(element);
 
       if (id) {
-        return `${tagName}${id}`;
+        return {
+          selector: `${tagName}${id}`,
+          strategy: 'id',
+          usesNthOfType: false,
+        };
       }
 
       const attributeSelector = stableAttributeSelector(element);
       const classSelector = stableClassSelector(element);
+      const baseStrategy = attributeSelector
+        ? 'attribute'
+        : classSelector
+          ? 'class'
+          : 'path';
       let segment = `${tagName}${attributeSelector ?? classSelector}`;
+      let usesNthOfType = false;
 
       if (needsNthOfType(element, segment)) {
         segment = `${segment}:nth-of-type(${nthOfType(element)})`;
+        usesNthOfType = true;
       }
 
-      return segment;
+      return {
+        selector: segment,
+        strategy: usesNthOfType ? 'position' : baseStrategy,
+        usesNthOfType,
+      };
+    }
+
+    type SelectorResultInput = {
+      matchCount: number;
+      segments: LocalSelectorSegment[];
+      value: string;
+    };
+
+    function selectorResult({
+      matchCount,
+      segments,
+      value,
+    }: SelectorResultInput): LocalSelectorResult {
+      return {
+        value,
+        meta: {
+          matchCount,
+          segmentCount: segments.length,
+          strategy: selectorStrategy(segments),
+          usesNthOfType: segments.some((segment) => segment.usesNthOfType),
+        },
+      };
+    }
+
+    function selectorStrategy(
+      segments: readonly LocalSelectorSegment[],
+    ): LocalSelectorStrategy {
+      if (segments.some((segment) => segment.usesNthOfType)) {
+        return 'position';
+      }
+
+      const targetSegment = segments.at(-1);
+
+      if (
+        targetSegment?.strategy === 'id' ||
+        targetSegment?.strategy === 'attribute'
+      ) {
+        return targetSegment.strategy;
+      }
+
+      if (segments.length === 1 && targetSegment?.strategy === 'class') {
+        return 'class';
+      }
+
+      return 'path';
     }
 
     function idSelector(element: Element): string | undefined {
@@ -440,7 +563,9 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
 
     function queryCount(rootDocument: Document, selector: string): number {
       try {
-        return rootDocument.querySelectorAll(selector).length;
+        return [...rootDocument.querySelectorAll(selector)].filter(
+          (element) => !root.contains(element),
+        ).length;
       } catch {
         return 0;
       }
