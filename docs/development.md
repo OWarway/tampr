@@ -90,8 +90,10 @@ and review workflow are proven. The workspace builder can add, remove, relabel,
 switch, enable, and disable nodes while the generated CSS still matches the
 recipe; once users hand-edit CSS, code-changing builder controls lock instead of
 overwriting their work. Workspaces opened from a source page carry a sanitized
-source URL and source tab ID so a node can re-pick its selector in the same tab
-without granting broad tab access.
+source URL and source tab ID so a node can re-pick or test its selector in the
+same tab without granting broad tab access. Selector tests read match and visible
+counts through a temporary `scripting.executeScript` call and do not activate the
+source tab.
 
 ## Script Download API
 

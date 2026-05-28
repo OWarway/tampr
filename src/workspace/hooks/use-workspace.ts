@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { pickBlueprintSelector as pickBlueprintSelectorFromTab } from '../../chrome/blueprints';
+import {
+  pickBlueprintSelector as pickBlueprintSelectorFromTab,
+  testBlueprintSelector as testBlueprintSelectorFromTab,
+} from '../../chrome/blueprints';
 import { requestHostAccess } from '../../chrome/host-access';
 import {
   deleteSnippetFolder,
@@ -18,6 +21,7 @@ import {
   type Snippet,
 } from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
+import type { BlueprintSelectorTestResult } from '../../shared/blueprint-messages';
 import {
   getWorkspaceSelectedSnippetId,
   getWorkspaceSourceTabId,
@@ -49,6 +53,9 @@ export type UseWorkspaceResult = {
   pickBlueprintSelector(): Promise<BlueprintElementPick | undefined>;
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
+  testBlueprintSelector(
+    selector: string,
+  ): Promise<BlueprintSelectorTestResult | undefined>;
   updateEditor(editor: EditorState): void;
   updateEditorFolder(folder: string): void;
 };
@@ -159,6 +166,42 @@ export function useWorkspace(): UseWorkspaceResult {
 
       setNotice('Selector picked. Save the snippet to sync it.');
       return response.pick;
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testBlueprintSelector(
+    selector: string,
+  ): Promise<BlueprintSelectorTestResult | undefined> {
+    const sourceTabId = getWorkspaceSourceTabId(window.location.href);
+
+    if (!sourceTabId) {
+      setNotice('Open the workspace from a page before testing selectors.');
+      return undefined;
+    }
+
+    setBusy(true);
+    setNotice('Testing selector on the source page.');
+
+    try {
+      const response = await testBlueprintSelectorFromTab(
+        sourceTabId,
+        selector,
+      );
+
+      if (!response.ok) {
+        setNotice(response.error);
+        return undefined;
+      }
+
+      setNotice(
+        `Selector test complete: ${selectorTestNotice(response.result)}.`,
+      );
+      return response.result;
     } catch (error: unknown) {
       setNotice(toErrorMessage(error));
       return undefined;
@@ -433,6 +476,7 @@ export function useWorkspace(): UseWorkspaceResult {
     renameFolder,
     saveEditor,
     selectEditor,
+    testBlueprintSelector,
     updateEditor: setEditor,
     updateEditorFolder,
   };
@@ -469,4 +513,12 @@ function parseJson(value: string): unknown {
 function exportFilename(exportedAt: number): string {
   const day = new Date(exportedAt).toISOString().slice(0, 10);
   return `tampr-snippets-${day}.json`;
+}
+
+function selectorTestNotice(result: BlueprintSelectorTestResult): string {
+  return `${plural(result.matchCount, 'match')}, ${result.visibleCount} visible`;
+}
+
+function plural(count: number, label: string): string {
+  return `${count} ${label}${count === 1 ? '' : 'es'}`;
 }

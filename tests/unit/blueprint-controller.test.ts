@@ -228,6 +228,54 @@ describe('BlueprintController', () => {
       status: 'cancelled',
     });
   });
+
+  it('tests a selector against the source tab without activating it', async () => {
+    const executeScript = vi.fn().mockResolvedValue([
+      {
+        result: {
+          ok: true,
+          result: {
+            firstTagName: 'button',
+            matchCount: 2,
+            visibleCount: 1,
+          },
+        },
+      },
+    ]);
+    const update = vi.fn();
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript,
+      },
+      snippets: new MemorySnippetStore(),
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn(),
+        update,
+      },
+    });
+
+    await expect(
+      controller.testSelector(42, 'button[data-testid="buy"]'),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        firstTagName: 'button',
+        matchCount: 2,
+        visibleCount: 1,
+      },
+    });
+    expect(update).not.toHaveBeenCalled();
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      func: expect.any(Function),
+      args: [{ selector: 'button[data-testid="buy"]' }],
+    });
+  });
 });
 
 class MemorySnippetStore {

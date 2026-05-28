@@ -406,7 +406,26 @@
   text-transform: uppercase;
 }
 
+.selectorActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selectorResult {
+  background: #edf4ef;
+  border: 1px solid #c7d2cc;
+  border-radius: 6px;
+  color: #29463d;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  margin: 0;
+  padding: 8px 10px;
+}
+
 .pickSelector,
+.testSelector,
 .removeNode {
   background: #fff;
   border-color: #c7d2cc;
@@ -428,6 +447,15 @@
   &:hover:not(:disabled),
   &:focus-visible {
     background: #e2f1e7;
+    border-color: #79a78f;
+    color: #14594d;
+  }
+}
+
+.testSelector {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #edf4ef;
     border-color: #79a78f;
     color: #14594d;
   }

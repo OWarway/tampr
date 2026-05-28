@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import type { PageRulePreset } from '../../../domain/page-rule-presets';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import { DEFAULT_SNIPPET_FOLDER, type Snippet } from '../../../domain/snippets';
+import type { BlueprintSelectorTestResult } from '../../../shared/blueprint-messages';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import {
   appendEditorRuleLine,
@@ -49,6 +50,9 @@ type SnippetEditorProps = {
     | (() => Promise<BlueprintElementPick | undefined>)
     | undefined;
   onSave(): void;
+  onTestBlueprintSelector?:
+    | ((selector: string) => Promise<BlueprintSelectorTestResult | undefined>)
+    | undefined;
   onUpdate(editor: EditorState): void;
 };
 
@@ -64,6 +68,7 @@ export function SnippetEditor({
   onFolderChange,
   onPickBlueprintSelector,
   onSave,
+  onTestBlueprintSelector,
   onUpdate,
 }: SnippetEditorProps) {
   const [deleteTargetId, setDeleteTargetId] = useState<string>();
@@ -213,6 +218,7 @@ export function SnippetEditor({
           blueprint={editor.blueprint}
           css={editor.css}
           onPickSelector={onPickBlueprintSelector}
+          onTestSelector={onTestBlueprintSelector}
           onChange={(blueprint, css) => onUpdate({ ...editor, blueprint, css })}
         />
 

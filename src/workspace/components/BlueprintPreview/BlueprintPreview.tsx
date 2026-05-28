@@ -20,6 +20,7 @@ import {
   type BlueprintNode,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
+import type { BlueprintSelectorTestResult } from '../../../shared/blueprint-messages';
 
 import styles from './BlueprintPreview.module.scss';
 
@@ -29,6 +30,9 @@ type BlueprintPreviewProps = {
   onPickSelector?:
     | (() => Promise<BlueprintElementPick | undefined>)
     | undefined;
+  onTestSelector?:
+    | ((selector: string) => Promise<BlueprintSelectorTestResult | undefined>)
+    | undefined;
   onChange?(blueprint: BlueprintRecipe, css: string): void;
 };
 
@@ -36,6 +40,7 @@ export function BlueprintPreview({
   blueprint,
   css,
   onPickSelector,
+  onTestSelector,
   onChange,
 }: BlueprintPreviewProps) {
   const nodes = useMemo(
@@ -44,6 +49,10 @@ export function BlueprintPreview({
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const [pickingNodeId, setPickingNodeId] = useState<string>();
+  const [testingNodeId, setTestingNodeId] = useState<string>();
+  const [selectorTestResults, setSelectorTestResults] = useState<
+    Record<string, BlueprintSelectorTestResult>
+  >({});
 
   if (!blueprint) {
     return null;
@@ -97,8 +106,32 @@ export function BlueprintPreview({
       });
 
       onChange(nextBlueprint, compileBlueprintCss(nextBlueprint));
+      clearSelectorTestResult(nodeId);
     } finally {
       setPickingNodeId(undefined);
+    }
+  }
+
+  async function testSelector(node: BlueprintNode): Promise<void> {
+    if (!onTestSelector) {
+      return;
+    }
+
+    setTestingNodeId(node.id);
+
+    try {
+      const result = await onTestSelector(node.selector);
+
+      if (!result) {
+        return;
+      }
+
+      setSelectorTestResults((currentResults) => ({
+        ...currentResults,
+        [node.id]: result,
+      }));
+    } finally {
+      setTestingNodeId(undefined);
     }
   }
 
@@ -141,6 +174,17 @@ export function BlueprintPreview({
       removeBlueprintNode(recipe, nodeId),
       nextSelectedNodeId,
     );
+    clearSelectorTestResult(nodeId);
+  }
+
+  function clearSelectorTestResult(nodeId: string): void {
+    setSelectorTestResults((currentResults) => {
+      const nextResults = { ...currentResults };
+
+      delete nextResults[nodeId];
+
+      return nextResults;
+    });
   }
 
   return (
@@ -207,7 +251,12 @@ export function BlueprintPreview({
                 ? () => void pickSelector(selectedNode.id)
                 : undefined
             }
+            onTestSelector={
+              onTestSelector ? () => void testSelector(selectedNode) : undefined
+            }
             pickingSelector={pickingNodeId === selectedNode.id}
+            selectorTestResult={selectorTestResults[selectedNode.id]}
+            testingSelector={testingNodeId === selectedNode.id}
           />
         ) : null}
       </div>
@@ -310,8 +359,11 @@ type BlueprintNodeInspectorProps = {
   onLabelChange(label: string): void;
   onPickSelector?: (() => void) | undefined;
   onRemove(): void;
+  onTestSelector?: (() => void) | undefined;
   onTypeChange(type: BlueprintCssAction): void;
   pickingSelector: boolean;
+  selectorTestResult?: BlueprintSelectorTestResult | undefined;
+  testingSelector: boolean;
 };
 
 function BlueprintNodeInspector({
@@ -322,8 +374,11 @@ function BlueprintNodeInspector({
   onLabelChange,
   onPickSelector,
   onRemove,
+  onTestSelector,
   onTypeChange,
   pickingSelector,
+  selectorTestResult,
+  testingSelector,
 }: BlueprintNodeInspectorProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
@@ -378,15 +433,32 @@ function BlueprintNodeInspector({
       <div className={styles.selectorField}>
         <span>Selector</span>
         <code>{node.selector}</code>
-        {onPickSelector ? (
-          <button
-            className={styles.pickSelector}
-            disabled={!cssInSync || pickingSelector}
-            type="button"
-            onClick={onPickSelector}
-          >
-            {pickingSelector ? 'Picking...' : 'Pick again'}
-          </button>
+        <div className={styles.selectorActions}>
+          {onPickSelector ? (
+            <button
+              className={styles.pickSelector}
+              disabled={!cssInSync || pickingSelector || testingSelector}
+              type="button"
+              onClick={onPickSelector}
+            >
+              {pickingSelector ? 'Picking...' : 'Pick again'}
+            </button>
+          ) : null}
+          {onTestSelector ? (
+            <button
+              className={styles.testSelector}
+              disabled={pickingSelector || testingSelector}
+              type="button"
+              onClick={onTestSelector}
+            >
+              {testingSelector ? 'Testing...' : 'Test selector'}
+            </button>
+          ) : null}
+        </div>
+        {selectorTestResult ? (
+          <p className={styles.selectorResult} aria-live="polite">
+            {selectorTestSummary(selectorTestResult)}
+          </p>
         ) : null}
       </div>
 
@@ -407,6 +479,18 @@ function BlueprintNodeInspector({
       </button>
     </aside>
   );
+}
+
+function selectorTestSummary(result: BlueprintSelectorTestResult): string {
+  const summary = `${plural(result.matchCount, 'match')}, ${
+    result.visibleCount
+  } visible`;
+
+  return result.firstTagName ? `${result.firstTagName}: ${summary}` : summary;
+}
+
+function plural(count: number, label: string): string {
+  return `${count} ${label}${count === 1 ? '' : 'es'}`;
 }
 
 function actionLabel(type: BlueprintNode['type']): string {

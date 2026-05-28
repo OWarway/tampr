@@ -6,13 +6,16 @@ import {
 import { buildSnippet, type Snippet } from '../domain/snippets';
 import type { RuntimeStatus } from '../runtime/runtime-status';
 import { runTamprBlueprintPicker } from '../blueprint/blueprint-picker-script';
+import { runTamprBlueprintSelectorTest } from '../blueprint/blueprint-selector-test-script';
 import {
   buildWorkspaceUrl,
   sanitizeWebPageUrl,
 } from '../shared/workspace-source-page';
 import type {
+  BlueprintSelectorTestResult,
   PickBlueprintSelectorResponse,
   StartBlueprintCreatorResponse,
+  TestBlueprintSelectorResponse,
 } from '../shared/blueprint-messages';
 
 type BlueprintSnippetStore = {
@@ -52,6 +55,15 @@ type BlueprintInjectionResult = {
   };
 };
 
+type BlueprintSelectorTestInjectionResult = {
+  result?: {
+    message?: string;
+    ok: boolean;
+    reason?: string;
+    result?: BlueprintSelectorTestResult;
+  };
+};
+
 export class BlueprintController {
   constructor(private readonly dependencies: BlueprintControllerDependencies) {}
 
@@ -71,6 +83,20 @@ export class BlueprintController {
   ): Promise<PickBlueprintSelectorResponse> {
     try {
       return await this.pickSelectorFromTab(sourceTabId);
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async testSelector(
+    sourceTabId: number,
+    selector: string,
+  ): Promise<TestBlueprintSelectorResponse> {
+    try {
+      return await this.testSelectorOnTab(sourceTabId, selector);
     } catch (error: unknown) {
       return {
         ok: false,
@@ -183,6 +209,51 @@ export class BlueprintController {
       ok: true,
       pick: pickerResponse.pick,
       status: 'picked',
+    };
+  }
+
+  private async testSelectorOnTab(
+    sourceTabId: number,
+    selector: string,
+  ): Promise<TestBlueprintSelectorResponse> {
+    if (!this.dependencies.scripting) {
+      throw new Error(
+        'Blueprint selector test needs Chrome scripting support.',
+      );
+    }
+
+    if (!Number.isInteger(sourceTabId) || sourceTabId <= 0) {
+      throw new Error('Blueprint selector test needs a source tab.');
+    }
+
+    if (!selector.trim() || selector.length > 1000) {
+      throw new Error('Blueprint selector test needs a valid selector.');
+    }
+
+    const [injectionResult] = (await this.dependencies.scripting.executeScript({
+      target: { tabId: sourceTabId },
+      func: runTamprBlueprintSelectorTest,
+      args: [{ selector }],
+    })) as BlueprintSelectorTestInjectionResult[];
+    const testResponse = injectionResult?.result;
+
+    if (!testResponse) {
+      throw new Error('Blueprint selector test could not read the page.');
+    }
+
+    if (!testResponse.ok) {
+      throw new Error(
+        testResponse.message ?? 'Blueprint selector test failed.',
+      );
+    }
+
+    if (!testResponse.result) {
+      throw new Error('Blueprint selector test returned no result.');
+    }
+
+    return {
+      ok: true,
+      result: testResponse.result,
     };
   }
 }

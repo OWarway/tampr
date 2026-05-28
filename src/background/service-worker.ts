@@ -4,6 +4,7 @@ import { syncChromeUserScripts } from '../runtime/user-script-runtime';
 import {
   isPickBlueprintSelectorMessage,
   isStartBlueprintCreatorMessage,
+  isTestBlueprintSelectorMessage,
 } from '../shared/blueprint-messages';
 import type { ExtensionResponse } from '../shared/workspace-messages';
 import { createChromeSnippetRepository } from '../storage/snippet-repository';
@@ -60,6 +61,17 @@ chrome.runtime.onMessage.addListener(
     if (isPickBlueprintSelectorMessage(message)) {
       void blueprints
         .pickSelector(message.sourceTabId)
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    }
+
+    if (isTestBlueprintSelectorMessage(message)) {
+      void blueprints
+        .testSelector(message.sourceTabId, message.selector)
         .then(sendResponse)
         .catch((error: unknown) => {
           sendResponse(toErrorResponse(error));

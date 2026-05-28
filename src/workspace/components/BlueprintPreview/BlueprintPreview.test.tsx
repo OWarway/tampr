@@ -285,6 +285,37 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('tests the selected node selector against the source page', async () => {
+    const onTestSelector = vi.fn().mockResolvedValue({
+      firstTagName: 'button',
+      matchCount: 1,
+      visibleCount: 1,
+    });
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onTestSelector={onTestSelector}
+        onChange={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test selector' }));
+
+    await waitFor(() =>
+      expect(onTestSelector).toHaveBeenCalledWith('[data-testid="offer"]'),
+    );
+    expect(await screen.findByText('button: 1 match, 1 visible')).toBeTruthy();
+  });
+
   it('removes the selected node and regenerates CSS', () => {
     const onChange = vi.fn();
     const blueprint = twoNodeRecipe();
