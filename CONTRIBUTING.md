@@ -67,3 +67,10 @@ trailers or tool-specific wording in commit messages.
 - `npm run check` passes.
 - `npm run test:e2e` passes when extension behavior or UI surfaces change.
 - New dependencies earn their bundle weight and product value.
+
+## Automated Agents
+
+Automated coding agents should read [AGENTS.md](./AGENTS.md) before making
+changes. It captures Tampr's product boundaries, architecture rules, UI
+conventions, testing expectations, permission policy, and commit rules in one
+place.
