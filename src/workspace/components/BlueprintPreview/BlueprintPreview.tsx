@@ -36,7 +36,11 @@ import {
   type BlueprintNodeType,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
-import type { BlueprintSelectorTestResult } from '../../../shared/blueprint-messages';
+import type {
+  BlueprintAutomationNodeTestInput,
+  BlueprintAutomationNodeTestResult,
+  BlueprintSelectorTestResult,
+} from '../../../shared/blueprint-messages';
 
 import styles from './BlueprintPreview.module.scss';
 
@@ -46,6 +50,11 @@ type BlueprintPreviewProps = {
   js?: string;
   onPickSelector?:
     | (() => Promise<BlueprintElementPick | undefined>)
+    | undefined;
+  onTestAutomationNode?:
+    | ((
+        node: BlueprintAutomationNodeTestInput,
+      ) => Promise<BlueprintAutomationNodeTestResult | undefined>)
     | undefined;
   onTestSelector?:
     | ((selector: string) => Promise<BlueprintSelectorTestResult | undefined>)
@@ -58,6 +67,7 @@ export function BlueprintPreview({
   css,
   js,
   onPickSelector,
+  onTestAutomationNode,
   onTestSelector,
   onChange,
 }: BlueprintPreviewProps) {
@@ -68,8 +78,13 @@ export function BlueprintPreview({
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const [pickingNodeId, setPickingNodeId] = useState<string>();
   const [testingNodeId, setTestingNodeId] = useState<string>();
+  const [testingAutomationNodeId, setTestingAutomationNodeId] =
+    useState<string>();
   const [selectorTestResults, setSelectorTestResults] = useState<
     Record<string, BlueprintSelectorTestResult>
+  >({});
+  const [automationTestResults, setAutomationTestResults] = useState<
+    Record<string, BlueprintAutomationNodeTestResult>
   >({});
 
   if (!blueprint) {
@@ -114,6 +129,10 @@ export function BlueprintPreview({
         : js;
 
     emitChange(nextBlueprint, nextCss, nextJs);
+
+    if (options.regeneratesCode) {
+      clearAutomationTestResult(nodeId);
+    }
   }
 
   async function pickSelector(nodeId: string): Promise<void> {
@@ -142,6 +161,7 @@ export function BlueprintPreview({
 
       emitGeneratedChange(nextBlueprint);
       clearSelectorTestResult(nodeId);
+      clearAutomationTestResult(nodeId);
     } finally {
       setPickingNodeId(undefined);
     }
@@ -167,6 +187,31 @@ export function BlueprintPreview({
       }));
     } finally {
       setTestingNodeId(undefined);
+    }
+  }
+
+  async function testAutomationNode(
+    node: BlueprintAutomationNode,
+  ): Promise<void> {
+    if (!onTestAutomationNode) {
+      return;
+    }
+
+    setTestingAutomationNodeId(node.id);
+
+    try {
+      const result = await onTestAutomationNode(automationNodeTestInput(node));
+
+      if (!result) {
+        return;
+      }
+
+      setAutomationTestResults((currentResults) => ({
+        ...currentResults,
+        [node.id]: result,
+      }));
+    } finally {
+      setTestingAutomationNodeId(undefined);
     }
   }
 
@@ -210,6 +255,7 @@ export function BlueprintPreview({
       nextSelectedNodeId,
     );
     clearSelectorTestResult(nodeId);
+    clearAutomationTestResult(nodeId);
   }
 
   function moveNode(
@@ -249,6 +295,16 @@ export function BlueprintPreview({
 
   function clearSelectorTestResult(nodeId: string): void {
     setSelectorTestResults((currentResults) => {
+      const nextResults = { ...currentResults };
+
+      delete nextResults[nodeId];
+
+      return nextResults;
+    });
+  }
+
+  function clearAutomationTestResult(nodeId: string): void {
+    setAutomationTestResults((currentResults) => {
       const nextResults = { ...currentResults };
 
       delete nextResults[nodeId];
@@ -367,8 +423,15 @@ export function BlueprintPreview({
             onTestSelector={
               onTestSelector ? () => void testSelector(selectedNode) : undefined
             }
+            onTestAutomationNode={
+              onTestAutomationNode && isAutomationNode(selectedNode)
+                ? () => void testAutomationNode(selectedNode)
+                : undefined
+            }
+            automationTestResult={automationTestResults[selectedNode.id]}
             pickingSelector={pickingNodeId === selectedNode.id}
             selectorTestResult={selectorTestResults[selectedNode.id]}
+            testingAutomationNode={testingAutomationNodeId === selectedNode.id}
             testingSelector={testingNodeId === selectedNode.id}
           />
         ) : null}
@@ -488,6 +551,7 @@ type BlueprintNodeInspectorProps = {
   canMoveDown: boolean;
   canMoveUp: boolean;
   canRemove: boolean;
+  automationTestResult?: BlueprintAutomationNodeTestResult | undefined;
   generatedCodeInSync: boolean;
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
@@ -499,6 +563,7 @@ type BlueprintNodeInspectorProps = {
   onRequireVisibleChange(requireVisible: boolean): void;
   onRemove(): void;
   onTestSelector?: (() => void) | undefined;
+  onTestAutomationNode?: (() => void) | undefined;
   onTimeoutChange(timeoutMs: number): void;
   onTypeChange(type: BlueprintCssAction): void;
   onValueChange(value: string): void;
@@ -506,6 +571,7 @@ type BlueprintNodeInspectorProps = {
   onVariableNameChange(variableName: string): void;
   pickingSelector: boolean;
   selectorTestResult?: BlueprintSelectorTestResult | undefined;
+  testingAutomationNode: boolean;
   testingSelector: boolean;
 };
 
@@ -513,6 +579,7 @@ function BlueprintNodeInspector({
   canMoveDown,
   canMoveUp,
   canRemove,
+  automationTestResult,
   generatedCodeInSync,
   node,
   onEnabledChange,
@@ -524,6 +591,7 @@ function BlueprintNodeInspector({
   onRequireVisibleChange,
   onRemove,
   onTestSelector,
+  onTestAutomationNode,
   onTimeoutChange,
   onTypeChange,
   onValueChange,
@@ -531,6 +599,7 @@ function BlueprintNodeInspector({
   onVariableNameChange,
   pickingSelector,
   selectorTestResult,
+  testingAutomationNode,
   testingSelector,
 }: BlueprintNodeInspectorProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
@@ -595,6 +664,12 @@ function BlueprintNodeInspector({
       {isAutomationNode(node) ? (
         <>
           <BlueprintSafetySummary issues={safetyIssues} />
+          <BlueprintAutomationTestPanel
+            generatedCodeInSync={generatedCodeInSync}
+            result={automationTestResult}
+            testing={testingAutomationNode}
+            onTest={onTestAutomationNode}
+          />
           <BlueprintAutomationSettings
             generatedCodeInSync={generatedCodeInSync}
             node={node}
@@ -680,6 +755,59 @@ function BlueprintNodeInspector({
         Remove node
       </button>
     </aside>
+  );
+}
+
+type BlueprintAutomationTestPanelProps = {
+  generatedCodeInSync: boolean;
+  result?: BlueprintAutomationNodeTestResult | undefined;
+  testing: boolean;
+  onTest?: (() => void) | undefined;
+};
+
+function BlueprintAutomationTestPanel({
+  generatedCodeInSync,
+  result,
+  testing,
+  onTest,
+}: BlueprintAutomationTestPanelProps) {
+  if (!onTest) {
+    return null;
+  }
+
+  return (
+    <div className={styles.automationTestPanel}>
+      <button
+        className={styles.testAutomation}
+        disabled={!generatedCodeInSync || testing}
+        type="button"
+        onClick={onTest}
+      >
+        {testing ? 'Testing...' : 'Test node'}
+      </button>
+      {result ? (
+        <div
+          className={`${styles.automationTestResult} ${
+            result.ready ? styles.testReady : styles.testReview
+          }`}
+          aria-live="polite"
+        >
+          <strong>{result.ready ? 'Ready on page' : 'Needs review'}</strong>
+          <span>
+            {result.matchCount} {result.matchCount === 1 ? 'match' : 'matches'},{' '}
+            {result.visibleCount} visible
+          </span>
+          {result.preview ? <p>{result.preview}</p> : null}
+          {result.issues.length > 0 ? (
+            <ul>
+              {result.issues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -849,6 +977,24 @@ function isAutomationNode(
   node: BlueprintNode,
 ): node is BlueprintAutomationNode {
   return isBlueprintAutomationAction(node.type);
+}
+
+function automationNodeTestInput(
+  node: BlueprintAutomationNode,
+): BlueprintAutomationNodeTestInput {
+  return {
+    selector: node.selector,
+    type: node.type,
+    ...('filename' in node ? { filename: node.filename } : {}),
+    ...('requireVisible' in node
+      ? { requireVisible: node.requireVisible }
+      : {}),
+    ...('value' in node ? { value: node.value } : {}),
+    ...('valueFrom' in node && node.valueFrom
+      ? { valueFrom: node.valueFrom }
+      : {}),
+    ...('variableName' in node ? { variableName: node.variableName } : {}),
+  };
 }
 
 function safetyLabel(

@@ -61,6 +61,9 @@ export function App() {
           onDuplicate={state.duplicateCurrentEditor}
           onFolderChange={state.updateEditorFolder}
           onPickBlueprintSelector={() => state.pickBlueprintSelector()}
+          onTestBlueprintAutomationNode={(node) =>
+            state.testBlueprintAutomationNode(node)
+          }
           onTestBlueprintSelector={(selector) =>
             state.testBlueprintSelector(selector)
           }

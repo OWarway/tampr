@@ -276,6 +276,72 @@ describe('BlueprintController', () => {
       args: [{ selector: 'button[data-testid="buy"]' }],
     });
   });
+
+  it('tests an automation node against the source tab without activating it', async () => {
+    const executeScript = vi.fn().mockResolvedValue([
+      {
+        result: {
+          ok: true,
+          result: {
+            action: 'click',
+            firstTagName: 'button',
+            issues: [],
+            matchCount: 1,
+            preview: 'Open deal',
+            ready: true,
+            visibleCount: 1,
+          },
+        },
+      },
+    ]);
+    const update = vi.fn();
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript,
+      },
+      snippets: new MemorySnippetStore(),
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn(),
+        update,
+      },
+    });
+
+    await expect(
+      controller.testAutomationNode(42, {
+        type: 'click',
+        selector: 'button[data-testid="deal"]',
+        requireVisible: true,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        action: 'click',
+        firstTagName: 'button',
+        issues: [],
+        matchCount: 1,
+        preview: 'Open deal',
+        ready: true,
+        visibleCount: 1,
+      },
+    });
+    expect(update).not.toHaveBeenCalled();
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      func: expect.any(Function),
+      args: [
+        {
+          type: 'click',
+          selector: 'button[data-testid="deal"]',
+          requireVisible: true,
+        },
+      ],
+    });
+  });
 });
 
 class MemorySnippetStore {

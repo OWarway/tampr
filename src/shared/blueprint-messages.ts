@@ -1,12 +1,38 @@
 import type { BlueprintElementPick } from '../domain/blueprint-snippets';
+import {
+  BLUEPRINT_AUTOMATION_ACTIONS,
+  type BlueprintAutomationAction,
+} from '../domain/blueprints/actions';
 
 export const START_BLUEPRINT_CREATOR_MESSAGE = 'blueprints/start-creator';
 export const PICK_BLUEPRINT_SELECTOR_MESSAGE = 'blueprints/pick-selector';
 export const TEST_BLUEPRINT_SELECTOR_MESSAGE = 'blueprints/test-selector';
+export const TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE =
+  'blueprints/test-automation-node';
 
 export type BlueprintSelectorTestResult = {
   firstTagName?: string;
   matchCount: number;
+  visibleCount: number;
+};
+
+export type BlueprintAutomationNodeTestInput = {
+  filename?: string;
+  requireVisible?: boolean;
+  selector: string;
+  type: BlueprintAutomationAction;
+  value?: string;
+  valueFrom?: string;
+  variableName?: string;
+};
+
+export type BlueprintAutomationNodeTestResult = {
+  action: BlueprintAutomationAction;
+  firstTagName?: string;
+  issues: string[];
+  matchCount: number;
+  preview?: string;
+  ready: boolean;
   visibleCount: number;
 };
 
@@ -23,6 +49,12 @@ export type TestBlueprintSelectorMessage = {
   selector: string;
   sourceTabId: number;
   type: typeof TEST_BLUEPRINT_SELECTOR_MESSAGE;
+};
+
+export type TestBlueprintAutomationNodeMessage = {
+  node: BlueprintAutomationNodeTestInput;
+  sourceTabId: number;
+  type: typeof TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE;
 };
 
 export type StartBlueprintCreatorResponse =
@@ -51,6 +83,16 @@ export type TestBlueprintSelectorResponse =
   | {
       ok: true;
       result: BlueprintSelectorTestResult;
+    }
+  | {
+      error: string;
+      ok: false;
+    };
+
+export type TestBlueprintAutomationNodeResponse =
+  | {
+      ok: true;
+      result: BlueprintAutomationNodeTestResult;
     }
   | {
       error: string;
@@ -100,4 +142,74 @@ export function isTestBlueprintSelectorMessage(
     message.selector.trim().length > 0 &&
     message.selector.length <= 1000
   );
+}
+
+export function isTestBlueprintAutomationNodeMessage(
+  message: unknown,
+): message is TestBlueprintAutomationNodeMessage {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'type' in message &&
+    message.type === TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE &&
+    'sourceTabId' in message &&
+    typeof message.sourceTabId === 'number' &&
+    Number.isInteger(message.sourceTabId) &&
+    message.sourceTabId > 0 &&
+    'node' in message &&
+    isAutomationNodeTestInput(message.node)
+  );
+}
+
+function isAutomationNodeTestInput(
+  value: unknown,
+): value is BlueprintAutomationNodeTestInput {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  if (
+    !('type' in value) ||
+    typeof value.type !== 'string' ||
+    !(BLUEPRINT_AUTOMATION_ACTIONS as readonly string[]).includes(value.type)
+  ) {
+    return false;
+  }
+
+  if (
+    !('selector' in value) ||
+    typeof value.selector !== 'string' ||
+    value.selector.length > 2000
+  ) {
+    return false;
+  }
+
+  if (
+    'requireVisible' in value &&
+    value.requireVisible !== undefined &&
+    typeof value.requireVisible !== 'boolean'
+  ) {
+    return false;
+  }
+
+  return (
+    optionalString(value, 'filename', 160) &&
+    optionalString(value, 'value', 10_000) &&
+    optionalString(value, 'valueFrom', 80) &&
+    optionalString(value, 'variableName', 80)
+  );
+}
+
+function optionalString(
+  value: object,
+  key: string,
+  maxLength: number,
+): boolean {
+  const property = (value as Record<string, unknown>)[key];
+
+  if (property === undefined) {
+    return true;
+  }
+
+  return typeof property === 'string' && property.length <= maxLength;
 }

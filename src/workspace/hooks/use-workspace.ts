@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   pickBlueprintSelector as pickBlueprintSelectorFromTab,
+  testBlueprintAutomationNode as testBlueprintAutomationNodeFromTab,
   testBlueprintSelector as testBlueprintSelectorFromTab,
 } from '../../chrome/blueprints';
 import { requestHostAccess } from '../../chrome/host-access';
@@ -21,7 +22,11 @@ import {
   type Snippet,
 } from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
-import type { BlueprintSelectorTestResult } from '../../shared/blueprint-messages';
+import type {
+  BlueprintAutomationNodeTestInput,
+  BlueprintAutomationNodeTestResult,
+  BlueprintSelectorTestResult,
+} from '../../shared/blueprint-messages';
 import {
   getWorkspaceSelectedSnippetId,
   getWorkspaceSourceTabId,
@@ -56,6 +61,9 @@ export type UseWorkspaceResult = {
   testBlueprintSelector(
     selector: string,
   ): Promise<BlueprintSelectorTestResult | undefined>;
+  testBlueprintAutomationNode(
+    node: BlueprintAutomationNodeTestInput,
+  ): Promise<BlueprintAutomationNodeTestResult | undefined>;
   updateEditor(editor: EditorState): void;
   updateEditorFolder(folder: string): void;
 };
@@ -200,6 +208,42 @@ export function useWorkspace(): UseWorkspaceResult {
 
       setNotice(
         `Selector test complete: ${selectorTestNotice(response.result)}.`,
+      );
+      return response.result;
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testBlueprintAutomationNode(
+    node: BlueprintAutomationNodeTestInput,
+  ): Promise<BlueprintAutomationNodeTestResult | undefined> {
+    const sourceTabId = getWorkspaceSourceTabId(window.location.href);
+
+    if (!sourceTabId) {
+      setNotice('Open the workspace from a page before testing automation.');
+      return undefined;
+    }
+
+    setBusy(true);
+    setNotice('Testing automation node on the source page.');
+
+    try {
+      const response = await testBlueprintAutomationNodeFromTab(
+        sourceTabId,
+        node,
+      );
+
+      if (!response.ok) {
+        setNotice(response.error);
+        return undefined;
+      }
+
+      setNotice(
+        `Automation test complete: ${automationTestNotice(response.result)}.`,
       );
       return response.result;
     } catch (error: unknown) {
@@ -476,6 +520,7 @@ export function useWorkspace(): UseWorkspaceResult {
     renameFolder,
     saveEditor,
     selectEditor,
+    testBlueprintAutomationNode,
     testBlueprintSelector,
     updateEditor: setEditor,
     updateEditorFolder,
@@ -517,6 +562,14 @@ function exportFilename(exportedAt: number): string {
 
 function selectorTestNotice(result: BlueprintSelectorTestResult): string {
   return `${plural(result.matchCount, 'match')}, ${result.visibleCount} visible`;
+}
+
+function automationTestNotice(
+  result: BlueprintAutomationNodeTestResult,
+): string {
+  return result.ready
+    ? `${result.action} ready`
+    : `${result.action} needs review`;
 }
 
 function plural(count: number, label: string): string {

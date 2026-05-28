@@ -5,6 +5,7 @@ import {
 } from '../domain/blueprint-snippets';
 import { buildSnippet, type Snippet } from '../domain/snippets';
 import type { RuntimeStatus } from '../runtime/runtime-status';
+import { runTamprBlueprintAutomationNodeTest } from '../blueprint/blueprint-automation-test-script';
 import { runTamprBlueprintPicker } from '../blueprint/blueprint-picker-script';
 import { runTamprBlueprintSelectorTest } from '../blueprint/blueprint-selector-test-script';
 import {
@@ -12,9 +13,12 @@ import {
   sanitizeWebPageUrl,
 } from '../shared/workspace-source-page';
 import type {
+  BlueprintAutomationNodeTestInput,
+  BlueprintAutomationNodeTestResult,
   BlueprintSelectorTestResult,
   PickBlueprintSelectorResponse,
   StartBlueprintCreatorResponse,
+  TestBlueprintAutomationNodeResponse,
   TestBlueprintSelectorResponse,
 } from '../shared/blueprint-messages';
 
@@ -64,6 +68,15 @@ type BlueprintSelectorTestInjectionResult = {
   };
 };
 
+type BlueprintAutomationNodeTestInjectionResult = {
+  result?: {
+    message?: string;
+    ok: boolean;
+    reason?: string;
+    result?: BlueprintAutomationNodeTestResult;
+  };
+};
+
 export class BlueprintController {
   constructor(private readonly dependencies: BlueprintControllerDependencies) {}
 
@@ -97,6 +110,20 @@ export class BlueprintController {
   ): Promise<TestBlueprintSelectorResponse> {
     try {
       return await this.testSelectorOnTab(sourceTabId, selector);
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async testAutomationNode(
+    sourceTabId: number,
+    node: BlueprintAutomationNodeTestInput,
+  ): Promise<TestBlueprintAutomationNodeResponse> {
+    try {
+      return await this.testAutomationNodeOnTab(sourceTabId, node);
     } catch (error: unknown) {
       return {
         ok: false,
@@ -249,6 +276,49 @@ export class BlueprintController {
 
     if (!testResponse.result) {
       throw new Error('Blueprint selector test returned no result.');
+    }
+
+    return {
+      ok: true,
+      result: testResponse.result,
+    };
+  }
+
+  private async testAutomationNodeOnTab(
+    sourceTabId: number,
+    node: BlueprintAutomationNodeTestInput,
+  ): Promise<TestBlueprintAutomationNodeResponse> {
+    if (!this.dependencies.scripting) {
+      throw new Error(
+        'Blueprint automation node test needs Chrome scripting support.',
+      );
+    }
+
+    if (!Number.isInteger(sourceTabId) || sourceTabId <= 0) {
+      throw new Error('Blueprint automation node test needs a source tab.');
+    }
+
+    const [injectionResult] = (await this.dependencies.scripting.executeScript({
+      target: { tabId: sourceTabId },
+      func: runTamprBlueprintAutomationNodeTest,
+      args: [node],
+    })) as BlueprintAutomationNodeTestInjectionResult[];
+    const testResponse = injectionResult?.result;
+
+    if (!testResponse) {
+      throw new Error(
+        'Blueprint automation node test could not read the page.',
+      );
+    }
+
+    if (!testResponse.ok) {
+      throw new Error(
+        testResponse.message ?? 'Blueprint automation node test failed.',
+      );
+    }
+
+    if (!testResponse.result) {
+      throw new Error('Blueprint automation node test returned no result.');
     }
 
     return {

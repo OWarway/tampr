@@ -35,6 +35,8 @@ group changes under the headings below.
   configuring wait, click, set-value, extract-text, and JSON download nodes.
 - Blueprint automation safety assessment for risky clicks, sensitive fields,
   selector drift, flaky timeouts, and download filename issues.
+- Source-page automation node testing for checking selectors, visibility, field
+  compatibility, and download settings without clicking, typing, or downloading.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.

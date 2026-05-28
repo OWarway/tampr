@@ -3,7 +3,11 @@ import { useState, type FormEvent } from 'react';
 import type { PageRulePreset } from '../../../domain/page-rule-presets';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import { DEFAULT_SNIPPET_FOLDER, type Snippet } from '../../../domain/snippets';
-import type { BlueprintSelectorTestResult } from '../../../shared/blueprint-messages';
+import type {
+  BlueprintAutomationNodeTestInput,
+  BlueprintAutomationNodeTestResult,
+  BlueprintSelectorTestResult,
+} from '../../../shared/blueprint-messages';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import {
   appendEditorRuleLine,
@@ -50,6 +54,11 @@ type SnippetEditorProps = {
     | (() => Promise<BlueprintElementPick | undefined>)
     | undefined;
   onSave(): void;
+  onTestBlueprintAutomationNode?:
+    | ((
+        node: BlueprintAutomationNodeTestInput,
+      ) => Promise<BlueprintAutomationNodeTestResult | undefined>)
+    | undefined;
   onTestBlueprintSelector?:
     | ((selector: string) => Promise<BlueprintSelectorTestResult | undefined>)
     | undefined;
@@ -68,6 +77,7 @@ export function SnippetEditor({
   onFolderChange,
   onPickBlueprintSelector,
   onSave,
+  onTestBlueprintAutomationNode,
   onTestBlueprintSelector,
   onUpdate,
 }: SnippetEditorProps) {
@@ -219,6 +229,7 @@ export function SnippetEditor({
           css={editor.css}
           js={editor.js}
           onPickSelector={onPickBlueprintSelector}
+          onTestAutomationNode={onTestBlueprintAutomationNode}
           onTestSelector={onTestBlueprintSelector}
           onChange={(blueprint, css, js = editor.js) =>
             onUpdate({ ...editor, blueprint, css, js })

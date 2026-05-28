@@ -564,6 +564,42 @@ describe('BlueprintPreview', () => {
     ).toBeTruthy();
   });
 
+  it('tests automation nodes against the source page without running them', async () => {
+    const onTestAutomationNode = vi.fn().mockResolvedValue({
+      action: 'wait-for-element',
+      firstTagName: 'section',
+      issues: [],
+      matchCount: 1,
+      preview: 'Deal',
+      ready: true,
+      visibleCount: 1,
+    });
+    const blueprint = automationRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onTestAutomationNode={onTestAutomationNode}
+        onChange={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test node' }));
+
+    await waitFor(() =>
+      expect(onTestAutomationNode).toHaveBeenCalledWith({
+        selector: '[data-testid="deal"]',
+        type: 'wait-for-element',
+        requireVisible: true,
+      }),
+    );
+    expect(await screen.findByText('Ready on page')).toBeTruthy();
+    expect(screen.getByText('1 match, 1 visible')).toBeTruthy();
+    expect(screen.getByText('Deal')).toBeTruthy();
+  });
+
   it('edits automation values and regenerates JavaScript', () => {
     const onChange = vi.fn();
     const blueprint = setValueRecipe();

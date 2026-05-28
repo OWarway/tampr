@@ -406,6 +406,62 @@
   padding-block: 12px;
 }
 
+.automationTestPanel {
+  display: grid;
+  gap: 8px;
+}
+
+.automationTestResult {
+  border: 1px solid #c7d2cc;
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  padding: 8px 10px;
+
+  strong {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  span,
+  p,
+  li {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  p,
+  ul {
+    margin: 0;
+  }
+
+  ul {
+    display: grid;
+    gap: 4px;
+    padding-left: 16px;
+  }
+}
+
+.testReady {
+  background: #e2f1e7;
+  border-color: #79a78f;
+
+  strong {
+    color: #14594d;
+  }
+}
+
+.testReview {
+  background: #fff4e4;
+  border-color: #d8ad72;
+
+  strong {
+    color: #7d4a16;
+  }
+}
+
 .safetyPanel {
   background: #f7fbf8;
   border: 1px solid #dbe3de;
@@ -517,6 +573,7 @@
 
 .moveNode,
 .pickSelector,
+.testAutomation,
 .testSelector,
 .removeNode {
   background: #fff;
@@ -545,6 +602,15 @@
 }
 
 .pickSelector {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #e2f1e7;
+    border-color: #79a78f;
+    color: #14594d;
+  }
+}
+
+.testAutomation {
   &:hover:not(:disabled),
   &:focus-visible {
     background: #e2f1e7;

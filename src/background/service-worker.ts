@@ -4,6 +4,7 @@ import { syncChromeUserScripts } from '../runtime/user-script-runtime';
 import {
   isPickBlueprintSelectorMessage,
   isStartBlueprintCreatorMessage,
+  isTestBlueprintAutomationNodeMessage,
   isTestBlueprintSelectorMessage,
 } from '../shared/blueprint-messages';
 import type { ExtensionResponse } from '../shared/workspace-messages';
@@ -72,6 +73,17 @@ chrome.runtime.onMessage.addListener(
     if (isTestBlueprintSelectorMessage(message)) {
       void blueprints
         .testSelector(message.sourceTabId, message.selector)
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    }
+
+    if (isTestBlueprintAutomationNodeMessage(message)) {
+      void blueprints
+        .testAutomationNode(message.sourceTabId, message.node)
         .then(sendResponse)
         .catch((error: unknown) => {
           sendResponse(toErrorResponse(error));

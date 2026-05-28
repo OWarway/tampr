@@ -116,6 +116,13 @@ sensitive form-field selectors, empty set-value payloads, flaky timeouts, and
 non-JSON download filenames. Run and recording features should reuse this same
 assessment instead of adding separate UI-only rules.
 
+Automation node tests use a temporary `scripting.executeScript` call against the
+source tab to preflight one node at a time. They read selector matches,
+visibility, field compatibility, preview text, and download configuration only;
+they must not click, type into fields, submit forms, extract saved data, or start
+downloads. Keep this non-mutating test path separate from any future manual run
+or recording path.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global
