@@ -63,6 +63,11 @@ Before release, exercise:
 - A matching JavaScript snippet in the default user-script world.
 - The extension badge shows the number of snippets that ran on a matching page
   and clears after navigating the tab away.
+- Start Blueprint from the popup on an http or https page, pick an element,
+  choose Hide, and confirm a Blueprints folder snippet opens in the workspace.
+- Start Blueprint again, choose Highlight, and confirm the generated CSS uses the
+  selected selector without adding JavaScript.
+- Press Escape during Blueprint picking and confirm no snippet is created.
 - A default user-script world snippet that calls
   `Tampr.download({ filename: 'tampr-test.txt', text: 'ok' })`.
 - A default user-script world snippet that calls
@@ -86,10 +91,14 @@ Before release, verify:
 - The popup treats `chrome://` pages as unsupported.
 - Opening the workspace from the popup carries only the sanitized page origin and
   path context.
+- Starting Blueprint from the popup uses only the active page and removes the
+  temporary picker after an action or cancel.
 - Saving a snippet requests host access for its match rules.
 - Denying host access leaves the snippet saved but not registered.
 - The manifest `downloads` permission is explained by workspace export and the
   constrained `Tampr.download()` API, not by automatic background behavior.
+- The manifest `scripting` permission is explained by the temporary
+  user-triggered Blueprint picker, not by persistent page monitoring.
 - The workspace trust strip explains local data, runtime state, and host access.
 
 ## Known Limits For V1

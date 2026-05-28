@@ -28,7 +28,11 @@ Tampr declares the smallest permission set needed for the current product:
 - `userScripts` registers user-authored JavaScript and the CSS bridge through
   Chrome's User Scripts API.
 - `activeTab` reads the active page URL only after the user opens the popup, so
-  the workspace can offer useful match-rule presets.
+  the workspace can offer useful match-rule presets and the Blueprint creator
+  can work on the page the user invoked it from.
+- `scripting` injects the temporary Blueprint picker only after the user starts
+  it from the popup. The picker highlights elements, returns the selected
+  selector, and is removed after Hide, Highlight, or Cancel.
 - `downloads` lets user-triggered workspace exports and validated
   `Tampr.download()` calls save generated text or remote http/https URLs
   through the browser downloads API.
@@ -54,6 +58,10 @@ Registered snippets also include a small user-script-world heartbeat that tells
 the service worker which snippet ran in a tab. Tampr uses that local message to
 show the extension badge count; it does not include page URLs, snippet code, or
 remote network calls, and it does not require the broad `tabs` permission.
+
+The Blueprint picker is not a persistent content script. It runs only for the
+active user-invoked page selection, creates a local snippet from the selected
+element, and does not send page content outside the extension.
 
 ## Risk Boundaries
 

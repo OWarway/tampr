@@ -1,4 +1,4 @@
-import { WORKSPACE_SOURCE_PAGE_PARAM } from '../shared/workspace-source-page';
+import { buildWorkspaceUrl } from '../shared/workspace-source-page';
 import { getActivePageUrl } from './active-page';
 
 export async function openWorkspace(): Promise<void> {
@@ -9,8 +9,10 @@ export async function openWorkspace(): Promise<void> {
     return;
   }
 
-  const workspaceUrl = new URL(chrome.runtime.getURL('workspace.html'));
-  workspaceUrl.searchParams.set(WORKSPACE_SOURCE_PAGE_PARAM, sourcePageUrl);
-
-  await chrome.tabs.create({ url: workspaceUrl.href });
+  await chrome.tabs.create({
+    url: buildWorkspaceUrl({
+      baseUrl: chrome.runtime.getURL('workspace.html'),
+      sourcePageUrl,
+    }),
+  });
 }

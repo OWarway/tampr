@@ -16,6 +16,7 @@ import {
   type Snippet,
 } from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
+import { getWorkspaceSelectedSnippetId } from '../../shared/workspace-source-page';
 import { downloadJson } from '../download-json';
 import {
   duplicateEditor,
@@ -73,8 +74,10 @@ export function useWorkspace(): UseWorkspaceResult {
         setNotice('Runtime state loaded.');
         setBusy(false);
 
-        if (state.snippets[0]) {
-          setEditor(toEditorState(state.snippets[0]));
+        const selectedSnippet = selectedSnippetFromUrl(state);
+
+        if (selectedSnippet) {
+          setEditor(toEditorState(selectedSnippet));
         }
       })
       .catch((error: unknown) => {
@@ -389,6 +392,22 @@ export function useWorkspace(): UseWorkspaceResult {
     updateEditor: setEditor,
     updateEditorFolder,
   };
+}
+
+function selectedSnippetFromUrl(state: WorkspaceState): Snippet | undefined {
+  const selectedSnippetId = getWorkspaceSelectedSnippetId(window.location.href);
+
+  if (selectedSnippetId) {
+    const selectedSnippet = state.snippets.find(
+      (snippet) => snippet.id === selectedSnippetId,
+    );
+
+    if (selectedSnippet) {
+      return selectedSnippet;
+    }
+  }
+
+  return state.snippets[0];
 }
 
 function toErrorMessage(error: unknown): string {

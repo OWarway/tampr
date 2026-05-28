@@ -9,6 +9,7 @@ Status: active pre-release development.
 
 - Creates and edits local CSS and JavaScript snippets.
 - Groups snippets into collapsible, lightweight folders in the workspace.
+- Creates starter snippets from pages with a visual Blueprint picker.
 - Targets snippets with Chrome web match rules and exclude rules.
 - Shows what matches the current page from the popup.
 - Shows a per-tab extension badge count when snippets run on the current page.
@@ -22,6 +23,13 @@ Status: active pre-release development.
 
 Tampr does not use accounts, cloud sync, telemetry, hosted snippet feeds, or
 remote snippet execution.
+
+## Blueprint Creator
+
+Open the popup on an http or https page and choose Blueprint. Tampr temporarily
+highlights page elements, lets you choose Hide or Highlight, saves the result as
+a normal CSS snippet in the Blueprints folder, and opens it in the workspace for
+review. The snippet is editable like any other local snippet.
 
 ## Screenshots
 
@@ -89,6 +97,7 @@ Tampr publishes GitHub pre-releases from version tags. Pushing a tag like
 ```text
 src/
   background/  service-worker message orchestration
+  blueprint/   temporary page picker behavior for Blueprint creation
   chrome/      thin typed adapters around Chrome APIs
   domain/      snippet models, match rules, import/export, pure logic
   popup/       current-page control surface

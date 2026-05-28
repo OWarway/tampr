@@ -75,6 +75,18 @@ Opening the workspace from the popup carries sanitized active-page context for
 match-rule presets. Tampr uses Chrome's temporary `activeTab` access for that
 user-invoked handoff rather than broad tab access.
 
+## Blueprint Creator
+
+The popup Blueprint action uses `activeTab` plus `scripting` to run a temporary
+element picker on the current http or https page. The picker returns only the
+chosen action and selector metadata to the service worker. The service worker
+creates a normal local CSS snippet in the Blueprints folder, syncs runtime
+registrations, and opens the new snippet in the workspace.
+
+Blueprint output is deliberately plain: Hide creates `display: none`, Highlight
+creates an outline, and both are editable in the normal snippet editor. Keep new
+Blueprint actions CSS-first until the selector and review workflow are proven.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global

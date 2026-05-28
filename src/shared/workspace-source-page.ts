@@ -1,4 +1,40 @@
 export const WORKSPACE_SOURCE_PAGE_PARAM = 'sourcePage';
+export const WORKSPACE_SELECTED_SNIPPET_PARAM = 'snippet';
+
+const SNIPPET_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+type BuildWorkspaceUrlInput = {
+  baseUrl: string;
+  selectedSnippetId?: string | undefined;
+  sourcePageUrl?: string | undefined;
+};
+
+export function buildWorkspaceUrl({
+  baseUrl,
+  selectedSnippetId,
+  sourcePageUrl,
+}: BuildWorkspaceUrlInput): string {
+  const workspaceUrl = new URL(baseUrl);
+  const sanitizedSourcePageUrl = sourcePageUrl
+    ? sanitizeWebPageUrl(sourcePageUrl)
+    : undefined;
+
+  if (sanitizedSourcePageUrl) {
+    workspaceUrl.searchParams.set(
+      WORKSPACE_SOURCE_PAGE_PARAM,
+      sanitizedSourcePageUrl,
+    );
+  }
+
+  if (selectedSnippetId && SNIPPET_ID_PATTERN.test(selectedSnippetId)) {
+    workspaceUrl.searchParams.set(
+      WORKSPACE_SELECTED_SNIPPET_PARAM,
+      selectedSnippetId,
+    );
+  }
+
+  return workspaceUrl.href;
+}
 
 export function getWorkspaceSourcePageUrl(
   workspaceUrl: string,
@@ -9,6 +45,22 @@ export function getWorkspaceSourcePageUrl(
     );
 
     return sourcePage ? sanitizeWebPageUrl(sourcePage) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function getWorkspaceSelectedSnippetId(
+  workspaceUrl: string,
+): string | undefined {
+  try {
+    const selectedSnippetId = new URL(workspaceUrl).searchParams.get(
+      WORKSPACE_SELECTED_SNIPPET_PARAM,
+    );
+
+    return selectedSnippetId && SNIPPET_ID_PATTERN.test(selectedSnippetId)
+      ? selectedSnippetId
+      : undefined;
   } catch {
     return undefined;
   }

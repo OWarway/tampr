@@ -1,3 +1,6 @@
+import { useState } from 'react';
+
+import { startBlueprintCreator } from '../chrome/blueprints';
 import { openWorkspace } from '../chrome/workspace';
 import { openExtensionDetails } from '../chrome/extension-settings';
 import {
@@ -11,6 +14,31 @@ import styles from './App.module.scss';
 
 export function App() {
   const pageState = usePageState();
+  const [blueprintNotice, setBlueprintNotice] = useState<string>();
+  const canStartBlueprint = pageState.pageState.state === 'ready';
+
+  async function startBlueprint(): Promise<void> {
+    setBlueprintNotice('Pick an element on the page.');
+
+    try {
+      const response = await startBlueprintCreator();
+
+      if (!response.ok) {
+        setBlueprintNotice(response.error);
+        return;
+      }
+
+      setBlueprintNotice(
+        response.status === 'created'
+          ? 'Blueprint created in the workspace.'
+          : 'Blueprint cancelled.',
+      );
+    } catch (error: unknown) {
+      setBlueprintNotice(
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
 
   return (
     <main className={styles.popup}>
@@ -22,10 +50,24 @@ export function App() {
             <h1>Tampr</h1>
           </div>
         </div>
-        <button type="button" onClick={() => void openWorkspace()}>
-          Workspace
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className={styles.blueprintButton}
+            disabled={!canStartBlueprint}
+            type="button"
+            onClick={() => void startBlueprint()}
+          >
+            Blueprint
+          </button>
+          <button type="button" onClick={() => void openWorkspace()}>
+            Workspace
+          </button>
+        </div>
       </header>
+
+      {blueprintNotice ? (
+        <p className={styles.blueprintNotice}>{blueprintNotice}</p>
+      ) : null}
 
       <PageStatus
         busySnippetId={pageState.busySnippetId}

@@ -22,6 +22,36 @@
   }
 }
 
+.headerActions {
+  align-items: stretch;
+  display: flex;
+  gap: 8px;
+}
+
+.blueprintButton {
+  background: #d44d3a;
+  border-color: #d44d3a;
+
+  &:disabled {
+    background: #c7d2cc;
+    border-color: #b9cac1;
+    color: #53645b;
+    cursor: not-allowed;
+  }
+}
+
+.blueprintNotice {
+  background: rgb(255 255 255 / 78%);
+  border: 1px solid #dbe3de;
+  border-radius: 6px;
+  color: #29463d;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0;
+  padding: 9px 10px;
+}
+
 .brand {
   align-items: center;
   display: flex;

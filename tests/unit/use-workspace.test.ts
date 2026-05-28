@@ -16,10 +16,44 @@ import type {
 import { useWorkspace } from '../../src/workspace/hooks/use-workspace';
 
 afterEach(() => {
+  window.history.replaceState({}, '', '/');
   vi.unstubAllGlobals();
 });
 
 describe('useWorkspace', () => {
+  it('opens the requested snippet from workspace URL context', async () => {
+    const firstSnippet = createSnippet({
+      id: 'snippet-1',
+      name: 'First snippet',
+    });
+    const selectedSnippet = createSnippet({
+      id: 'blueprint-snippet',
+      name: 'Hide Subscribe panel',
+    });
+
+    window.history.replaceState(
+      {},
+      '',
+      '/workspace.html?snippet=blueprint-snippet',
+    );
+    stubWorkspaceMessages((message) => {
+      if (message.type === 'workspace/get-state') {
+        return workspaceState([firstSnippet, selectedSnippet]);
+      }
+
+      throw new Error('Unexpected message.');
+    });
+
+    const { result } = renderHook(() => useWorkspace());
+
+    await waitFor(() => expect(result.current.workspace).toBeDefined());
+
+    expect(result.current.editor).toMatchObject({
+      id: 'blueprint-snippet',
+      name: 'Hide Subscribe panel',
+    });
+  });
+
   it('auto-saves saved folder moves without writing unrelated editor changes', async () => {
     const savedSnippet = createSnippet({
       id: 'snippet-1',

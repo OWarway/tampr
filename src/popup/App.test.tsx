@@ -82,6 +82,41 @@ describe('Popup App', () => {
     expect(await screen.findByRole('button', { name: 'Enable' })).toBeTruthy();
   });
 
+  it('starts the blueprint creator from a supported page', async () => {
+    const sendMessage = vi
+      .fn()
+      .mockResolvedValueOnce(readyPageResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 'created',
+        snippetId: 'blueprint-snippet',
+      });
+
+    vi.stubGlobal('chrome', {
+      runtime: { sendMessage },
+      tabs: {
+        query: vi.fn().mockResolvedValue([
+          {
+            url: 'https://docs.example.com/snippets/new',
+          },
+        ]),
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Blueprint' }));
+
+    await waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'blueprints/start-creator',
+      }),
+    );
+    expect(
+      await screen.findByText('Blueprint created in the workspace.'),
+    ).toBeTruthy();
+  });
+
   it('falls back to the options page outside web pages', async () => {
     const openOptionsPage = vi.fn().mockResolvedValue(undefined);
 

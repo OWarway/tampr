@@ -1,13 +1,24 @@
 import { startDevReloadWatcher } from '../dev/reload-extension';
 import { handleTamprDownloadMessage } from '../runtime/tampr-download-api';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
+import { isStartBlueprintCreatorMessage } from '../shared/blueprint-messages';
 import type { ExtensionResponse } from '../shared/workspace-messages';
 import { createChromeSnippetRepository } from '../storage/snippet-repository';
 import { ActionBadgeController } from './action-badge';
+import { BlueprintController } from './blueprint-controller';
 import { WorkspaceController } from './workspace-controller';
 
 const snippets = createChromeSnippetRepository();
 const actionBadge = new ActionBadgeController(chrome.action);
+const blueprints = new BlueprintController({
+  createId: () => crypto.randomUUID(),
+  getExtensionUrl: (path) => chrome.runtime.getURL(path),
+  now: () => Date.now(),
+  runtimeSync: syncChromeUserScripts,
+  scripting: chrome.scripting,
+  snippets,
+  tabs: chrome.tabs,
+});
 const workspace = new WorkspaceController({
   createId: () => crypto.randomUUID(),
   now: () => Date.now(),
@@ -32,6 +43,17 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.runtime.onMessage.addListener(
   (message: unknown, _sender, sendResponse) => {
+    if (isStartBlueprintCreatorMessage(message)) {
+      void blueprints
+        .startCreator()
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    }
+
     void workspace
       .handleMessage(message)
       .then(sendResponse)

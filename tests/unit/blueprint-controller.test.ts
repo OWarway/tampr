@@ -1,0 +1,147 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { BlueprintController } from '../../src/background/blueprint-controller';
+import type { Snippet } from '../../src/domain/snippets';
+import type { RuntimeStatus } from '../../src/runtime/runtime-status';
+
+describe('BlueprintController', () => {
+  it('creates a snippet from the active tab picker result', async () => {
+    const snippets = new MemorySnippetStore();
+    const runtimeSync = vi.fn(async () => readyRuntime());
+    const create = vi.fn().mockResolvedValue(undefined);
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync,
+      scripting: {
+        executeScript: vi.fn().mockResolvedValue([
+          {
+            result: {
+              ok: true,
+              action: 'hide',
+              pick: {
+                label: 'Subscribe panel',
+                selector: 'aside.subscribe',
+                tagName: 'aside',
+              },
+            },
+          },
+        ]),
+      },
+      snippets,
+      tabs: {
+        create,
+        query: vi.fn().mockResolvedValue([
+          {
+            id: 42,
+            url: 'https://docs.example.com/articles/intro?secret=1#comments',
+          },
+        ]),
+      },
+    });
+
+    await expect(controller.startCreator()).resolves.toEqual({
+      ok: true,
+      snippetId: 'blueprint-snippet',
+      status: 'created',
+    });
+    expect(snippets.values[0]).toMatchObject({
+      id: 'blueprint-snippet',
+      folder: 'Blueprints',
+      name: 'Hide Subscribe panel',
+      matches: ['https://docs.example.com/articles/intro*'],
+      css: `aside.subscribe {
+  display: none !important;
+}`,
+    });
+    expect(runtimeSync).toHaveBeenCalledWith(snippets.values);
+    expect(create).toHaveBeenCalledWith({
+      url: 'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fdocs.example.com%2Farticles%2Fintro&snippet=blueprint-snippet',
+    });
+  });
+
+  it('does not save when the picker is cancelled', async () => {
+    const snippets = new MemorySnippetStore();
+    const create = vi.fn().mockResolvedValue(undefined);
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript: vi.fn().mockResolvedValue([
+          {
+            result: {
+              ok: false,
+              reason: 'cancelled',
+              message: 'Blueprint picking was cancelled.',
+            },
+          },
+        ]),
+      },
+      snippets,
+      tabs: {
+        create,
+        query: vi.fn().mockResolvedValue([
+          {
+            id: 42,
+            url: 'https://docs.example.com/articles/intro',
+          },
+        ]),
+      },
+    });
+
+    await expect(controller.startCreator()).resolves.toEqual({
+      ok: true,
+      status: 'cancelled',
+    });
+    expect(snippets.values).toEqual([]);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported active pages', async () => {
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript: vi.fn(),
+      },
+      snippets: new MemorySnippetStore(),
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn().mockResolvedValue([
+          {
+            id: 42,
+            url: 'chrome://extensions',
+          },
+        ]),
+      },
+    });
+
+    await expect(controller.startCreator()).resolves.toEqual({
+      ok: false,
+      error: 'Blueprint creator works on http and https pages.',
+    });
+  });
+});
+
+class MemorySnippetStore {
+  constructor(public values: Snippet[] = []) {}
+
+  async save(snippet: Snippet): Promise<Snippet[]> {
+    this.values = [...this.values, snippet];
+    return this.values;
+  }
+}
+
+function readyRuntime(): RuntimeStatus {
+  return {
+    state: 'ready',
+    registrations: 1,
+    skipped: [],
+    errors: [],
+  };
+}
