@@ -406,6 +406,17 @@
   text-transform: uppercase;
 }
 
+.readOnlyAction {
+  background: #edf4ef;
+  border: 1px solid #c7d2cc;
+  border-radius: 6px;
+  color: #29463d;
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 9px 10px;
+}
+
 .selectorActions {
   display: flex;
   flex-wrap: wrap;

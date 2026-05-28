@@ -6,6 +6,9 @@ import {
   BLUEPRINT_CSS_ACTIONS,
   blueprintActionDescription,
   blueprintActionLabel,
+  blueprintNodeDescription,
+  blueprintNodeLabel,
+  isBlueprintCssAction,
   type BlueprintCssAction,
 } from '../../../domain/blueprints/actions';
 import {
@@ -421,21 +424,27 @@ function BlueprintNodeInspector({
 
       <div className={styles.selectorField}>
         <span>Action</span>
-        <select
-          aria-label="Blueprint node action"
-          disabled={!cssInSync}
-          value={node.type}
-          onChange={(event) =>
-            onTypeChange(event.currentTarget.value as BlueprintCssAction)
-          }
-        >
-          {BLUEPRINT_CSS_ACTIONS.map((action) => (
-            <option key={action} value={action}>
-              {blueprintActionLabel(action)}
-            </option>
-          ))}
-        </select>
-        <p>{blueprintActionDescription(node.type)}</p>
+        {isBlueprintCssAction(node.type) ? (
+          <select
+            aria-label="Blueprint node action"
+            disabled={!cssInSync}
+            value={node.type}
+            onChange={(event) =>
+              onTypeChange(event.currentTarget.value as BlueprintCssAction)
+            }
+          >
+            {BLUEPRINT_CSS_ACTIONS.map((action) => (
+              <option key={action} value={action}>
+                {blueprintActionLabel(action)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <strong className={styles.readOnlyAction}>
+            {blueprintNodeLabel(node.type)}
+          </strong>
+        )}
+        <p>{blueprintNodeDescription(node.type)}</p>
       </div>
 
       <label className={styles.inspectorField}>
@@ -545,7 +554,7 @@ function plural(count: number, label: string): string {
 }
 
 function actionLabel(type: BlueprintNode['type']): string {
-  return blueprintActionLabel(type);
+  return blueprintNodeLabel(type);
 }
 
 function qualityLabel(

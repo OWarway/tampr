@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  compileBlueprintJavaScript,
   compileBlueprintCss,
   isBlueprintCssInSync,
+  isBlueprintJavaScriptInSync,
 } from '../../src/domain/blueprints/compiler';
+import type { BlueprintCssAction } from '../../src/domain/blueprints/actions';
 import {
   BLUEPRINT_RECIPE_VERSION,
   BlueprintRecipeSchema,
@@ -109,7 +112,7 @@ body {
   }
 }`,
     ],
-  ] satisfies Array<[BlueprintNodeType, string]>)(
+  ] satisfies Array<[BlueprintCssAction, string]>)(
     'compiles %s CSS nodes',
     (type, expectedCss) => {
       expect(
@@ -313,6 +316,119 @@ body {
     expect(isBlueprintCssInSync(recipe, 'main { color: red; }')).toBe(false);
   });
 
+  it('parses automation nodes with guarded defaults', () => {
+    const recipe = BlueprintRecipeSchema.parse({
+      version: BLUEPRINT_RECIPE_VERSION,
+      name: 'Click flow',
+      graph: {
+        nodes: [
+          node('wait-for-buy', 'wait-for-element', 'button.buy'),
+          node('click-buy', 'click', 'button.buy'),
+          {
+            ...node('extract-total', 'extract-text', '.total'),
+            variableName: 'total',
+          },
+          node('download-total', 'download-json', 'body'),
+        ],
+        edges: [
+          edge('edge-click-buy', 'wait-for-buy', 'click-buy'),
+          edge('edge-extract-total', 'click-buy', 'extract-total'),
+          edge('edge-download-total', 'extract-total', 'download-total'),
+        ],
+        layout: {
+          'wait-for-buy': { x: 0, y: 0 },
+          'click-buy': { x: 220, y: 0 },
+          'extract-total': { x: 440, y: 0 },
+          'download-total': { x: 660, y: 0 },
+        },
+      },
+    });
+
+    expect(recipe.graph.nodes).toEqual([
+      expect.objectContaining({
+        id: 'wait-for-buy',
+        requireVisible: true,
+        timeoutMs: 5000,
+        type: 'wait-for-element',
+      }),
+      expect.objectContaining({
+        id: 'click-buy',
+        requireVisible: true,
+        timeoutMs: 5000,
+        type: 'click',
+      }),
+      expect.objectContaining({
+        id: 'extract-total',
+        requireVisible: true,
+        timeoutMs: 5000,
+        type: 'extract-text',
+        variableName: 'total',
+      }),
+      expect.objectContaining({
+        filename: 'tampr-blueprint.json',
+        id: 'download-total',
+        type: 'download-json',
+      }),
+    ]);
+  });
+
+  it('compiles automation nodes to readable JavaScript', () => {
+    const recipe = automationRecipe();
+    const js = compileBlueprintJavaScript(recipe);
+
+    expect(compileBlueprintCss(recipe)).toBe('');
+    expect(js).toContain("const PREFIX = '[Tampr Blueprint]';");
+    expect(js).toContain('"type": "wait-for-element"');
+    expect(js).toContain('"type": "click"');
+    expect(js).toContain('"value": "oliver@example.com"');
+    expect(js).toContain('"variableName": "headline"');
+    expect(js).toContain('"filename": "tampr-flow.json"');
+    expect(js).toContain('assertSafeClickTarget(element, step);');
+    expect(js).toContain('globalThis.Tampr.download');
+  });
+
+  it('skips disabled automation nodes when compiling JavaScript', () => {
+    const recipe = updateBlueprintNode(automationRecipe(), 'click-login', {
+      enabled: false,
+    });
+    const js = compileBlueprintJavaScript(recipe);
+
+    expect(js).toContain('"type": "wait-for-element"');
+    expect(js).not.toContain('"id": "click-login"');
+  });
+
+  it('detects when generated JavaScript still matches the recipe', () => {
+    const recipe = automationRecipe();
+
+    expect(
+      isBlueprintJavaScriptInSync(recipe, compileBlueprintJavaScript(recipe)),
+    ).toBe(true);
+    expect(isBlueprintJavaScriptInSync(recipe, 'console.log("edited");')).toBe(
+      false,
+    );
+  });
+
+  it('rejects unsafe automation variable names', () => {
+    const result = BlueprintRecipeSchema.safeParse({
+      version: BLUEPRINT_RECIPE_VERSION,
+      name: 'Broken automation flow',
+      graph: {
+        nodes: [
+          {
+            ...node('extract-total', 'extract-text', '.total'),
+            variableName: 'deal-total',
+          },
+        ],
+        edges: [],
+        layout: {
+          'extract-total': { x: 0, y: 0 },
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects branching graphs for now', () => {
     const result = BlueprintRecipeSchema.safeParse({
       ...twoNodeRecipe(),
@@ -386,6 +502,44 @@ function twoNodeRecipe({
       layout: {
         'hide-selection': { x: 0, y: 0 },
         'highlight-selection': { x: 220, y: 0 },
+      },
+    },
+  });
+}
+
+function automationRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Login flow',
+    graph: {
+      nodes: [
+        node('wait-email', 'wait-for-element', 'input[name="email"]'),
+        {
+          ...node('set-email', 'set-value', 'input[name="email"]'),
+          value: 'oliver@example.com',
+        },
+        node('click-login', 'click', 'button.sign-in'),
+        {
+          ...node('extract-headline', 'extract-text', 'h1'),
+          variableName: 'headline',
+        },
+        {
+          ...node('download-headline', 'download-json', 'body'),
+          filename: 'tampr-flow.json',
+        },
+      ],
+      edges: [
+        edge('edge-set-email', 'wait-email', 'set-email'),
+        edge('edge-click-login', 'set-email', 'click-login'),
+        edge('edge-extract-headline', 'click-login', 'extract-headline'),
+        edge('edge-download-headline', 'extract-headline', 'download-headline'),
+      ],
+      layout: {
+        'wait-email': { x: 0, y: 0 },
+        'set-email': { x: 220, y: 0 },
+        'click-login': { x: 440, y: 0 },
+        'extract-headline': { x: 660, y: 0 },
+        'download-headline': { x: 880, y: 0 },
       },
     },
   });

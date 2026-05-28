@@ -95,6 +95,14 @@ same tab without granting broad tab access. Selector tests read match and visibl
 counts through a temporary `scripting.executeScript` call and do not activate the
 source tab.
 
+Automation Blueprint nodes are domain-supported before they are fully exposed in
+the workspace builder. Recipes can model wait-for-element, click, set-value,
+extract-text, and download-json steps. The JavaScript compiler emits a readable
+local runner with timeouts, visible-element checks, protected-field refusal,
+risky-click refusal, and `Tampr.download()` JSON output. Keep automation
+generated code visible in the normal snippet editor; do not move execution into a
+hidden interpreter.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global

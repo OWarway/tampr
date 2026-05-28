@@ -3,14 +3,16 @@ import { z } from 'zod';
 import { BlueprintSelectorMetaSchema } from '../blueprint-selectors';
 import {
   BLUEPRINT_CSS_ACTIONS,
-  blueprintActionLabel,
+  blueprintNodeLabel,
+  type BlueprintAutomationAction,
   type BlueprintCssAction,
+  type BlueprintNodeAction,
 } from './actions';
+export { BLUEPRINT_NODE_TYPES } from './actions';
 
 export const BLUEPRINT_RECIPE_VERSION = 1;
-export const BLUEPRINT_NODE_TYPES = BLUEPRINT_CSS_ACTIONS;
 
-export type BlueprintNodeType = BlueprintCssAction;
+export type BlueprintNodeType = BlueprintNodeAction;
 
 const BlueprintIdentifierSchema = z
   .string()
@@ -30,14 +32,78 @@ export const BlueprintLayoutPointSchema = z.object({
   y: z.number().int().min(-100_000).max(100_000),
 });
 
-export const BlueprintNodeSchema = z.object({
+export const BlueprintAutomationTimeoutMsSchema = z
+  .number()
+  .int()
+  .min(250)
+  .max(60_000);
+
+export const BlueprintVariableNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(80)
+  .regex(
+    /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+    'Blueprint variable names must be valid JavaScript identifiers.',
+  );
+
+const BlueprintElementNodeBaseSchema = z.object({
   id: BlueprintNodeIdSchema,
   enabled: z.boolean().default(true),
   label: z.string().trim().min(1).max(120).optional(),
   selector: z.string().trim().min(1).max(2_000),
   selectorMeta: BlueprintSelectorMetaSchema,
-  type: z.enum(BLUEPRINT_NODE_TYPES),
 });
+
+export const BlueprintCssNodeSchema = BlueprintElementNodeBaseSchema.extend({
+  type: z.enum(BLUEPRINT_CSS_ACTIONS),
+});
+
+export const BlueprintWaitForElementNodeSchema =
+  BlueprintElementNodeBaseSchema.extend({
+    type: z.literal('wait-for-element'),
+    requireVisible: z.boolean().default(true),
+    timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
+  });
+
+export const BlueprintClickNodeSchema = BlueprintElementNodeBaseSchema.extend({
+  type: z.literal('click'),
+  requireVisible: z.boolean().default(true),
+  timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
+});
+
+export const BlueprintSetValueNodeSchema =
+  BlueprintElementNodeBaseSchema.extend({
+    type: z.literal('set-value'),
+    requireVisible: z.boolean().default(true),
+    timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
+    value: z.string().max(10_000).default(''),
+  });
+
+export const BlueprintExtractTextNodeSchema =
+  BlueprintElementNodeBaseSchema.extend({
+    type: z.literal('extract-text'),
+    requireVisible: z.boolean().default(true),
+    timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
+    variableName: BlueprintVariableNameSchema.default('text'),
+  });
+
+export const BlueprintDownloadJsonNodeSchema =
+  BlueprintElementNodeBaseSchema.extend({
+    type: z.literal('download-json'),
+    filename: z.string().trim().min(1).max(160).default('tampr-blueprint.json'),
+    valueFrom: BlueprintVariableNameSchema.optional(),
+  });
+
+export const BlueprintNodeSchema = z.discriminatedUnion('type', [
+  BlueprintCssNodeSchema,
+  BlueprintWaitForElementNodeSchema,
+  BlueprintClickNodeSchema,
+  BlueprintSetValueNodeSchema,
+  BlueprintExtractTextNodeSchema,
+  BlueprintDownloadJsonNodeSchema,
+]);
 
 export const BlueprintEdgeSchema = z.object({
   id: BlueprintEdgeIdSchema,
@@ -192,6 +258,11 @@ export const BlueprintRecipeSchema = z.object({
 });
 
 export type BlueprintNode = z.infer<typeof BlueprintNodeSchema>;
+export type BlueprintCssNode = z.infer<typeof BlueprintCssNodeSchema>;
+export type BlueprintAutomationNode = Extract<
+  BlueprintNode,
+  { type: BlueprintAutomationAction }
+>;
 export type BlueprintEdge = z.infer<typeof BlueprintEdgeSchema>;
 export type BlueprintGraph = z.infer<typeof BlueprintGraphSchema>;
 export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
@@ -201,7 +272,13 @@ export type BlueprintNodeUpdate = {
   label?: string;
   selector?: string;
   selectorMeta?: BlueprintNode['selectorMeta'];
+  filename?: string;
+  requireVisible?: boolean;
+  timeoutMs?: number;
   type?: BlueprintNodeType;
+  value?: string;
+  valueFrom?: string;
+  variableName?: string;
 };
 
 export type MoveBlueprintNodeDirection = 'down' | 'up';
@@ -224,7 +301,7 @@ type BuildCssBlueprintRecipeInput = {
   label: string;
   selector: string;
   selectorMeta: BlueprintNode['selectorMeta'];
-  type: BlueprintNodeType;
+  type: BlueprintCssAction;
 };
 
 export function buildCssBlueprintRecipe({
@@ -270,14 +347,28 @@ export function updateBlueprintNode(
 
     updated = true;
 
-    const nextNode: BlueprintNode = {
+    const nextNode = {
       ...node,
       ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
       ...(update.selector !== undefined ? { selector: update.selector } : {}),
       ...(update.selectorMeta !== undefined
         ? { selectorMeta: update.selectorMeta }
         : {}),
+      ...(update.filename !== undefined ? { filename: update.filename } : {}),
+      ...(update.requireVisible !== undefined
+        ? { requireVisible: update.requireVisible }
+        : {}),
+      ...(update.timeoutMs !== undefined
+        ? { timeoutMs: update.timeoutMs }
+        : {}),
       ...(update.type !== undefined ? { type: update.type } : {}),
+      ...(update.value !== undefined ? { value: update.value } : {}),
+      ...(update.valueFrom !== undefined
+        ? { valueFrom: update.valueFrom }
+        : {}),
+      ...(update.variableName !== undefined
+        ? { variableName: update.variableName }
+        : {}),
     };
 
     if (update.label !== undefined) {
@@ -322,14 +413,14 @@ export function insertBlueprintNode(
   const existingNodeIds = new Set(recipe.graph.nodes.map((node) => node.id));
   const nodeId = uniqueIdentifier(`${input.type}-selection`, existingNodeIds);
   const nextNode = linearNodes[afterIndex + 1];
-  const newNode: BlueprintNode = {
+  const newNode = BlueprintNodeSchema.parse({
     enabled: true,
     id: nodeId,
-    label: input.label?.trim() || blueprintActionLabel(input.type),
+    label: input.label?.trim() || blueprintNodeLabel(input.type),
     selector: input.selector,
     selectorMeta: input.selectorMeta,
     type: input.type,
-  };
+  });
   const nodes = [
     ...linearNodes.slice(0, afterIndex + 1),
     newNode,

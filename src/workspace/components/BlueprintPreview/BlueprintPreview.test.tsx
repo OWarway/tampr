@@ -445,6 +445,42 @@ describe('BlueprintPreview', () => {
       screen.getByText('Relaxes narrow content containers for easier reading.'),
     ).toBeTruthy();
   });
+
+  it('renders automation nodes as read-only actions for now', () => {
+    const blueprint = BlueprintRecipeSchema.parse({
+      version: BLUEPRINT_RECIPE_VERSION,
+      name: 'Wait for deal',
+      graph: {
+        nodes: [
+          {
+            id: 'wait-for-deal',
+            enabled: true,
+            selector: '[data-testid="deal"]',
+            selectorMeta: selectorMeta('attribute'),
+            type: 'wait-for-element',
+          },
+        ],
+        edges: [],
+        layout: {
+          'wait-for-deal': { x: 0, y: 0 },
+        },
+      },
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css=""
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(screen.getAllByText('Wait for element').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('Pauses the flow until the selected element appears.'),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText('Blueprint node action')).toBeNull();
+  });
 });
 
 function twoNodeRecipe(): BlueprintRecipe {
