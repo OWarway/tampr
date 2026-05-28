@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { compileBlueprintCss } from '../../src/domain/blueprints/compiler';
+import {
+  compileBlueprintCss,
+  isBlueprintCssInSync,
+} from '../../src/domain/blueprints/compiler';
 import {
   BLUEPRINT_RECIPE_VERSION,
   BlueprintRecipeSchema,
   buildCssBlueprintRecipe,
   getLinearBlueprintNodes,
+  updateBlueprintNode,
   type BlueprintRecipe,
 } from '../../src/domain/blueprints/recipe';
 
@@ -67,6 +71,34 @@ main > button.primary {
     expect(
       getLinearBlueprintNodes(twoNodeRecipe()).map((node) => node.id),
     ).toEqual(['hide-selection', 'highlight-selection']);
+  });
+
+  it('updates node metadata through the recipe schema', () => {
+    const recipe = updateBlueprintNode(twoNodeRecipe(), 'hide-selection', {
+      enabled: false,
+      label: 'Hide signup panel',
+    });
+
+    expect(recipe.graph.nodes[0]).toMatchObject({
+      enabled: false,
+      label: 'Hide signup panel',
+    });
+    expect(compileBlueprintCss(recipe)).toBe(`main > button.primary {
+  outline: 3px solid #d44d3a !important;
+  outline-offset: 3px !important;
+}`);
+  });
+
+  it('detects when generated CSS still matches the recipe', () => {
+    const recipe = twoNodeRecipe();
+
+    expect(isBlueprintCssInSync(recipe, compileBlueprintCss(recipe))).toBe(
+      true,
+    );
+    expect(
+      isBlueprintCssInSync(recipe, `${compileBlueprintCss(recipe)}\n\n`),
+    ).toBe(true);
+    expect(isBlueprintCssInSync(recipe, 'main { color: red; }')).toBe(false);
   });
 
   it('rejects branching graphs for now', () => {

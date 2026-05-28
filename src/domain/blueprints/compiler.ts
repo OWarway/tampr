@@ -9,6 +9,13 @@ export function compileBlueprintCss(recipe: BlueprintRecipe): string {
     .join('\n\n');
 }
 
+export function isBlueprintCssInSync(
+  recipe: BlueprintRecipe,
+  css: string,
+): boolean {
+  return normalizeCss(css) === normalizeCss(compileBlueprintCss(recipe));
+}
+
 function compileCssNode(node: BlueprintNode): string {
   if (node.type === 'hide') {
     return `${node.selector} {
@@ -20,4 +27,8 @@ function compileCssNode(node: BlueprintNode): string {
   outline: 3px solid #d44d3a !important;
   outline-offset: 3px !important;
 }`;
+}
+
+function normalizeCss(value: string): string {
+  return value.replace(/\r\n/g, '\n').trim();
 }

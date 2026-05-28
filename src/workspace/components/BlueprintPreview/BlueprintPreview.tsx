@@ -1,6 +1,13 @@
+import { useMemo, useState } from 'react';
+
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import {
+  compileBlueprintCss,
+  isBlueprintCssInSync,
+} from '../../../domain/blueprints/compiler';
+import {
   getLinearBlueprintNodes,
+  updateBlueprintNode,
   type BlueprintNode,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
@@ -9,59 +16,127 @@ import styles from './BlueprintPreview.module.scss';
 
 type BlueprintPreviewProps = {
   blueprint: BlueprintRecipe | undefined;
+  css?: string;
+  onChange?(blueprint: BlueprintRecipe, css: string): void;
 };
 
-export function BlueprintPreview({ blueprint }: BlueprintPreviewProps) {
+export function BlueprintPreview({
+  blueprint,
+  css,
+  onChange,
+}: BlueprintPreviewProps) {
+  const nodes = useMemo(
+    () => (blueprint ? getLinearBlueprintNodes(blueprint) : []),
+    [blueprint],
+  );
+  const [selectedNodeId, setSelectedNodeId] = useState<string>();
+
   if (!blueprint) {
     return null;
   }
 
-  const nodes = getLinearBlueprintNodes(blueprint);
+  const recipe = blueprint;
+  const selectedNode =
+    nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
+  const cssSourceKnown = css !== undefined;
+  const cssInSync = cssSourceKnown ? isBlueprintCssInSync(recipe, css) : true;
+  const editable = Boolean(onChange && cssSourceKnown && selectedNode);
+
+  function editNode(
+    nodeId: string,
+    update: Parameters<typeof updateBlueprintNode>[2],
+    options: { regeneratesCss: boolean },
+  ): void {
+    if (!onChange || css === undefined) {
+      return;
+    }
+
+    if (options.regeneratesCss && !cssInSync) {
+      return;
+    }
+
+    const nextBlueprint = updateBlueprintNode(recipe, nodeId, update);
+    const nextCss = options.regeneratesCss
+      ? compileBlueprintCss(nextBlueprint)
+      : css;
+
+    onChange(nextBlueprint, nextCss);
+  }
 
   return (
     <section className={styles.preview} aria-label="Blueprint preview">
       <header className={styles.header}>
         <div>
           <span>Blueprint</span>
-          <strong>{blueprint.name}</strong>
+          <strong>{recipe.name}</strong>
         </div>
         <span className={styles.count}>
           {nodes.length} {nodes.length === 1 ? 'node' : 'nodes'}
         </span>
+        {cssSourceKnown ? (
+          <span
+            className={`${styles.sourceState} ${
+              cssInSync ? styles.synced : styles.changed
+            }`}
+          >
+            {cssInSync ? 'Synced' : 'Code edited'}
+          </span>
+        ) : null}
       </header>
 
-      <ol className={styles.flow}>
-        {nodes.map((node, index) => (
-          <BlueprintPreviewNode
-            index={index}
-            key={node.id}
-            node={node}
-            total={nodes.length}
+      <div className={styles.builder}>
+        <ol className={styles.flow}>
+          {nodes.map((node, index) => (
+            <BlueprintPreviewNode
+              editable={editable}
+              index={index}
+              key={node.id}
+              node={node}
+              selected={node.id === selectedNode?.id}
+              total={nodes.length}
+              onSelect={() => setSelectedNodeId(node.id)}
+            />
+          ))}
+        </ol>
+
+        {editable && selectedNode ? (
+          <BlueprintNodeInspector
+            cssInSync={cssInSync}
+            node={selectedNode}
+            onEnabledChange={(enabled) =>
+              editNode(selectedNode.id, { enabled }, { regeneratesCss: true })
+            }
+            onLabelChange={(label) =>
+              editNode(selectedNode.id, { label }, { regeneratesCss: false })
+            }
           />
-        ))}
-      </ol>
+        ) : null}
+      </div>
     </section>
   );
 }
 
 type BlueprintPreviewNodeProps = {
+  editable: boolean;
   index: number;
   node: BlueprintNode;
+  selected: boolean;
   total: number;
+  onSelect(): void;
 };
 
 function BlueprintPreviewNode({
+  editable,
   index,
   node,
+  selected,
   total,
+  onSelect,
 }: BlueprintPreviewNodeProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
-
-  return (
-    <li
-      className={`${styles.node} ${index === total - 1 ? styles.lastNode : ''}`}
-    >
+  const content = (
+    <>
       <span className={styles.step}>{index + 1}</span>
       <div className={styles.body}>
         <div className={styles.nodeHeader}>
@@ -74,7 +149,85 @@ function BlueprintPreviewNode({
       <span className={`${styles.quality} ${styles[assessment.quality]}`}>
         {qualityLabel(assessment.quality)}
       </span>
+    </>
+  );
+
+  return (
+    <li
+      className={`${styles.node} ${index === total - 1 ? styles.lastNode : ''}`}
+    >
+      {editable ? (
+        <button
+          aria-pressed={selected}
+          className={`${styles.nodeButton} ${selected ? styles.selected : ''}`}
+          type="button"
+          onClick={onSelect}
+        >
+          {content}
+        </button>
+      ) : (
+        <div className={styles.nodeContent}>{content}</div>
+      )}
     </li>
+  );
+}
+
+type BlueprintNodeInspectorProps = {
+  cssInSync: boolean;
+  node: BlueprintNode;
+  onEnabledChange(enabled: boolean): void;
+  onLabelChange(label: string): void;
+};
+
+function BlueprintNodeInspector({
+  cssInSync,
+  node,
+  onEnabledChange,
+  onLabelChange,
+}: BlueprintNodeInspectorProps) {
+  const assessment = assessBlueprintSelector(node.selectorMeta);
+  const label = node.label ?? actionLabel(node.type);
+
+  return (
+    <aside className={styles.inspector} aria-label="Blueprint node inspector">
+      <header>
+        <span>Inspector</span>
+        <strong>{label}</strong>
+      </header>
+
+      <label className={styles.inspectorField}>
+        <span>Label</span>
+        <input
+          aria-label="Blueprint node label"
+          value={node.label ?? ''}
+          placeholder={actionLabel(node.type)}
+          onChange={(event) => onLabelChange(event.currentTarget.value)}
+        />
+      </label>
+
+      <label className={styles.enabledField}>
+        <input
+          aria-label="Enable blueprint node"
+          checked={node.enabled}
+          disabled={!cssInSync}
+          type="checkbox"
+          onChange={(event) => onEnabledChange(event.currentTarget.checked)}
+        />
+        <span>Enabled</span>
+      </label>
+
+      <div className={styles.selectorField}>
+        <span>Selector</span>
+        <code>{node.selector}</code>
+      </div>
+
+      <div className={styles.selectorField}>
+        <span>Health</span>
+        <strong className={`${styles.health} ${styles[assessment.quality]}`}>
+          {qualityLabel(assessment.quality)}
+        </strong>
+      </div>
+    </aside>
   );
 }
 

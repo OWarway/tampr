@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { compileBlueprintCss } from '../../../domain/blueprints/compiler';
 import { buildCssBlueprintRecipe } from '../../../domain/blueprints/recipe';
 import { buildSnippet, SnippetDraftSchema } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
@@ -123,19 +124,22 @@ describe('SnippetEditor', () => {
   });
 
   it('renders saved blueprint metadata in the editor', () => {
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-signup-modal',
+      label: 'Hide signup modal',
+      selector: '[data-modal="signup"]',
+      selectorMeta: blueprintSelectorMeta(),
+      type: 'hide',
+    });
+
     render(
       <SnippetEditor
         busy={false}
         dirty={false}
         editor={{
           ...newSnippetEditor,
-          blueprint: buildCssBlueprintRecipe({
-            id: 'hide-signup-modal',
-            label: 'Hide signup modal',
-            selector: '[data-modal="signup"]',
-            selectorMeta: blueprintSelectorMeta(),
-            type: 'hide',
-          }),
+          blueprint,
+          css: compileBlueprintCss(blueprint),
         }}
         notice="Ready."
         workspace={undefined}
@@ -150,8 +154,8 @@ describe('SnippetEditor', () => {
     expect(
       screen.getByRole('region', { name: 'Blueprint preview' }),
     ).toBeTruthy();
-    expect(screen.getByText('[data-modal="signup"]')).toBeTruthy();
-    expect(screen.getByText('Strong')).toBeTruthy();
+    expect(screen.getAllByText('[data-modal="signup"]')).toHaveLength(2);
+    expect(screen.getAllByText('Strong')).toHaveLength(2);
   });
 
   it('duplicates drafts and confirms saved snippet deletes', () => {

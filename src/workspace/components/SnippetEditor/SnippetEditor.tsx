@@ -204,7 +204,11 @@ export function SnippetEditor({
           </span>
         </div>
 
-        <BlueprintPreview blueprint={editor.blueprint} />
+        <BlueprintPreview
+          blueprint={editor.blueprint}
+          css={editor.css}
+          onChange={(blueprint, css) => onUpdate({ ...editor, blueprint, css })}
+        />
 
         <div className={styles.tabs} aria-label="Editor mode">
           {EDITOR_MODES.map((editorMode) => (

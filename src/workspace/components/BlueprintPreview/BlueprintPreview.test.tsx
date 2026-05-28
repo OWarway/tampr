@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { compileBlueprintCss } from '../../../domain/blueprints/compiler';
 import {
   BLUEPRINT_RECIPE_VERSION,
   BlueprintRecipeSchema,
@@ -73,6 +74,90 @@ describe('BlueprintPreview', () => {
 
     expect(screen.getByText('Fragile')).toBeTruthy();
     expect(screen.getByText(/layout changes may break it/)).toBeTruthy();
+  });
+
+  it('edits saved node labels without changing generated CSS', () => {
+    const onChange = vi.fn();
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+    const css = compileBlueprintCss(blueprint);
+
+    render(
+      <BlueprintPreview blueprint={blueprint} css={css} onChange={onChange} />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Blueprint node label'), {
+      target: { value: 'Hide spring offer' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              label: 'Hide spring offer',
+            }),
+          ],
+        }),
+      }),
+      css,
+    );
+  });
+
+  it('regenerates CSS when toggling a synced node', () => {
+    const onChange = vi.fn();
+    const blueprint = twoNodeRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Enable blueprint node'));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              enabled: false,
+            }),
+            expect.objectContaining({
+              enabled: true,
+            }),
+          ],
+        }),
+      }),
+      `.checkout {
+  outline: 3px solid #d44d3a !important;
+  outline-offset: 3px !important;
+}`,
+    );
+  });
+
+  it('locks code-changing controls when CSS has been edited by hand', () => {
+    render(
+      <BlueprintPreview
+        blueprint={twoNodeRecipe()}
+        css="main { color: red; }"
+        onChange={() => undefined}
+      />,
+    );
+
+    const enabledToggle = screen.getByLabelText(
+      'Enable blueprint node',
+    ) as HTMLInputElement;
+
+    expect(screen.getByText('Code edited')).toBeTruthy();
+    expect(enabledToggle.disabled).toBe(true);
   });
 });
 

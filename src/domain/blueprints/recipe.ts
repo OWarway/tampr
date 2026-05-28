@@ -191,6 +191,11 @@ export type BlueprintEdge = z.infer<typeof BlueprintEdgeSchema>;
 export type BlueprintGraph = z.infer<typeof BlueprintGraphSchema>;
 export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
 
+export type BlueprintNodeUpdate = {
+  enabled?: boolean;
+  label?: string;
+};
+
 type BuildCssBlueprintRecipeInput = {
   id: string;
   label: string;
@@ -224,6 +229,51 @@ export function buildCssBlueprintRecipe({
       layout: {
         [id]: { x: 160, y: 120 },
       },
+    },
+  });
+}
+
+export function updateBlueprintNode(
+  recipe: BlueprintRecipe,
+  nodeId: string,
+  update: BlueprintNodeUpdate,
+): BlueprintRecipe {
+  let updated = false;
+
+  const nodes = recipe.graph.nodes.map((node) => {
+    if (node.id !== nodeId) {
+      return node;
+    }
+
+    updated = true;
+
+    const nextNode: BlueprintNode = {
+      ...node,
+      ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
+    };
+
+    if (update.label !== undefined) {
+      const label = update.label.trim();
+
+      if (label) {
+        nextNode.label = label;
+      } else {
+        delete nextNode.label;
+      }
+    }
+
+    return nextNode;
+  });
+
+  if (!updated) {
+    throw new Error(`Blueprint node ${nodeId} does not exist.`);
+  }
+
+  return BlueprintRecipeSchema.parse({
+    ...recipe,
+    graph: {
+      ...recipe.graph,
+      nodes,
     },
   });
 }
