@@ -26,6 +26,8 @@ group changes under the headings below.
   quality.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles
   with code-sync protection.
+- Blueprint node library for adding and removing CSS action nodes in a straight
+  saved flow.
 - User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.

@@ -183,6 +183,86 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('adds CSS action nodes from the library after the selected node', () => {
+    const onChange = vi.fn();
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add Print cleanup node' }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              id: 'hide-offer',
+              type: 'hide',
+            }),
+            expect.objectContaining({
+              id: 'print-cleanup-selection',
+              type: 'print-cleanup',
+            }),
+          ],
+        }),
+      }),
+      `[data-testid="offer"] {
+  display: none !important;
+}
+
+@media print {
+  [data-testid="offer"] {
+    display: none !important;
+  }
+}`,
+    );
+  });
+
+  it('removes the selected node and regenerates CSS', () => {
+    const onChange = vi.fn();
+    const blueprint = twoNodeRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Highlight checkout/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove node' }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              id: 'hide-signup',
+            }),
+          ],
+        }),
+      }),
+      `#signup {
+  display: none !important;
+}`,
+    );
+  });
+
   it('locks code-changing controls when CSS has been edited by hand', () => {
     render(
       <BlueprintPreview
@@ -201,6 +281,13 @@ describe('BlueprintPreview', () => {
     expect(
       (screen.getByLabelText('Blueprint node action') as HTMLSelectElement)
         .disabled,
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Add Hide node',
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true);
   });
 

@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
 import { BlueprintSelectorMetaSchema } from '../blueprint-selectors';
-import { BLUEPRINT_CSS_ACTIONS, type BlueprintCssAction } from './actions';
+import {
+  BLUEPRINT_CSS_ACTIONS,
+  blueprintActionLabel,
+  type BlueprintCssAction,
+} from './actions';
 
 export const BLUEPRINT_RECIPE_VERSION = 1;
 export const BLUEPRINT_NODE_TYPES = BLUEPRINT_CSS_ACTIONS;
@@ -198,6 +202,19 @@ export type BlueprintNodeUpdate = {
   type?: BlueprintNodeType;
 };
 
+export type InsertBlueprintNodeInput = {
+  afterNodeId: string;
+  label?: string;
+  selector: string;
+  selectorMeta: BlueprintNode['selectorMeta'];
+  type: BlueprintNodeType;
+};
+
+export type InsertBlueprintNodeResult = {
+  nodeId: string;
+  recipe: BlueprintRecipe;
+};
+
 type BuildCssBlueprintRecipeInput = {
   id: string;
   label: string;
@@ -281,6 +298,111 @@ export function updateBlueprintNode(
   });
 }
 
+export function insertBlueprintNode(
+  recipe: BlueprintRecipe,
+  input: InsertBlueprintNodeInput,
+): InsertBlueprintNodeResult {
+  const linearNodes = getLinearBlueprintNodes(recipe);
+  const afterIndex = linearNodes.findIndex(
+    (node) => node.id === input.afterNodeId,
+  );
+
+  if (afterIndex === -1) {
+    throw new Error(`Blueprint node ${input.afterNodeId} does not exist.`);
+  }
+
+  const existingNodeIds = new Set(recipe.graph.nodes.map((node) => node.id));
+  const nodeId = uniqueIdentifier(`${input.type}-selection`, existingNodeIds);
+  const nextNode = linearNodes[afterIndex + 1];
+  const newNode: BlueprintNode = {
+    enabled: true,
+    id: nodeId,
+    label: input.label?.trim() || blueprintActionLabel(input.type),
+    selector: input.selector,
+    selectorMeta: input.selectorMeta,
+    type: input.type,
+  };
+  const nodes = [
+    ...linearNodes.slice(0, afterIndex + 1),
+    newNode,
+    ...linearNodes.slice(afterIndex + 1),
+  ];
+  const edges = recipe.graph.edges.filter(
+    (edge) => edge.fromNodeId !== input.afterNodeId,
+  );
+  const existingEdgeIds = new Set(edges.map((edge) => edge.id));
+
+  edges.push({
+    id: uniqueIdentifier(`edge-${nodeId}`, existingEdgeIds),
+    fromNodeId: input.afterNodeId,
+    fromPort: 'success',
+    toNodeId: nodeId,
+  });
+
+  if (nextNode) {
+    edges.push({
+      id: uniqueIdentifier(`edge-${nextNode.id}`, existingEdgeIds),
+      fromNodeId: nodeId,
+      fromPort: 'success',
+      toNodeId: nextNode.id,
+    });
+  }
+
+  return {
+    nodeId,
+    recipe: BlueprintRecipeSchema.parse({
+      ...recipe,
+      graph: {
+        nodes,
+        edges,
+        layout: insertLayoutPoint(recipe, input.afterNodeId, nodeId),
+      },
+    }),
+  };
+}
+
+export function removeBlueprintNode(
+  recipe: BlueprintRecipe,
+  nodeId: string,
+): BlueprintRecipe {
+  const linearNodes = getLinearBlueprintNodes(recipe);
+  const removeIndex = linearNodes.findIndex((node) => node.id === nodeId);
+
+  if (removeIndex === -1) {
+    throw new Error(`Blueprint node ${nodeId} does not exist.`);
+  }
+
+  if (linearNodes.length <= 1) {
+    throw new Error('Blueprints need at least one node.');
+  }
+
+  const previousNode = linearNodes[removeIndex - 1];
+  const nextNode = linearNodes[removeIndex + 1];
+  const nodes = linearNodes.filter((node) => node.id !== nodeId);
+  const edges = recipe.graph.edges.filter(
+    (edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId,
+  );
+  const existingEdgeIds = new Set(edges.map((edge) => edge.id));
+
+  if (previousNode && nextNode) {
+    edges.push({
+      id: uniqueIdentifier(`edge-${nextNode.id}`, existingEdgeIds),
+      fromNodeId: previousNode.id,
+      fromPort: 'success',
+      toNodeId: nextNode.id,
+    });
+  }
+
+  return BlueprintRecipeSchema.parse({
+    ...recipe,
+    graph: {
+      nodes,
+      edges,
+      layout: removeLayoutPoint(recipe, nodeId),
+    },
+  });
+}
+
 export function getLinearBlueprintNodes(
   recipe: BlueprintRecipe,
 ): BlueprintNode[] {
@@ -325,4 +447,50 @@ function addDuplicateIssues(
 
     seen.add(value);
   }
+}
+
+function insertLayoutPoint(
+  recipe: BlueprintRecipe,
+  afterNodeId: string,
+  nodeId: string,
+): BlueprintGraph['layout'] {
+  const layout = { ...recipe.graph.layout };
+  const afterPoint = layout[afterNodeId] ?? { x: 160, y: 120 };
+
+  layout[nodeId] = {
+    x: afterPoint.x + 220,
+    y: afterPoint.y,
+  };
+
+  return layout;
+}
+
+function removeLayoutPoint(
+  recipe: BlueprintRecipe,
+  nodeId: string,
+): BlueprintGraph['layout'] {
+  const layout = { ...recipe.graph.layout };
+
+  delete layout[nodeId];
+
+  return layout;
+}
+
+function uniqueIdentifier(base: string, existing: Set<string>): string {
+  const root = base
+    .replace(/[^A-Za-z0-9_-]/g, '-')
+    .replace(/^[^A-Za-z0-9]+/, '')
+    .slice(0, 96);
+  const fallback = root || 'blueprint-node';
+  let candidate = fallback;
+  let index = 2;
+
+  while (existing.has(candidate)) {
+    candidate = `${fallback}-${index}`;
+    index += 1;
+  }
+
+  existing.add(candidate);
+
+  return candidate;
 }

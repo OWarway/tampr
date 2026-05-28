@@ -86,7 +86,10 @@ registrations, and opens the new snippet in the workspace.
 Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
 remove an overlay, make an element sticky, widen a content container, or hide an
 element only for print. Keep new Blueprint actions CSS-first until the selector
-and review workflow are proven.
+and review workflow are proven. The workspace builder can add, remove, relabel,
+switch, enable, and disable nodes while the generated CSS still matches the
+recipe; once users hand-edit CSS, code-changing builder controls lock instead of
+overwriting their work.
 
 ## Script Download API
 

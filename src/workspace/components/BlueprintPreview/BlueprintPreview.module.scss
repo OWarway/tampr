@@ -74,8 +74,69 @@
   align-items: start;
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
   min-width: 0;
+}
+
+.editableBuilder {
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr) minmax(
+      220px,
+      280px
+    );
+}
+
+.readOnlyBuilder {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.library {
+  border-right: 1px solid #dbe3de;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-right: 18px;
+
+  header {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  header span {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  header strong {
+    color: #14201b;
+    font-size: 15px;
+    line-height: 1.25;
+  }
+}
+
+.libraryActions {
+  display: grid;
+  gap: 8px;
+
+  button {
+    background: #fff;
+    border-color: #b9cac1;
+    color: #29463d;
+    font-size: 12px;
+    font-weight: 900;
+    justify-content: start;
+    min-height: 34px;
+    padding: 0 10px;
+    text-align: left;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      background: #e2f1e7;
+      border-color: #79a78f;
+    }
+  }
 }
 
 .flow {
@@ -345,14 +406,37 @@
   text-transform: uppercase;
 }
 
+.removeNode {
+  background: #fff;
+  border-color: #c7d2cc;
+  color: #31463e;
+  justify-self: start;
+  min-height: 36px;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #fff4e4;
+    border-color: #d8ad72;
+    color: #7d4a16;
+  }
+}
+
 @media (max-width: 720px) {
   .header {
     align-items: start;
     flex-direction: column;
   }
 
-  .builder {
+  .editableBuilder,
+  .readOnlyBuilder {
     grid-template-columns: 1fr;
+  }
+
+  .library {
+    border-bottom: 1px solid #dbe3de;
+    border-right: 0;
+    padding-bottom: 14px;
+    padding-right: 0;
   }
 
   .nodeContent,

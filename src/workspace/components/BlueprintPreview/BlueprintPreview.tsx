@@ -13,6 +13,8 @@ import {
 } from '../../../domain/blueprints/compiler';
 import {
   getLinearBlueprintNodes,
+  insertBlueprintNode,
+  removeBlueprintNode,
   updateBlueprintNode,
   type BlueprintNode,
   type BlueprintRecipe,
@@ -69,6 +71,47 @@ export function BlueprintPreview({
     onChange(nextBlueprint, nextCss);
   }
 
+  function applyGeneratedBlueprint(
+    nextBlueprint: BlueprintRecipe,
+    nextSelectedNodeId?: string,
+  ): void {
+    if (!onChange || css === undefined || !cssInSync) {
+      return;
+    }
+
+    if (nextSelectedNodeId) {
+      setSelectedNodeId(nextSelectedNodeId);
+    }
+
+    onChange(nextBlueprint, compileBlueprintCss(nextBlueprint));
+  }
+
+  function addNode(type: BlueprintCssAction): void {
+    if (!selectedNode) {
+      return;
+    }
+
+    const result = insertBlueprintNode(recipe, {
+      afterNodeId: selectedNode.id,
+      selector: selectedNode.selector,
+      selectorMeta: selectedNode.selectorMeta,
+      type,
+    });
+
+    applyGeneratedBlueprint(result.recipe, result.nodeId);
+  }
+
+  function removeNode(nodeId: string): void {
+    const nodeIndex = nodes.findIndex((node) => node.id === nodeId);
+    const nextSelectedNodeId =
+      nodes[nodeIndex - 1]?.id ?? nodes[nodeIndex + 1]?.id;
+
+    applyGeneratedBlueprint(
+      removeBlueprintNode(recipe, nodeId),
+      nextSelectedNodeId,
+    );
+  }
+
   return (
     <section className={styles.preview} aria-label="Blueprint preview">
       <header className={styles.header}>
@@ -90,7 +133,15 @@ export function BlueprintPreview({
         ) : null}
       </header>
 
-      <div className={styles.builder}>
+      <div
+        className={`${styles.builder} ${
+          editable ? styles.editableBuilder : styles.readOnlyBuilder
+        }`}
+      >
+        {editable ? (
+          <BlueprintNodeLibrary cssInSync={cssInSync} onAdd={addNode} />
+        ) : null}
+
         <ol className={styles.flow}>
           {nodes.map((node, index) => (
             <BlueprintPreviewNode
@@ -109,6 +160,7 @@ export function BlueprintPreview({
           <BlueprintNodeInspector
             cssInSync={cssInSync}
             node={selectedNode}
+            canRemove={nodes.length > 1}
             onEnabledChange={(enabled) =>
               editNode(selectedNode.id, { enabled }, { regeneratesCss: true })
             }
@@ -118,10 +170,42 @@ export function BlueprintPreview({
             onTypeChange={(type) =>
               editNode(selectedNode.id, { type }, { regeneratesCss: true })
             }
+            onRemove={() => removeNode(selectedNode.id)}
           />
         ) : null}
       </div>
     </section>
+  );
+}
+
+type BlueprintNodeLibraryProps = {
+  cssInSync: boolean;
+  onAdd(type: BlueprintCssAction): void;
+};
+
+function BlueprintNodeLibrary({ cssInSync, onAdd }: BlueprintNodeLibraryProps) {
+  return (
+    <aside className={styles.library} aria-label="Blueprint node library">
+      <header>
+        <span>Library</span>
+        <strong>CSS actions</strong>
+      </header>
+
+      <div className={styles.libraryActions}>
+        {BLUEPRINT_CSS_ACTIONS.map((action) => (
+          <button
+            aria-label={`Add ${blueprintActionLabel(action)} node`}
+            disabled={!cssInSync}
+            key={action}
+            title={blueprintActionDescription(action)}
+            type="button"
+            onClick={() => onAdd(action)}
+          >
+            {blueprintActionLabel(action)}
+          </button>
+        ))}
+      </div>
+    </aside>
   );
 }
 
@@ -182,18 +266,22 @@ function BlueprintPreviewNode({
 }
 
 type BlueprintNodeInspectorProps = {
+  canRemove: boolean;
   cssInSync: boolean;
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
   onLabelChange(label: string): void;
+  onRemove(): void;
   onTypeChange(type: BlueprintCssAction): void;
 };
 
 function BlueprintNodeInspector({
+  canRemove,
   cssInSync,
   node,
   onEnabledChange,
   onLabelChange,
+  onRemove,
   onTypeChange,
 }: BlueprintNodeInspectorProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
@@ -257,6 +345,15 @@ function BlueprintNodeInspector({
           {qualityLabel(assessment.quality)}
         </strong>
       </div>
+
+      <button
+        className={styles.removeNode}
+        disabled={!cssInSync || !canRemove}
+        type="button"
+        onClick={onRemove}
+      >
+        Remove node
+      </button>
     </aside>
   );
 }
