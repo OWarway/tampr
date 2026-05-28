@@ -4,9 +4,12 @@ import {
   BLUEPRINT_SNIPPET_FOLDER,
   buildBlueprintSnippetDraft,
 } from '../../src/domain/blueprint-snippets';
+import { BLUEPRINT_RECIPE_VERSION } from '../../src/domain/blueprints/recipe';
 
 describe('blueprint snippet drafts', () => {
   it('creates a hide snippet scoped to the current path', () => {
+    const selectorMeta = strongSelectorMeta();
+
     expect(
       buildBlueprintSnippetDraft({
         action: 'hide',
@@ -14,7 +17,7 @@ describe('blueprint snippet drafts', () => {
         pick: {
           label: 'Subscribe panel',
           selector: 'aside.subscribe',
-          selectorMeta: strongSelectorMeta(),
+          selectorMeta,
           tagName: 'aside',
         },
       }),
@@ -30,6 +33,26 @@ describe('blueprint snippet drafts', () => {
       js: '',
       runAt: 'document_idle',
       world: 'USER_SCRIPT',
+      blueprint: {
+        version: BLUEPRINT_RECIPE_VERSION,
+        name: 'Hide Subscribe panel',
+        graph: {
+          nodes: [
+            {
+              id: 'hide-selection',
+              enabled: true,
+              label: 'Hide Subscribe panel',
+              selector: 'aside.subscribe',
+              selectorMeta,
+              type: 'hide',
+            },
+          ],
+          edges: [],
+          layout: {
+            'hide-selection': { x: 160, y: 120 },
+          },
+        },
+      },
     });
   });
 

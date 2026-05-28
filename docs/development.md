@@ -133,8 +133,9 @@ The workspace exports snippets as Tampr version 1 JSON with this envelope:
 }
 ```
 
-The export contains local snippet records, including folder labels, only; it
-does not include accounts, remote URLs, or browser permission grants.
+The export contains local snippet records, including folder labels and optional
+Blueprint recipe metadata, only. It does not include accounts, remote URLs, or
+browser permission grants.
 
 Imports are runtime-validated before storage changes. Valid imports merge by
 stable snippet ID: matching IDs are replaced by the imported snippet, unrelated

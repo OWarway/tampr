@@ -101,6 +101,7 @@ export class WorkspaceController {
             js: previous.js,
             runAt: previous.runAt,
             world: previous.world,
+            blueprint: previous.blueprint,
           },
           id: previous.id,
           now: this.dependencies.now(),

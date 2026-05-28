@@ -18,6 +18,8 @@ group changes under the headings below.
 - Per-tab extension badge count when snippets run on the current page.
 - Visual Blueprint creator for generating editable Hide or Highlight snippets
   from a picked page element.
+- Blueprint recipe metadata stored with generated snippets for future flow
+  editing.
 - User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.

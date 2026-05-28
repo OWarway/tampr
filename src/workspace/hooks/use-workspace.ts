@@ -348,6 +348,7 @@ export function useWorkspace(): UseWorkspaceResult {
           js: savedSnippet.js,
           runAt: savedSnippet.runAt,
           world: savedSnippet.world,
+          blueprint: savedSnippet.blueprint,
         }),
       );
 

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  BlueprintRecipeSchema,
+  type BlueprintRecipe,
+} from './blueprints/recipe';
 import { WebMatchPatternSchema } from './web-match-patterns';
 
 export const SNIPPET_RUN_TIMINGS = ['document_start', 'document_idle'] as const;
@@ -20,6 +24,7 @@ export type Snippet = {
   js: string;
   runAt: SnippetRunTiming;
   world: SnippetWorld;
+  blueprint?: BlueprintRecipe | undefined;
   createdAt: number;
   updatedAt: number;
 };
@@ -66,6 +71,7 @@ export const SnippetSchema = z.object({
   js: SnippetCodeSchema,
   runAt: SnippetRunTimingSchema,
   world: SnippetWorldSchema,
+  blueprint: BlueprintRecipeSchema.optional(),
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,
 });
@@ -81,6 +87,7 @@ export const SnippetDraftSchema = SnippetSchema.pick({
   js: true,
   runAt: true,
   world: true,
+  blueprint: true,
 })
   .partial({ id: true })
   .extend({
@@ -137,8 +144,11 @@ export function buildSnippet({
   now,
   previous,
 }: BuildSnippetInput): Snippet {
+  const blueprint = draft.blueprint ?? previous?.blueprint;
+
   return SnippetSchema.parse({
     ...draft,
+    ...(blueprint ? { blueprint } : {}),
     id,
     createdAt: previous?.createdAt ?? now,
     updatedAt: now,

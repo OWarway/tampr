@@ -38,6 +38,8 @@ Before release, exercise:
 - Import non-Tampr JSON and confirm storage is unchanged.
 - Confirm exports do not contain host permission grants, account identifiers, or
   browser state.
+- Create a Blueprint snippet and confirm export includes its local Blueprint
+  recipe metadata without adding page content beyond selectors and labels.
 
 ## Manual Runtime Checks
 

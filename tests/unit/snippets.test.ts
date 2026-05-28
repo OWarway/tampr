@@ -5,6 +5,7 @@ import {
   createEmptySnippet,
   SnippetDraftSchema,
 } from '../../src/domain/snippets';
+import { buildCssBlueprintRecipe } from '../../src/domain/blueprints/recipe';
 
 describe('createEmptySnippet', () => {
   it('creates a safe local snippet default', () => {
@@ -62,6 +63,49 @@ describe('createEmptySnippet', () => {
     expect(snippet.runAt).toBe('document_start');
   });
 
+  it('stores blueprint metadata from drafts', () => {
+    const blueprint = createBlueprint();
+    const snippet = buildSnippet({
+      draft: SnippetDraftSchema.parse({
+        name: 'Hide subscribe',
+        matches: ['*://example.com/*'],
+        css: 'aside.subscribe { display: none !important; }',
+        blueprint,
+      }),
+      id: 'snippet-blueprint',
+      now: 1_748_000_000_004,
+    });
+
+    expect(snippet.blueprint).toEqual(blueprint);
+  });
+
+  it('preserves blueprint metadata when updating existing snippets', () => {
+    const blueprint = createBlueprint();
+    const previous = buildSnippet({
+      draft: SnippetDraftSchema.parse({
+        name: 'Hide subscribe',
+        matches: ['*://example.com/*'],
+        css: 'aside.subscribe { display: none !important; }',
+        blueprint,
+      }),
+      id: 'snippet-blueprint',
+      now: 1_748_000_000_004,
+    });
+    const updated = buildSnippet({
+      draft: SnippetDraftSchema.parse({
+        id: previous.id,
+        name: 'Hide subscribe updated',
+        matches: previous.matches,
+        css: 'aside.subscribe { display: none !important; }',
+      }),
+      id: previous.id,
+      now: 1_748_000_000_005,
+      previous,
+    });
+
+    expect(updated.blueprint).toEqual(blueprint);
+  });
+
   it('trims custom folders from drafts', () => {
     const snippet = buildSnippet({
       draft: SnippetDraftSchema.parse({
@@ -88,3 +132,18 @@ describe('createEmptySnippet', () => {
     expect(draft.folder).toBe('General');
   });
 });
+
+function createBlueprint() {
+  return buildCssBlueprintRecipe({
+    id: 'hide-selection',
+    label: 'Hide Subscribe panel',
+    selector: 'aside.subscribe',
+    selectorMeta: {
+      matchCount: 1,
+      segmentCount: 1,
+      strategy: 'attribute',
+      usesNthOfType: false,
+    },
+    type: 'hide',
+  });
+}

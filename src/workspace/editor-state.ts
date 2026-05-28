@@ -18,6 +18,7 @@ export type EditorState = {
   js: string;
   runAt: Snippet['runAt'];
   world: Snippet['world'];
+  blueprint?: Snippet['blueprint'];
 };
 
 export const newSnippetEditor: EditorState = {
@@ -126,11 +127,13 @@ export function toEditorState(snippet: Snippet): EditorState {
     js: snippet.js,
     runAt: snippet.runAt,
     world: snippet.world,
+    ...(snippet.blueprint ? { blueprint: snippet.blueprint } : {}),
   };
 }
 
 export function duplicateEditor(value: EditorState): EditorState {
   return {
+    ...(value.blueprint ? { blueprint: value.blueprint } : {}),
     css: value.css,
     enabled: value.enabled,
     excludeMatches: value.excludeMatches,
@@ -194,6 +197,18 @@ function editorsEqual(left: EditorState, right: EditorState): boolean {
     left.css === right.css &&
     left.js === right.js &&
     left.runAt === right.runAt &&
-    left.world === right.world
+    left.world === right.world &&
+    blueprintsEqual(left.blueprint, right.blueprint)
   );
+}
+
+function blueprintsEqual(
+  left: Snippet['blueprint'] | undefined,
+  right: Snippet['blueprint'] | undefined,
+): boolean {
+  if (!left || !right) {
+    return left === right;
+  }
+
+  return JSON.stringify(left) === JSON.stringify(right);
 }

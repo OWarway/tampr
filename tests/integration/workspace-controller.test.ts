@@ -10,6 +10,7 @@ import {
   SnippetDraftSchema,
   type Snippet,
 } from '../../src/domain/snippets';
+import { buildCssBlueprintRecipe } from '../../src/domain/blueprints/recipe';
 import { createSnippetExport } from '../../src/domain/snippet-export';
 import type { RuntimeStatus } from '../../src/runtime/runtime-status';
 
@@ -122,7 +123,11 @@ describe('WorkspaceController', () => {
   });
 
   it('toggles snippets before returning synced state', async () => {
-    const snippet = createSnippet('snippet-toggle', { folder: 'Reading' });
+    const blueprint = createBlueprint();
+    const snippet = createSnippet('snippet-toggle', {
+      blueprint,
+      folder: 'Reading',
+    });
     const runtimeSync = new RuntimeSync();
     const snippets = new MemorySnippetStore([snippet]);
     const controller = createController({ runtimeSync, snippets });
@@ -138,6 +143,7 @@ describe('WorkspaceController', () => {
       id: snippet.id,
       folder: 'Reading',
       enabled: false,
+      blueprint,
       createdAt: snippet.createdAt,
       updatedAt: 1_748_000_000_000,
     });
@@ -320,6 +326,7 @@ function createController({
 }
 
 type SnippetOverrides = {
+  blueprint?: ReturnType<typeof createBlueprint>;
   css?: string;
   excludeMatches?: string[];
   folder?: string;
@@ -336,7 +343,23 @@ function createSnippet(id: string, overrides: SnippetOverrides = {}): Snippet {
       matches: ['*://example.com/*'],
       excludeMatches: overrides.excludeMatches,
       css: overrides.css ?? 'body { color: blue; }',
+      blueprint: overrides.blueprint,
     }),
+  });
+}
+
+function createBlueprint() {
+  return buildCssBlueprintRecipe({
+    id: 'hide-selection',
+    label: 'Hide Subscribe panel',
+    selector: 'aside.subscribe',
+    selectorMeta: {
+      matchCount: 1,
+      segmentCount: 1,
+      strategy: 'attribute',
+      usesNthOfType: false,
+    },
+    type: 'hide',
   });
 }
 

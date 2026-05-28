@@ -47,6 +47,7 @@ export function buildBlueprintSnippetDraft({
     js: '',
     runAt: 'document_idle',
     world: 'USER_SCRIPT',
+    blueprint: recipe,
   });
 }
 

@@ -7,6 +7,8 @@ extension storage and runs only CSS or JavaScript the user saves locally.
 
 - Snippet names, folder labels, match rules, exclude rules, enabled state, run
   settings, CSS, JavaScript, and timestamps.
+- Optional Blueprint recipe metadata for snippets created through Blueprint,
+  including selectors, selector quality metadata, graph nodes, edges, and layout.
 - Exported backups as user-downloaded JSON when the workspace export action is
   used.
 - Generated text files, or files fetched from an http/https URL, when a

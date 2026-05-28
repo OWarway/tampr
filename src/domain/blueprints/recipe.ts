@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-import { SnippetIdSchema } from '../snippets';
 import { BlueprintSelectorMetaSchema } from '../blueprint-selectors';
 
 export const BLUEPRINT_RECIPE_VERSION = 1;
@@ -8,8 +7,18 @@ export const BLUEPRINT_NODE_TYPES = ['hide', 'highlight'] as const;
 
 export type BlueprintNodeType = (typeof BLUEPRINT_NODE_TYPES)[number];
 
-export const BlueprintNodeIdSchema = SnippetIdSchema;
-export const BlueprintEdgeIdSchema = SnippetIdSchema;
+const BlueprintIdentifierSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9_-]*$/,
+    'Blueprint IDs must contain letters, numbers, underscores, or hyphens.',
+  );
+
+export const BlueprintNodeIdSchema = BlueprintIdentifierSchema;
+export const BlueprintEdgeIdSchema = BlueprintIdentifierSchema;
 
 export const BlueprintLayoutPointSchema = z.object({
   x: z.number().int().min(-100_000).max(100_000),

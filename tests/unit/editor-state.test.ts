@@ -4,10 +4,12 @@ import {
   appendEditorRuleLine,
   duplicateEditor,
   hasUnsavedChanges,
+  parseEditorDraft,
   toEditorState,
   validateEditorRuleLines,
 } from '../../src/workspace/editor-state';
 import { buildSnippet, SnippetDraftSchema } from '../../src/domain/snippets';
+import { buildCssBlueprintRecipe } from '../../src/domain/blueprints/recipe';
 
 describe('editor state', () => {
   it('duplicates a saved editor as a new named draft', () => {
@@ -37,6 +39,21 @@ describe('editor state', () => {
     );
   });
 
+  it('preserves blueprint metadata through editor drafts', () => {
+    const blueprint = createBlueprint();
+    const snippet = createSnippet({ blueprint });
+    const editor = toEditorState(snippet);
+
+    expect(editor.blueprint).toEqual(blueprint);
+    expect(duplicateEditor(editor).blueprint).toEqual(blueprint);
+    expect(parseEditorDraft(editor)).toMatchObject({
+      ok: true,
+      draft: {
+        blueprint,
+      },
+    });
+  });
+
   it('validates and appends editor match-rule lines', () => {
     expect(validateEditorRuleLines('', true)).toEqual([
       {
@@ -61,7 +78,11 @@ describe('editor state', () => {
   });
 });
 
-function createSnippet() {
+type CreateSnippetInput = {
+  blueprint?: ReturnType<typeof createBlueprint>;
+};
+
+function createSnippet({ blueprint }: CreateSnippetInput = {}) {
   return buildSnippet({
     id: 'daily-cleanup',
     now: 1_748_000_000_000,
@@ -70,6 +91,22 @@ function createSnippet() {
       folder: 'Daily',
       matches: ['*://example.com/*'],
       css: 'main { outline: 1px solid red; }',
+      blueprint,
     }),
+  });
+}
+
+function createBlueprint() {
+  return buildCssBlueprintRecipe({
+    id: 'highlight-selection',
+    label: 'Highlight main',
+    selector: 'main',
+    selectorMeta: {
+      matchCount: 1,
+      segmentCount: 1,
+      strategy: 'attribute',
+      usesNthOfType: false,
+    },
+    type: 'highlight',
   });
 }

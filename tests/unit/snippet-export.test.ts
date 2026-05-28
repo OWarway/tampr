@@ -12,6 +12,7 @@ import {
   SnippetDraftSchema,
   type Snippet,
 } from '../../src/domain/snippets';
+import { buildCssBlueprintRecipe } from '../../src/domain/blueprints/recipe';
 
 describe('snippet exports', () => {
   it('creates a versioned Tampr snippet export', () => {
@@ -56,6 +57,18 @@ describe('snippet exports', () => {
       },
       exportedAt: 1_747_000_000_000,
     });
+  });
+
+  it('keeps blueprint metadata in native exports', () => {
+    const blueprint = createBlueprint();
+    const snippet = createSnippet('blueprint-snippet', { blueprint });
+
+    expect(
+      createSnippetExport({
+        now: 1_748_000_000_000,
+        snippets: [snippet],
+      }).data.snippets[0]?.blueprint,
+    ).toEqual(blueprint);
   });
 
   it('defaults folders when parsing older native exports', () => {
@@ -146,6 +159,7 @@ describe('snippet exports', () => {
 });
 
 type SnippetOverrides = {
+  blueprint?: ReturnType<typeof createBlueprint>;
   css?: string;
   folder?: string;
   name?: string;
@@ -154,6 +168,7 @@ type SnippetOverrides = {
 function createSnippet(
   id: string,
   {
+    blueprint,
     css = 'body { color: blue; }',
     folder = 'General',
     name = 'Example',
@@ -167,6 +182,22 @@ function createSnippet(
       folder,
       matches: ['*://example.com/*'],
       css,
+      blueprint,
     }),
+  });
+}
+
+function createBlueprint() {
+  return buildCssBlueprintRecipe({
+    id: 'hide-selection',
+    label: 'Hide Subscribe panel',
+    selector: 'aside.subscribe',
+    selectorMeta: {
+      matchCount: 1,
+      segmentCount: 1,
+      strategy: 'attribute',
+      usesNthOfType: false,
+    },
+    type: 'hide',
   });
 }
