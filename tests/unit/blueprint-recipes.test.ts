@@ -10,6 +10,7 @@ import {
   buildCssBlueprintRecipe,
   getLinearBlueprintNodes,
   updateBlueprintNode,
+  type BlueprintNodeType,
   type BlueprintRecipe,
 } from '../../src/domain/blueprints/recipe';
 
@@ -56,6 +57,72 @@ main > button.primary {
 }`);
   });
 
+  it.each([
+    [
+      'hide',
+      `main > .target {
+  display: none !important;
+}`,
+    ],
+    [
+      'highlight',
+      `main > .target {
+  outline: 3px solid #d44d3a !important;
+  outline-offset: 3px !important;
+}`,
+    ],
+    [
+      'remove-overlay',
+      `main > .target {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+html,
+body {
+  overflow: auto !important;
+}`,
+    ],
+    [
+      'sticky',
+      `main > .target {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2147483646 !important;
+}`,
+    ],
+    [
+      'widen',
+      `main > .target {
+  max-width: none !important;
+  width: min(100%, 1200px) !important;
+}`,
+    ],
+    [
+      'print-cleanup',
+      `@media print {
+  main > .target {
+    display: none !important;
+  }
+}`,
+    ],
+  ] satisfies Array<[BlueprintNodeType, string]>)(
+    'compiles %s CSS nodes',
+    (type, expectedCss) => {
+      expect(
+        compileBlueprintCss(
+          buildCssBlueprintRecipe({
+            id: `${type}-selection`,
+            label: 'Target action',
+            selector: 'main > .target',
+            selectorMeta: selectorMeta(),
+            type,
+          }),
+        ),
+      ).toBe(expectedCss);
+    },
+  );
+
   it('skips disabled nodes when compiling CSS', () => {
     const recipe = twoNodeRecipe({
       firstEnabled: false,
@@ -77,11 +144,13 @@ main > button.primary {
     const recipe = updateBlueprintNode(twoNodeRecipe(), 'hide-selection', {
       enabled: false,
       label: 'Hide signup panel',
+      type: 'print-cleanup',
     });
 
     expect(recipe.graph.nodes[0]).toMatchObject({
       enabled: false,
       label: 'Hide signup panel',
+      type: 'print-cleanup',
     });
     expect(compileBlueprintCss(recipe)).toBe(`main > button.primary {
   outline: 3px solid #d44d3a !important;
@@ -179,7 +248,7 @@ function twoNodeRecipe({
   });
 }
 
-function node(id: string, type: 'hide' | 'highlight', selector: string) {
+function node(id: string, type: BlueprintNodeType, selector: string) {
   return {
     id,
     enabled: true,

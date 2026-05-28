@@ -74,6 +74,31 @@ describe('blueprint snippet drafts', () => {
 }`);
   });
 
+  it('creates overlay removal snippets with readable names', () => {
+    const draft = buildBlueprintSnippetDraft({
+      action: 'remove-overlay',
+      pageUrl: 'https://example.com/',
+      pick: {
+        label: 'Cookie overlay',
+        selector: '[data-testid="cookie-modal"]',
+        selectorMeta: strongSelectorMeta(),
+        tagName: 'div',
+      },
+    });
+
+    expect(draft.name).toBe('Remove overlay Cookie overlay');
+    expect(draft.blueprint?.graph.nodes[0]?.type).toBe('remove-overlay');
+    expect(draft.css).toBe(`[data-testid="cookie-modal"] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+html,
+body {
+  overflow: auto !important;
+}`);
+  });
+
   it('rejects unsupported page URLs', () => {
     expect(() =>
       buildBlueprintSnippetDraft({

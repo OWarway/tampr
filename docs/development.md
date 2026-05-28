@@ -83,9 +83,10 @@ chosen action and selector metadata to the service worker. The service worker
 creates a normal local CSS snippet in the Blueprints folder, syncs runtime
 registrations, and opens the new snippet in the workspace.
 
-Blueprint output is deliberately plain: Hide creates `display: none`, Highlight
-creates an outline, and both are editable in the normal snippet editor. Keep new
-Blueprint actions CSS-first until the selector and review workflow are proven.
+Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
+remove an overlay, make an element sticky, widen a content container, or hide an
+element only for print. Keep new Blueprint actions CSS-first until the selector
+and review workflow are proven.
 
 ## Script Download API
 

@@ -42,6 +42,10 @@ describe('runTamprBlueprintPicker', () => {
     expect(document.body.textContent).toContain('Good selector');
     expect(document.body.textContent).toContain('Unique class-based target.');
     expect(document.body.textContent).toContain('aside.subscribe.panel');
+    expect(document.body.textContent).toContain('Remove overlay');
+    expect(document.body.textContent).toContain('Make sticky');
+    expect(document.body.textContent).toContain('Widen');
+    expect(document.body.textContent).toContain('Print cleanup');
 
     const hideButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent === 'Hide',
@@ -68,6 +72,52 @@ describe('runTamprBlueprintPicker', () => {
       },
     });
     expect(document.querySelector('[data-tampr-blueprint-picker]')).toBeNull();
+  });
+
+  it('returns new CSS action choices from the palette', async () => {
+    document.body.innerHTML = `
+      <main>
+        <article class="content">Readable article</article>
+      </main>
+    `;
+    const target = document.querySelector('article') as HTMLElement;
+
+    stubElementFromPoint(target);
+    stubRect(target);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    const widenButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Widen',
+    );
+
+    widenButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      action: 'widen',
+      pick: {
+        selector: 'article.content',
+      },
+    });
   });
 
   it('cancels with Escape', async () => {

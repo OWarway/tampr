@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
 import { BlueprintSelectorMetaSchema } from '../blueprint-selectors';
+import { BLUEPRINT_CSS_ACTIONS, type BlueprintCssAction } from './actions';
 
 export const BLUEPRINT_RECIPE_VERSION = 1;
-export const BLUEPRINT_NODE_TYPES = ['hide', 'highlight'] as const;
+export const BLUEPRINT_NODE_TYPES = BLUEPRINT_CSS_ACTIONS;
 
-export type BlueprintNodeType = (typeof BLUEPRINT_NODE_TYPES)[number];
+export type BlueprintNodeType = BlueprintCssAction;
 
 const BlueprintIdentifierSchema = z
   .string()
@@ -194,6 +195,7 @@ export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
 export type BlueprintNodeUpdate = {
   enabled?: boolean;
   label?: string;
+  type?: BlueprintNodeType;
 };
 
 type BuildCssBlueprintRecipeInput = {
@@ -250,6 +252,7 @@ export function updateBlueprintNode(
     const nextNode: BlueprintNode = {
       ...node,
       ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
+      ...(update.type !== undefined ? { type: update.type } : {}),
     };
 
     if (update.label !== undefined) {

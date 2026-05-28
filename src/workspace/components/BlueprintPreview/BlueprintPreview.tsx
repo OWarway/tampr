@@ -2,6 +2,12 @@ import { useMemo, useState } from 'react';
 
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import {
+  BLUEPRINT_CSS_ACTIONS,
+  blueprintActionDescription,
+  blueprintActionLabel,
+  type BlueprintCssAction,
+} from '../../../domain/blueprints/actions';
+import {
   compileBlueprintCss,
   isBlueprintCssInSync,
 } from '../../../domain/blueprints/compiler';
@@ -109,6 +115,9 @@ export function BlueprintPreview({
             onLabelChange={(label) =>
               editNode(selectedNode.id, { label }, { regeneratesCss: false })
             }
+            onTypeChange={(type) =>
+              editNode(selectedNode.id, { type }, { regeneratesCss: true })
+            }
           />
         ) : null}
       </div>
@@ -177,6 +186,7 @@ type BlueprintNodeInspectorProps = {
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
   onLabelChange(label: string): void;
+  onTypeChange(type: BlueprintCssAction): void;
 };
 
 function BlueprintNodeInspector({
@@ -184,6 +194,7 @@ function BlueprintNodeInspector({
   node,
   onEnabledChange,
   onLabelChange,
+  onTypeChange,
 }: BlueprintNodeInspectorProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
@@ -194,6 +205,25 @@ function BlueprintNodeInspector({
         <span>Inspector</span>
         <strong>{label}</strong>
       </header>
+
+      <div className={styles.selectorField}>
+        <span>Action</span>
+        <select
+          aria-label="Blueprint node action"
+          disabled={!cssInSync}
+          value={node.type}
+          onChange={(event) =>
+            onTypeChange(event.currentTarget.value as BlueprintCssAction)
+          }
+        >
+          {BLUEPRINT_CSS_ACTIONS.map((action) => (
+            <option key={action} value={action}>
+              {blueprintActionLabel(action)}
+            </option>
+          ))}
+        </select>
+        <p>{blueprintActionDescription(node.type)}</p>
+      </div>
 
       <label className={styles.inspectorField}>
         <span>Label</span>
@@ -232,7 +262,7 @@ function BlueprintNodeInspector({
 }
 
 function actionLabel(type: BlueprintNode['type']): string {
-  return type === 'hide' ? 'Hide' : 'Highlight';
+  return blueprintActionLabel(type);
 }
 
 function qualityLabel(

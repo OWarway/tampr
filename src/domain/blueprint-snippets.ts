@@ -1,13 +1,18 @@
 import { buildPageRulePresets } from './page-rule-presets';
 import { SnippetDraftSchema, type SnippetDraft } from './snippets';
 import type { BlueprintSelectorMeta } from './blueprint-selectors';
+import {
+  BLUEPRINT_CSS_ACTIONS,
+  blueprintActionLabel,
+  type BlueprintCssAction,
+} from './blueprints/actions';
 import { buildCssBlueprintRecipe } from './blueprints/recipe';
 import { compileBlueprintCss } from './blueprints/compiler';
 
 export const BLUEPRINT_SNIPPET_FOLDER = 'Blueprints';
-export const BLUEPRINT_ACTIONS = ['hide', 'highlight'] as const;
+export const BLUEPRINT_ACTIONS = BLUEPRINT_CSS_ACTIONS;
 
-export type BlueprintAction = (typeof BLUEPRINT_ACTIONS)[number];
+export type BlueprintAction = BlueprintCssAction;
 
 export type BlueprintElementPick = {
   label: string;
@@ -52,7 +57,7 @@ export function buildBlueprintSnippetDraft({
 }
 
 function actionLabel(action: BlueprintAction): string {
-  return action === 'hide' ? 'Hide' : 'Highlight';
+  return blueprintActionLabel(action);
 }
 
 function snippetSubject(pick: BlueprintElementPick): string {

@@ -154,6 +154,14 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
     paletteActions.append(
       createPaletteButton('Hide', '#14594d', () => finish('hide')),
       createPaletteButton('Highlight', '#d44d3a', () => finish('highlight')),
+      createPaletteButton('Remove overlay', '#7d4a16', () =>
+        finish('remove-overlay'),
+      ),
+      createPaletteButton('Make sticky', '#2d7d56', () => finish('sticky')),
+      createPaletteButton('Widen', '#29463d', () => finish('widen')),
+      createPaletteButton('Print cleanup', '#53645b', () =>
+        finish('print-cleanup'),
+      ),
       createPaletteButton('Cancel', '#53645b', cancel),
     );
     palette.append(paletteInfo, paletteActions);

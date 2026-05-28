@@ -1,5 +1,6 @@
 import {
   buildBlueprintSnippetDraft,
+  type BlueprintAction,
   type BlueprintElementPick,
 } from '../domain/blueprint-snippets';
 import { buildSnippet, type Snippet } from '../domain/snippets';
@@ -40,7 +41,7 @@ type ActiveBlueprintTab = {
 
 type BlueprintInjectionResult = {
   result?: {
-    action?: 'hide' | 'highlight';
+    action?: BlueprintAction;
     message?: string;
     ok: boolean;
     pick?: BlueprintElementPick;

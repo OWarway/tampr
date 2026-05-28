@@ -258,7 +258,8 @@
     text-transform: uppercase;
   }
 
-  header strong {
+  header strong,
+  .selectorField strong {
     color: #14201b;
     font-size: 15px;
     line-height: 1.25;
@@ -266,6 +267,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .selectorField p {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    margin: 0;
   }
 }
 
@@ -276,6 +285,16 @@
   min-width: 0;
 
   input {
+    background: #fff;
+    border: 1px solid #b9cac1;
+    border-radius: 6px;
+    color: #14201b;
+    min-height: 38px;
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  select {
     background: #fff;
     border: 1px solid #b9cac1;
     border-radius: 6px;

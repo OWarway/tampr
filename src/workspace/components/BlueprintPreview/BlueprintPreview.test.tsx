@@ -143,6 +143,46 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('regenerates CSS when changing a synced node action', () => {
+    const onChange = vi.fn();
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Blueprint node action'), {
+      target: { value: 'print-cleanup' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              type: 'print-cleanup',
+            }),
+          ],
+        }),
+      }),
+      `@media print {
+  [data-testid="offer"] {
+    display: none !important;
+  }
+}`,
+    );
+  });
+
   it('locks code-changing controls when CSS has been edited by hand', () => {
     render(
       <BlueprintPreview
@@ -158,6 +198,33 @@ describe('BlueprintPreview', () => {
 
     expect(screen.getByText('Code edited')).toBeTruthy();
     expect(enabledToggle.disabled).toBe(true);
+    expect(
+      (screen.getByLabelText('Blueprint node action') as HTMLSelectElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  it('shows the selected action description in the inspector', () => {
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'widen-selection',
+      label: 'Widen article',
+      selector: 'article.story',
+      selectorMeta: selectorMeta('class'),
+      type: 'widen',
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(screen.getAllByText('Widen').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('Relaxes narrow content containers for easier reading.'),
+    ).toBeTruthy();
   });
 });
 

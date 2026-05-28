@@ -16,14 +16,16 @@ group changes under the headings below.
 - Chrome User Scripts runtime sync with host-access and capability states.
 - Popup current-page status with enable and disable controls.
 - Per-tab extension badge count when snippets run on the current page.
-- Visual Blueprint creator for generating editable Hide or Highlight snippets
-  from a picked page element.
+- Visual Blueprint creator for generating editable CSS snippets from a picked
+  page element.
+- Blueprint CSS action pack for overlay removal, sticky elements, wider content,
+  and print cleanup.
 - Blueprint recipe metadata stored with generated snippets for future flow
   editing.
 - Workspace Blueprint preview for saved recipe nodes, selectors, and selector
   quality.
-- Editable Blueprint node labels and generated-CSS enable toggles with
-  code-sync protection.
+- Editable Blueprint node labels, action types, and generated-CSS enable toggles
+  with code-sync protection.
 - User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.

@@ -27,9 +27,10 @@ remote snippet execution.
 ## Blueprint Creator
 
 Open the popup on an http or https page and choose Blueprint. Tampr temporarily
-highlights page elements, lets you choose Hide or Highlight, saves the result as
-a normal CSS snippet in the Blueprints folder, and opens it in the workspace for
-review. The snippet is editable like any other local snippet.
+highlights page elements, lets you choose a CSS-first action such as Hide,
+Highlight, Remove overlay, Make sticky, Widen, or Print cleanup, saves the
+result as a normal CSS snippet in the Blueprints folder, and opens it in the
+workspace for review. The snippet is editable like any other local snippet.
 
 ## Screenshots
 
