@@ -5,7 +5,7 @@ import type {
 
 export type BlueprintPickerResponse =
   | {
-      action: BlueprintAction;
+      action?: BlueprintAction;
       ok: true;
       pick: BlueprintElementPick;
     }
@@ -15,8 +15,14 @@ export type BlueprintPickerResponse =
       reason: 'busy' | 'cancelled' | 'unavailable';
     };
 
+type BlueprintPickerOptions = {
+  mode?: 'create' | 'selector';
+};
+
 // Chrome serializes only this function for injection, so the picker helpers stay nested.
-export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse> {
+export async function runTamprBlueprintPicker({
+  mode = 'create',
+}: BlueprintPickerOptions = {}): Promise<BlueprintPickerResponse> {
   type PickerWindow = Window & {
     __tamprBlueprintPickerActive?: boolean;
   };
@@ -97,7 +103,9 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       'transform: translateX(-50%)',
     ].join(';');
     banner.textContent =
-      'Tampr Blueprint: pick an element, then choose what to create.';
+      mode === 'selector'
+        ? 'Tampr Blueprint: pick a replacement element.'
+        : 'Tampr Blueprint: pick an element, then choose what to create.';
 
     palette.style.cssText = [
       'background: #f7fbf8',
@@ -151,19 +159,26 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       'flex-wrap: wrap',
       'gap: 8px',
     ].join(';');
-    paletteActions.append(
-      createPaletteButton('Hide', '#14594d', () => finish('hide')),
-      createPaletteButton('Highlight', '#d44d3a', () => finish('highlight')),
-      createPaletteButton('Remove overlay', '#7d4a16', () =>
-        finish('remove-overlay'),
-      ),
-      createPaletteButton('Make sticky', '#2d7d56', () => finish('sticky')),
-      createPaletteButton('Widen', '#29463d', () => finish('widen')),
-      createPaletteButton('Print cleanup', '#53645b', () =>
-        finish('print-cleanup'),
-      ),
-      createPaletteButton('Cancel', '#53645b', cancel),
-    );
+    if (mode === 'selector') {
+      paletteActions.append(
+        createPaletteButton('Use selector', '#14594d', () => finish()),
+        createPaletteButton('Cancel', '#53645b', cancel),
+      );
+    } else {
+      paletteActions.append(
+        createPaletteButton('Hide', '#14594d', () => finish('hide')),
+        createPaletteButton('Highlight', '#d44d3a', () => finish('highlight')),
+        createPaletteButton('Remove overlay', '#7d4a16', () =>
+          finish('remove-overlay'),
+        ),
+        createPaletteButton('Make sticky', '#2d7d56', () => finish('sticky')),
+        createPaletteButton('Widen', '#29463d', () => finish('widen')),
+        createPaletteButton('Print cleanup', '#53645b', () =>
+          finish('print-cleanup'),
+        ),
+        createPaletteButton('Cancel', '#53645b', cancel),
+      );
+    }
     palette.append(paletteInfo, paletteActions);
 
     root.append(highlight, banner, palette);
@@ -305,14 +320,14 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       palette.style.top = `${top}px`;
     }
 
-    function finish(action: BlueprintAction): void {
+    function finish(action?: BlueprintAction): void {
       if (!selectedTarget) {
         return;
       }
 
       const pick = selectedPick ?? describePick(selectedTarget);
       cleanup();
-      resolve({ ok: true, action, pick });
+      resolve(action ? { ok: true, action, pick } : { ok: true, pick });
     }
 
     function cancel(): void {

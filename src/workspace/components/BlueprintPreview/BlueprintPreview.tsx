@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
+import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import {
   BLUEPRINT_CSS_ACTIONS,
   blueprintActionDescription,
@@ -25,12 +26,16 @@ import styles from './BlueprintPreview.module.scss';
 type BlueprintPreviewProps = {
   blueprint: BlueprintRecipe | undefined;
   css?: string;
+  onPickSelector?:
+    | (() => Promise<BlueprintElementPick | undefined>)
+    | undefined;
   onChange?(blueprint: BlueprintRecipe, css: string): void;
 };
 
 export function BlueprintPreview({
   blueprint,
   css,
+  onPickSelector,
   onChange,
 }: BlueprintPreviewProps) {
   const nodes = useMemo(
@@ -38,6 +43,7 @@ export function BlueprintPreview({
     [blueprint],
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
+  const [pickingNodeId, setPickingNodeId] = useState<string>();
 
   if (!blueprint) {
     return null;
@@ -69,6 +75,31 @@ export function BlueprintPreview({
       : css;
 
     onChange(nextBlueprint, nextCss);
+  }
+
+  async function pickSelector(nodeId: string): Promise<void> {
+    if (!onChange || !onPickSelector || css === undefined || !cssInSync) {
+      return;
+    }
+
+    setPickingNodeId(nodeId);
+
+    try {
+      const pick = await onPickSelector();
+
+      if (!pick) {
+        return;
+      }
+
+      const nextBlueprint = updateBlueprintNode(recipe, nodeId, {
+        selector: pick.selector,
+        selectorMeta: pick.selectorMeta,
+      });
+
+      onChange(nextBlueprint, compileBlueprintCss(nextBlueprint));
+    } finally {
+      setPickingNodeId(undefined);
+    }
   }
 
   function applyGeneratedBlueprint(
@@ -171,6 +202,12 @@ export function BlueprintPreview({
               editNode(selectedNode.id, { type }, { regeneratesCss: true })
             }
             onRemove={() => removeNode(selectedNode.id)}
+            onPickSelector={
+              onPickSelector
+                ? () => void pickSelector(selectedNode.id)
+                : undefined
+            }
+            pickingSelector={pickingNodeId === selectedNode.id}
           />
         ) : null}
       </div>
@@ -271,8 +308,10 @@ type BlueprintNodeInspectorProps = {
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
   onLabelChange(label: string): void;
+  onPickSelector?: (() => void) | undefined;
   onRemove(): void;
   onTypeChange(type: BlueprintCssAction): void;
+  pickingSelector: boolean;
 };
 
 function BlueprintNodeInspector({
@@ -281,8 +320,10 @@ function BlueprintNodeInspector({
   node,
   onEnabledChange,
   onLabelChange,
+  onPickSelector,
   onRemove,
   onTypeChange,
+  pickingSelector,
 }: BlueprintNodeInspectorProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
@@ -337,6 +378,16 @@ function BlueprintNodeInspector({
       <div className={styles.selectorField}>
         <span>Selector</span>
         <code>{node.selector}</code>
+        {onPickSelector ? (
+          <button
+            className={styles.pickSelector}
+            disabled={!cssInSync || pickingSelector}
+            type="button"
+            onClick={onPickSelector}
+          >
+            {pickingSelector ? 'Picking...' : 'Pick again'}
+          </button>
+        ) : null}
       </div>
 
       <div className={styles.selectorField}>

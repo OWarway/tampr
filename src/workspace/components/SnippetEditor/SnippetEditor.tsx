@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import type { PageRulePreset } from '../../../domain/page-rule-presets';
+import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import { DEFAULT_SNIPPET_FOLDER, type Snippet } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import {
@@ -44,6 +45,9 @@ type SnippetEditorProps = {
   onDelete(): void;
   onDuplicate(): void;
   onFolderChange(folder: string): void;
+  onPickBlueprintSelector?:
+    | (() => Promise<BlueprintElementPick | undefined>)
+    | undefined;
   onSave(): void;
   onUpdate(editor: EditorState): void;
 };
@@ -58,6 +62,7 @@ export function SnippetEditor({
   onDelete,
   onDuplicate,
   onFolderChange,
+  onPickBlueprintSelector,
   onSave,
   onUpdate,
 }: SnippetEditorProps) {
@@ -207,6 +212,7 @@ export function SnippetEditor({
         <BlueprintPreview
           blueprint={editor.blueprint}
           css={editor.css}
+          onPickSelector={onPickBlueprintSelector}
           onChange={(blueprint, css) => onUpdate({ ...editor, blueprint, css })}
         />
 

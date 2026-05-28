@@ -1,7 +1,10 @@
 import { startDevReloadWatcher } from '../dev/reload-extension';
 import { handleTamprDownloadMessage } from '../runtime/tampr-download-api';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
-import { isStartBlueprintCreatorMessage } from '../shared/blueprint-messages';
+import {
+  isPickBlueprintSelectorMessage,
+  isStartBlueprintCreatorMessage,
+} from '../shared/blueprint-messages';
 import type { ExtensionResponse } from '../shared/workspace-messages';
 import { createChromeSnippetRepository } from '../storage/snippet-repository';
 import { ActionBadgeController } from './action-badge';
@@ -46,6 +49,17 @@ chrome.runtime.onMessage.addListener(
     if (isStartBlueprintCreatorMessage(message)) {
       void blueprints
         .startCreator()
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    }
+
+    if (isPickBlueprintSelectorMessage(message)) {
+      void blueprints
+        .pickSelector(message.sourceTabId)
         .then(sendResponse)
         .catch((error: unknown) => {
           sendResponse(toErrorResponse(error));

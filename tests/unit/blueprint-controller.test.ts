@@ -9,6 +9,7 @@ describe('BlueprintController', () => {
     const snippets = new MemorySnippetStore();
     const runtimeSync = vi.fn(async () => readyRuntime());
     const create = vi.fn().mockResolvedValue(undefined);
+    const update = vi.fn().mockResolvedValue(undefined);
     const controller = new BlueprintController({
       createId: () => 'blueprint-snippet',
       getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
@@ -44,6 +45,7 @@ describe('BlueprintController', () => {
             url: 'https://docs.example.com/articles/intro?secret=1#comments',
           },
         ]),
+        update,
       },
     });
 
@@ -63,7 +65,7 @@ describe('BlueprintController', () => {
     });
     expect(runtimeSync).toHaveBeenCalledWith(snippets.values);
     expect(create).toHaveBeenCalledWith({
-      url: 'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fdocs.example.com%2Farticles%2Fintro&snippet=blueprint-snippet',
+      url: 'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fdocs.example.com%2Farticles%2Fintro&snippet=blueprint-snippet&sourceTab=42',
     });
   });
 
@@ -95,6 +97,7 @@ describe('BlueprintController', () => {
             url: 'https://docs.example.com/articles/intro',
           },
         ]),
+        update: vi.fn(),
       },
     });
 
@@ -124,12 +127,105 @@ describe('BlueprintController', () => {
             url: 'chrome://extensions',
           },
         ]),
+        update: vi.fn(),
       },
     });
 
     await expect(controller.startCreator()).resolves.toEqual({
       ok: false,
       error: 'Blueprint creator works on http and https pages.',
+    });
+  });
+
+  it('picks a selector from a source tab without creating a snippet', async () => {
+    const snippets = new MemorySnippetStore();
+    const executeScript = vi.fn().mockResolvedValue([
+      {
+        result: {
+          ok: true,
+          pick: {
+            label: 'Buy now',
+            selector: '[data-testid="buy"]',
+            selectorMeta: {
+              matchCount: 1,
+              segmentCount: 1,
+              strategy: 'attribute',
+              usesNthOfType: false,
+            },
+            tagName: 'button',
+          },
+        },
+      },
+    ]);
+    const update = vi.fn().mockResolvedValue(undefined);
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript,
+      },
+      snippets,
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn(),
+        update,
+      },
+    });
+
+    await expect(controller.pickSelector(42)).resolves.toEqual({
+      ok: true,
+      pick: {
+        label: 'Buy now',
+        selector: '[data-testid="buy"]',
+        selectorMeta: {
+          matchCount: 1,
+          segmentCount: 1,
+          strategy: 'attribute',
+          usesNthOfType: false,
+        },
+        tagName: 'button',
+      },
+      status: 'picked',
+    });
+    expect(update).toHaveBeenCalledWith(42, { active: true });
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      func: expect.any(Function),
+      args: [{ mode: 'selector' }],
+    });
+    expect(snippets.values).toEqual([]);
+  });
+
+  it('does not pick a selector when cancelled', async () => {
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript: vi.fn().mockResolvedValue([
+          {
+            result: {
+              ok: false,
+              reason: 'cancelled',
+              message: 'Blueprint picking was cancelled.',
+            },
+          },
+        ]),
+      },
+      snippets: new MemorySnippetStore(),
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn(),
+        update: vi.fn(),
+      },
+    });
+
+    await expect(controller.pickSelector(42)).resolves.toEqual({
+      ok: true,
+      status: 'cancelled',
     });
   });
 });

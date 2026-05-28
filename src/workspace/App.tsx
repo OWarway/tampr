@@ -60,6 +60,7 @@ export function App() {
           onDelete={() => void state.deleteEditor()}
           onDuplicate={state.duplicateCurrentEditor}
           onFolderChange={state.updateEditorFolder}
+          onPickBlueprintSelector={() => state.pickBlueprintSelector()}
           onSave={() => void state.saveEditor()}
           onUpdate={state.updateEditor}
         />

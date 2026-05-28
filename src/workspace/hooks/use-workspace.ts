@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { pickBlueprintSelector as pickBlueprintSelectorFromTab } from '../../chrome/blueprints';
 import { requestHostAccess } from '../../chrome/host-access';
 import {
   deleteSnippetFolder,
@@ -10,13 +11,17 @@ import {
   saveSnippetDraft,
 } from '../../chrome/workspace-state';
 import { createSnippetExport } from '../../domain/snippet-export';
+import type { BlueprintElementPick } from '../../domain/blueprint-snippets';
 import {
   DEFAULT_SNIPPET_FOLDER,
   SnippetDraftSchema,
   type Snippet,
 } from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
-import { getWorkspaceSelectedSnippetId } from '../../shared/workspace-source-page';
+import {
+  getWorkspaceSelectedSnippetId,
+  getWorkspaceSourceTabId,
+} from '../../shared/workspace-source-page';
 import { downloadJson } from '../download-json';
 import {
   duplicateEditor,
@@ -41,6 +46,7 @@ export type UseWorkspaceResult = {
   exportWorkspace(): Promise<void>;
   importWorkspaceFile(file: File): Promise<void>;
   renameFolder(folder: string, nextFolder: string): Promise<void>;
+  pickBlueprintSelector(): Promise<BlueprintElementPick | undefined>;
   saveEditor(): Promise<void>;
   selectEditor(editor: EditorState): void;
   updateEditor(editor: EditorState): void;
@@ -120,6 +126,42 @@ export function useWorkspace(): UseWorkspaceResult {
       );
     } catch (error: unknown) {
       setNotice(toErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pickBlueprintSelector(): Promise<
+    BlueprintElementPick | undefined
+  > {
+    const sourceTabId = getWorkspaceSourceTabId(window.location.href);
+
+    if (!sourceTabId) {
+      setNotice('Open the workspace from a page before re-picking selectors.');
+      return undefined;
+    }
+
+    setBusy(true);
+    setNotice('Pick a replacement element on the source page.');
+
+    try {
+      const response = await pickBlueprintSelectorFromTab(sourceTabId);
+
+      if (!response.ok) {
+        setNotice(response.error);
+        return undefined;
+      }
+
+      if (response.status === 'cancelled' || !response.pick) {
+        setNotice('Selector picking cancelled.');
+        return undefined;
+      }
+
+      setNotice('Selector picked. Save the snippet to sync it.');
+      return response.pick;
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+      return undefined;
     } finally {
       setBusy(false);
     }
@@ -387,6 +429,7 @@ export function useWorkspace(): UseWorkspaceResult {
     duplicateCurrentEditor,
     exportWorkspace,
     importWorkspaceFile,
+    pickBlueprintSelector,
     renameFolder,
     saveEditor,
     selectEditor,

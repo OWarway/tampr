@@ -10,7 +10,10 @@ import {
   buildWorkspaceUrl,
   sanitizeWebPageUrl,
 } from '../shared/workspace-source-page';
-import type { StartBlueprintCreatorResponse } from '../shared/blueprint-messages';
+import type {
+  PickBlueprintSelectorResponse,
+  StartBlueprintCreatorResponse,
+} from '../shared/blueprint-messages';
 
 type BlueprintSnippetStore = {
   save(snippet: Snippet): Promise<Snippet[]>;
@@ -20,7 +23,7 @@ type BlueprintRuntimeSync = (
   snippets: readonly Snippet[],
 ) => Promise<RuntimeStatus>;
 
-type BlueprintTabs = Pick<typeof chrome.tabs, 'create' | 'query'>;
+type BlueprintTabs = Pick<typeof chrome.tabs, 'create' | 'query' | 'update'>;
 
 type BlueprintScripting = Pick<typeof chrome.scripting, 'executeScript'>;
 
@@ -55,6 +58,19 @@ export class BlueprintController {
   async startCreator(): Promise<StartBlueprintCreatorResponse> {
     try {
       return await this.createFromActiveTab();
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async pickSelector(
+    sourceTabId: number,
+  ): Promise<PickBlueprintSelectorResponse> {
+    try {
+      return await this.pickSelectorFromTab(sourceTabId);
     } catch (error: unknown) {
       return {
         ok: false,
@@ -105,6 +121,7 @@ export class BlueprintController {
         baseUrl: this.dependencies.getExtensionUrl('workspace.html'),
         selectedSnippetId: snippetId,
         sourcePageUrl: tab.pageUrl,
+        sourceTabId: tab.id,
       }),
     });
 
@@ -125,6 +142,47 @@ export class BlueprintController {
     return {
       id: tab.id,
       pageUrl,
+    };
+  }
+
+  private async pickSelectorFromTab(
+    sourceTabId: number,
+  ): Promise<PickBlueprintSelectorResponse> {
+    if (!this.dependencies.scripting) {
+      throw new Error(
+        'Blueprint selector picker needs Chrome scripting support.',
+      );
+    }
+
+    if (!Number.isInteger(sourceTabId) || sourceTabId <= 0) {
+      throw new Error('Blueprint selector picker needs a source tab.');
+    }
+
+    await this.dependencies.tabs.update(sourceTabId, { active: true });
+
+    const [injectionResult] = (await this.dependencies.scripting.executeScript({
+      target: { tabId: sourceTabId },
+      func: runTamprBlueprintPicker,
+      args: [{ mode: 'selector' }],
+    })) as BlueprintInjectionResult[];
+    const pickerResponse = injectionResult?.result;
+
+    if (!pickerResponse) {
+      throw new Error('Blueprint selector picker could not read the page.');
+    }
+
+    if (!pickerResponse.ok) {
+      return { ok: true, status: 'cancelled' };
+    }
+
+    if (!pickerResponse.pick) {
+      throw new Error('Blueprint selector picker returned no selection.');
+    }
+
+    return {
+      ok: true,
+      pick: pickerResponse.pick,
+      status: 'picked',
     };
   }
 }

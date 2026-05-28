@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { compileBlueprintCss } from '../../../domain/blueprints/compiler';
@@ -232,6 +238,53 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('updates a node selector from the page picker and regenerates CSS', async () => {
+    const onChange = vi.fn();
+    const onPickSelector = vi.fn().mockResolvedValue({
+      label: 'Dismiss',
+      selector: '[data-testid="dismiss"]',
+      selectorMeta: selectorMeta('attribute'),
+      tagName: 'button',
+    });
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onPickSelector={onPickSelector}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pick again' }));
+
+    await waitFor(() => expect(onPickSelector).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: [
+              expect.objectContaining({
+                selector: '[data-testid="dismiss"]',
+                selectorMeta: selectorMeta('attribute'),
+              }),
+            ],
+          }),
+        }),
+        `[data-testid="dismiss"] {
+  display: none !important;
+}`,
+      ),
+    );
+  });
+
   it('removes the selected node and regenerates CSS', () => {
     const onChange = vi.fn();
     const blueprint = twoNodeRecipe();
@@ -268,6 +321,7 @@ describe('BlueprintPreview', () => {
       <BlueprintPreview
         blueprint={twoNodeRecipe()}
         css="main { color: red; }"
+        onPickSelector={() => Promise.resolve(undefined)}
         onChange={() => undefined}
       />,
     );
@@ -288,6 +342,10 @@ describe('BlueprintPreview', () => {
           name: 'Add Hide node',
         }) as HTMLButtonElement
       ).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Pick again' }) as HTMLButtonElement)
+        .disabled,
     ).toBe(true);
   });
 

@@ -89,7 +89,9 @@ element only for print. Keep new Blueprint actions CSS-first until the selector
 and review workflow are proven. The workspace builder can add, remove, relabel,
 switch, enable, and disable nodes while the generated CSS still matches the
 recipe; once users hand-edit CSS, code-changing builder controls lock instead of
-overwriting their work.
+overwriting their work. Workspaces opened from a source page carry a sanitized
+source URL and source tab ID so a node can re-pick its selector in the same tab
+without granting broad tab access.
 
 ## Script Download API
 

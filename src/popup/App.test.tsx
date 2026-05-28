@@ -23,6 +23,7 @@ describe('Popup App', () => {
     const sendMessage = vi.fn().mockResolvedValue(readyPageResponse());
     const query = vi.fn().mockResolvedValue([
       {
+        id: 42,
         url: 'https://docs.example.com/snippets/new?token=private#draft',
       },
     ]);
@@ -44,7 +45,7 @@ describe('Popup App', () => {
 
     await waitFor(() =>
       expect(create).toHaveBeenCalledWith({
-        url: 'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fdocs.example.com%2Fsnippets%2Fnew',
+        url: 'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fdocs.example.com%2Fsnippets%2Fnew&sourceTab=42',
       }),
     );
     expect(openOptionsPage).not.toHaveBeenCalled();

@@ -406,18 +406,30 @@
   text-transform: uppercase;
 }
 
+.pickSelector,
 .removeNode {
   background: #fff;
   border-color: #c7d2cc;
   color: #31463e;
   justify-self: start;
   min-height: 36px;
+}
 
+.removeNode {
   &:hover:not(:disabled),
   &:focus-visible {
     background: #fff4e4;
     border-color: #d8ad72;
     color: #7d4a16;
+  }
+}
+
+.pickSelector {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #e2f1e7;
+    border-color: #79a78f;
+    color: #14594d;
   }
 }
 

@@ -5,6 +5,7 @@ import {
   buildWorkspaceUrl,
   getWorkspaceSelectedSnippetId,
   getWorkspaceSourcePageUrl,
+  getWorkspaceSourceTabId,
   sanitizeWebPageUrl,
 } from '../../src/shared/workspace-source-page';
 
@@ -47,11 +48,12 @@ describe('page rule presets', () => {
     const workspaceUrl = buildWorkspaceUrl({
       baseUrl: 'chrome-extension://tampr/workspace.html',
       selectedSnippetId: 'blueprint-snippet_1',
+      sourceTabId: 42,
       sourcePageUrl: 'https://example.com/path?token=private#draft',
     });
 
     expect(workspaceUrl).toBe(
-      'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fexample.com%2Fpath&snippet=blueprint-snippet_1',
+      'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fexample.com%2Fpath&snippet=blueprint-snippet_1&sourceTab=42',
     );
     expect(getWorkspaceSourcePageUrl(workspaceUrl)).toBe(
       'https://example.com/path',
@@ -59,6 +61,12 @@ describe('page rule presets', () => {
     expect(getWorkspaceSelectedSnippetId(workspaceUrl)).toBe(
       'blueprint-snippet_1',
     );
+    expect(getWorkspaceSourceTabId(workspaceUrl)).toBe(42);
+    expect(
+      getWorkspaceSourceTabId(
+        'chrome-extension://tampr/workspace.html?sourceTab=-1',
+      ),
+    ).toBeUndefined();
     expect(
       getWorkspaceSelectedSnippetId(
         'chrome-extension://tampr/workspace.html?snippet=../private',

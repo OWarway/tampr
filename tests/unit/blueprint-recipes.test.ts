@@ -146,12 +146,15 @@ body {
     const recipe = updateBlueprintNode(twoNodeRecipe(), 'hide-selection', {
       enabled: false,
       label: 'Hide signup panel',
+      selector: 'aside.new-signup',
+      selectorMeta: selectorMeta(),
       type: 'print-cleanup',
     });
 
     expect(recipe.graph.nodes[0]).toMatchObject({
       enabled: false,
       label: 'Hide signup panel',
+      selector: 'aside.new-signup',
       type: 'print-cleanup',
     });
     expect(compileBlueprintCss(recipe)).toBe(`main > button.primary {

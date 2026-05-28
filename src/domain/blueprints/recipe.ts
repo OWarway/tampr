@@ -199,6 +199,8 @@ export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
 export type BlueprintNodeUpdate = {
   enabled?: boolean;
   label?: string;
+  selector?: string;
+  selectorMeta?: BlueprintNode['selectorMeta'];
   type?: BlueprintNodeType;
 };
 
@@ -269,6 +271,10 @@ export function updateBlueprintNode(
     const nextNode: BlueprintNode = {
       ...node,
       ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
+      ...(update.selector !== undefined ? { selector: update.selector } : {}),
+      ...(update.selectorMeta !== undefined
+        ? { selectorMeta: update.selectorMeta }
+        : {}),
       ...(update.type !== undefined ? { type: update.type } : {}),
     };
 

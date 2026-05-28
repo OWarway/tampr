@@ -120,6 +120,63 @@ describe('runTamprBlueprintPicker', () => {
     });
   });
 
+  it('returns only selector data in selector mode', async () => {
+    document.body.innerHTML = `
+      <main>
+        <button data-testid="buy">Buy now</button>
+      </main>
+    `;
+    const target = document.querySelector('button') as HTMLElement;
+
+    stubElementFromPoint(target);
+    stubRect(target);
+
+    const resultPromise = runTamprBlueprintPicker({ mode: 'selector' });
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    expect(document.body.textContent).toContain('Use selector');
+    expect(document.body.textContent).not.toContain('Remove overlay');
+
+    const useSelectorButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Use selector',
+    );
+
+    useSelectorButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
+    await expect(resultPromise).resolves.toEqual({
+      ok: true,
+      pick: {
+        label: 'Buy now',
+        selector: 'button[data-testid="buy"]',
+        selectorMeta: {
+          matchCount: 1,
+          segmentCount: 1,
+          strategy: 'attribute',
+          usesNthOfType: false,
+        },
+        tagName: 'button',
+        text: 'Buy now',
+      },
+    });
+  });
+
   it('cancels with Escape', async () => {
     const resultPromise = runTamprBlueprintPicker();
 
