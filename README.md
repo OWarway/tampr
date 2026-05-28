@@ -32,7 +32,9 @@ Highlight, Remove overlay, Make sticky, Widen, or Print cleanup, saves the
 result as a normal CSS snippet in the Blueprints folder, and opens it in the
 workspace for review. The workspace Blueprint panel can add, remove, reorder,
 relabel, switch CSS action nodes, re-pick selectors, and test selectors against
-the source page while keeping generated code visible and editable.
+the source page while keeping generated code visible and editable. Early
+automation nodes can also be added to generate readable JavaScript for waits,
+clicks, form values, text extraction, and JSON downloads.
 
 ## Screenshots
 

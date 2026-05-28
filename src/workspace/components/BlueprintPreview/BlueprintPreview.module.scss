@@ -139,6 +139,14 @@
   }
 }
 
+.libraryGroup {
+  color: #53645b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .flow {
   display: grid;
   gap: 12px;
@@ -389,6 +397,13 @@
     margin: 0;
     width: 18px;
   }
+}
+
+.automationSettings {
+  border-block: 1px solid #dbe3de;
+  display: grid;
+  gap: 12px;
+  padding-block: 12px;
 }
 
 .health {

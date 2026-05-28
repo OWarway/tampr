@@ -277,7 +277,7 @@ export type BlueprintNodeUpdate = {
   timeoutMs?: number;
   type?: BlueprintNodeType;
   value?: string;
-  valueFrom?: string;
+  valueFrom?: string | null;
   variableName?: string;
 };
 
@@ -347,7 +347,7 @@ export function updateBlueprintNode(
 
     updated = true;
 
-    const nextNode = {
+    const nextNode: Record<string, unknown> = {
       ...node,
       ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
       ...(update.selector !== undefined ? { selector: update.selector } : {}),
@@ -363,13 +363,18 @@ export function updateBlueprintNode(
         : {}),
       ...(update.type !== undefined ? { type: update.type } : {}),
       ...(update.value !== undefined ? { value: update.value } : {}),
-      ...(update.valueFrom !== undefined
-        ? { valueFrom: update.valueFrom }
-        : {}),
       ...(update.variableName !== undefined
         ? { variableName: update.variableName }
         : {}),
     };
+
+    if (update.valueFrom !== undefined) {
+      if (update.valueFrom) {
+        nextNode.valueFrom = update.valueFrom;
+      } else {
+        delete nextNode.valueFrom;
+      }
+    }
 
     if (update.label !== undefined) {
       const label = update.label.trim();

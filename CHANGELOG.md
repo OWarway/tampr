@@ -31,6 +31,8 @@ group changes under the headings below.
 - Blueprint flow reordering for moving saved nodes up and down.
 - Automation Blueprint recipe foundation with typed wait, click, set-value,
   extract-text, and JSON download nodes plus a readable JavaScript compiler.
+- Workspace automation node library and inspector controls for adding and
+  configuring wait, click, set-value, extract-text, and JSON download nodes.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.

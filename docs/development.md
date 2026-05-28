@@ -103,6 +103,12 @@ risky-click refusal, and `Tampr.download()` JSON output. Keep automation
 generated code visible in the normal snippet editor; do not move execution into a
 hidden interpreter.
 
+The workspace builder can add automation nodes to the same straight-line flow as
+CSS nodes and edits their core settings in the inspector. Blueprint changes
+regenerate both CSS and JavaScript while the generated code is still in sync; if
+either editor is hand-edited, code-changing Blueprint controls lock until the
+user reconciles the generated source.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global

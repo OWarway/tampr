@@ -3,17 +3,21 @@ import { useMemo, useState } from 'react';
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import {
+  BLUEPRINT_AUTOMATION_ACTIONS,
   BLUEPRINT_CSS_ACTIONS,
   blueprintActionDescription,
   blueprintActionLabel,
   blueprintNodeDescription,
   blueprintNodeLabel,
+  isBlueprintAutomationAction,
   isBlueprintCssAction,
   type BlueprintCssAction,
 } from '../../../domain/blueprints/actions';
 import {
+  compileBlueprintJavaScript,
   compileBlueprintCss,
   isBlueprintCssInSync,
+  isBlueprintJavaScriptInSync,
 } from '../../../domain/blueprints/compiler';
 import {
   getLinearBlueprintNodes,
@@ -22,7 +26,9 @@ import {
   removeBlueprintNode,
   updateBlueprintNode,
   type MoveBlueprintNodeDirection,
+  type BlueprintAutomationNode,
   type BlueprintNode,
+  type BlueprintNodeType,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
 import type { BlueprintSelectorTestResult } from '../../../shared/blueprint-messages';
@@ -32,18 +38,20 @@ import styles from './BlueprintPreview.module.scss';
 type BlueprintPreviewProps = {
   blueprint: BlueprintRecipe | undefined;
   css?: string;
+  js?: string;
   onPickSelector?:
     | (() => Promise<BlueprintElementPick | undefined>)
     | undefined;
   onTestSelector?:
     | ((selector: string) => Promise<BlueprintSelectorTestResult | undefined>)
     | undefined;
-  onChange?(blueprint: BlueprintRecipe, css: string): void;
+  onChange?(blueprint: BlueprintRecipe, css: string, js?: string): void;
 };
 
 export function BlueprintPreview({
   blueprint,
   css,
+  js,
   onPickSelector,
   onTestSelector,
   onChange,
@@ -70,32 +78,46 @@ export function BlueprintPreview({
     ? nodes.findIndex((node) => node.id === selectedNode.id)
     : -1;
   const cssSourceKnown = css !== undefined;
+  const jsSourceKnown = js !== undefined;
   const cssInSync = cssSourceKnown ? isBlueprintCssInSync(recipe, css) : true;
+  const jsInSync = jsSourceKnown
+    ? isBlueprintJavaScriptInSync(recipe, js)
+    : true;
+  const generatedCodeInSync = cssInSync && jsInSync;
   const editable = Boolean(onChange && cssSourceKnown && selectedNode);
 
   function editNode(
     nodeId: string,
     update: Parameters<typeof updateBlueprintNode>[2],
-    options: { regeneratesCss: boolean },
+    options: { regeneratesCode: boolean },
   ): void {
     if (!onChange || css === undefined) {
       return;
     }
 
-    if (options.regeneratesCss && !cssInSync) {
+    if (options.regeneratesCode && !generatedCodeInSync) {
       return;
     }
 
     const nextBlueprint = updateBlueprintNode(recipe, nodeId, update);
-    const nextCss = options.regeneratesCss
+    const nextCss = options.regeneratesCode
       ? compileBlueprintCss(nextBlueprint)
       : css;
+    const nextJs =
+      js !== undefined && options.regeneratesCode
+        ? compileBlueprintJavaScript(nextBlueprint)
+        : js;
 
-    onChange(nextBlueprint, nextCss);
+    emitChange(nextBlueprint, nextCss, nextJs);
   }
 
   async function pickSelector(nodeId: string): Promise<void> {
-    if (!onChange || !onPickSelector || css === undefined || !cssInSync) {
+    if (
+      !onChange ||
+      !onPickSelector ||
+      css === undefined ||
+      !generatedCodeInSync
+    ) {
       return;
     }
 
@@ -113,7 +135,7 @@ export function BlueprintPreview({
         selectorMeta: pick.selectorMeta,
       });
 
-      onChange(nextBlueprint, compileBlueprintCss(nextBlueprint));
+      emitGeneratedChange(nextBlueprint);
       clearSelectorTestResult(nodeId);
     } finally {
       setPickingNodeId(undefined);
@@ -147,7 +169,7 @@ export function BlueprintPreview({
     nextBlueprint: BlueprintRecipe,
     nextSelectedNodeId?: string,
   ): void {
-    if (!onChange || css === undefined || !cssInSync) {
+    if (!onChange || css === undefined || !generatedCodeInSync) {
       return;
     }
 
@@ -155,10 +177,10 @@ export function BlueprintPreview({
       setSelectedNodeId(nextSelectedNodeId);
     }
 
-    onChange(nextBlueprint, compileBlueprintCss(nextBlueprint));
+    emitGeneratedChange(nextBlueprint);
   }
 
-  function addNode(type: BlueprintCssAction): void {
+  function addNode(type: BlueprintNodeType): void {
     if (!selectedNode) {
       return;
     }
@@ -195,6 +217,31 @@ export function BlueprintPreview({
     );
   }
 
+  function emitGeneratedChange(nextBlueprint: BlueprintRecipe): void {
+    emitChange(
+      nextBlueprint,
+      compileBlueprintCss(nextBlueprint),
+      js !== undefined ? compileBlueprintJavaScript(nextBlueprint) : undefined,
+    );
+  }
+
+  function emitChange(
+    nextBlueprint: BlueprintRecipe,
+    nextCss: string,
+    nextJs: string | undefined,
+  ): void {
+    if (!onChange) {
+      return;
+    }
+
+    if (nextJs === undefined) {
+      onChange(nextBlueprint, nextCss);
+      return;
+    }
+
+    onChange(nextBlueprint, nextCss, nextJs);
+  }
+
   function clearSelectorTestResult(nodeId: string): void {
     setSelectorTestResults((currentResults) => {
       const nextResults = { ...currentResults };
@@ -218,10 +265,10 @@ export function BlueprintPreview({
         {cssSourceKnown ? (
           <span
             className={`${styles.sourceState} ${
-              cssInSync ? styles.synced : styles.changed
+              generatedCodeInSync ? styles.synced : styles.changed
             }`}
           >
-            {cssInSync ? 'Synced' : 'Code edited'}
+            {generatedCodeInSync ? 'Synced' : 'Code edited'}
           </span>
         ) : null}
       </header>
@@ -232,7 +279,10 @@ export function BlueprintPreview({
         }`}
       >
         {editable ? (
-          <BlueprintNodeLibrary cssInSync={cssInSync} onAdd={addNode} />
+          <BlueprintNodeLibrary
+            generatedCodeInSync={generatedCodeInSync}
+            onAdd={addNode}
+          />
         ) : null}
 
         <ol className={styles.flow}>
@@ -255,19 +305,53 @@ export function BlueprintPreview({
               selectedNodeIndex >= 0 && selectedNodeIndex < nodes.length - 1
             }
             canMoveUp={selectedNodeIndex > 0}
-            cssInSync={cssInSync}
+            generatedCodeInSync={generatedCodeInSync}
             node={selectedNode}
             canRemove={nodes.length > 1}
             onEnabledChange={(enabled) =>
-              editNode(selectedNode.id, { enabled }, { regeneratesCss: true })
+              editNode(selectedNode.id, { enabled }, { regeneratesCode: true })
             }
             onLabelChange={(label) =>
-              editNode(selectedNode.id, { label }, { regeneratesCss: false })
+              editNode(selectedNode.id, { label }, { regeneratesCode: true })
             }
             onMoveDown={() => moveNode(selectedNode.id, 'down')}
             onMoveUp={() => moveNode(selectedNode.id, 'up')}
+            onFilenameChange={(filename) =>
+              editNode(selectedNode.id, { filename }, { regeneratesCode: true })
+            }
+            onRequireVisibleChange={(requireVisible) =>
+              editNode(
+                selectedNode.id,
+                { requireVisible },
+                { regeneratesCode: true },
+              )
+            }
+            onTimeoutChange={(timeoutMs) =>
+              editNode(
+                selectedNode.id,
+                { timeoutMs },
+                { regeneratesCode: true },
+              )
+            }
             onTypeChange={(type) =>
-              editNode(selectedNode.id, { type }, { regeneratesCss: true })
+              editNode(selectedNode.id, { type }, { regeneratesCode: true })
+            }
+            onValueChange={(value) =>
+              editNode(selectedNode.id, { value }, { regeneratesCode: true })
+            }
+            onValueFromChange={(valueFrom) =>
+              editNode(
+                selectedNode.id,
+                { valueFrom },
+                { regeneratesCode: true },
+              )
+            }
+            onVariableNameChange={(variableName) =>
+              editNode(
+                selectedNode.id,
+                { variableName },
+                { regeneratesCode: true },
+              )
             }
             onRemove={() => removeNode(selectedNode.id)}
             onPickSelector={
@@ -289,29 +373,49 @@ export function BlueprintPreview({
 }
 
 type BlueprintNodeLibraryProps = {
-  cssInSync: boolean;
-  onAdd(type: BlueprintCssAction): void;
+  generatedCodeInSync: boolean;
+  onAdd(type: BlueprintNodeType): void;
 };
 
-function BlueprintNodeLibrary({ cssInSync, onAdd }: BlueprintNodeLibraryProps) {
+function BlueprintNodeLibrary({
+  generatedCodeInSync,
+  onAdd,
+}: BlueprintNodeLibraryProps) {
   return (
     <aside className={styles.library} aria-label="Blueprint node library">
       <header>
         <span>Library</span>
-        <strong>CSS actions</strong>
+        <strong>Blueprint nodes</strong>
       </header>
 
+      <span className={styles.libraryGroup}>CSS</span>
       <div className={styles.libraryActions}>
         {BLUEPRINT_CSS_ACTIONS.map((action) => (
           <button
             aria-label={`Add ${blueprintActionLabel(action)} node`}
-            disabled={!cssInSync}
+            disabled={!generatedCodeInSync}
             key={action}
             title={blueprintActionDescription(action)}
             type="button"
             onClick={() => onAdd(action)}
           >
             {blueprintActionLabel(action)}
+          </button>
+        ))}
+      </div>
+
+      <span className={styles.libraryGroup}>Automation</span>
+      <div className={styles.libraryActions}>
+        {BLUEPRINT_AUTOMATION_ACTIONS.map((action) => (
+          <button
+            aria-label={`Add ${blueprintNodeLabel(action)} node`}
+            disabled={!generatedCodeInSync}
+            key={action}
+            title={blueprintNodeDescription(action)}
+            type="button"
+            onClick={() => onAdd(action)}
+          >
+            {blueprintNodeLabel(action)}
           </button>
         ))}
       </div>
@@ -379,16 +483,22 @@ type BlueprintNodeInspectorProps = {
   canMoveDown: boolean;
   canMoveUp: boolean;
   canRemove: boolean;
-  cssInSync: boolean;
+  generatedCodeInSync: boolean;
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
+  onFilenameChange(filename: string): void;
   onLabelChange(label: string): void;
   onMoveDown(): void;
   onMoveUp(): void;
   onPickSelector?: (() => void) | undefined;
+  onRequireVisibleChange(requireVisible: boolean): void;
   onRemove(): void;
   onTestSelector?: (() => void) | undefined;
+  onTimeoutChange(timeoutMs: number): void;
   onTypeChange(type: BlueprintCssAction): void;
+  onValueChange(value: string): void;
+  onValueFromChange(valueFrom: string | null): void;
+  onVariableNameChange(variableName: string): void;
   pickingSelector: boolean;
   selectorTestResult?: BlueprintSelectorTestResult | undefined;
   testingSelector: boolean;
@@ -398,16 +508,22 @@ function BlueprintNodeInspector({
   canMoveDown,
   canMoveUp,
   canRemove,
-  cssInSync,
+  generatedCodeInSync,
   node,
   onEnabledChange,
+  onFilenameChange,
   onLabelChange,
   onMoveDown,
   onMoveUp,
   onPickSelector,
+  onRequireVisibleChange,
   onRemove,
   onTestSelector,
+  onTimeoutChange,
   onTypeChange,
+  onValueChange,
+  onValueFromChange,
+  onVariableNameChange,
   pickingSelector,
   selectorTestResult,
   testingSelector,
@@ -427,7 +543,7 @@ function BlueprintNodeInspector({
         {isBlueprintCssAction(node.type) ? (
           <select
             aria-label="Blueprint node action"
-            disabled={!cssInSync}
+            disabled={!generatedCodeInSync}
             value={node.type}
             onChange={(event) =>
               onTypeChange(event.currentTarget.value as BlueprintCssAction)
@@ -461,19 +577,32 @@ function BlueprintNodeInspector({
         <input
           aria-label="Enable blueprint node"
           checked={node.enabled}
-          disabled={!cssInSync}
+          disabled={!generatedCodeInSync}
           type="checkbox"
           onChange={(event) => onEnabledChange(event.currentTarget.checked)}
         />
         <span>Enabled</span>
       </label>
 
+      {isAutomationNode(node) ? (
+        <BlueprintAutomationSettings
+          generatedCodeInSync={generatedCodeInSync}
+          node={node}
+          onFilenameChange={onFilenameChange}
+          onRequireVisibleChange={onRequireVisibleChange}
+          onTimeoutChange={onTimeoutChange}
+          onValueChange={onValueChange}
+          onValueFromChange={onValueFromChange}
+          onVariableNameChange={onVariableNameChange}
+        />
+      ) : null}
+
       <div className={styles.selectorField}>
         <span>Flow position</span>
         <div className={styles.selectorActions}>
           <button
             className={styles.moveNode}
-            disabled={!cssInSync || !canMoveUp}
+            disabled={!generatedCodeInSync || !canMoveUp}
             type="button"
             onClick={onMoveUp}
           >
@@ -481,7 +610,7 @@ function BlueprintNodeInspector({
           </button>
           <button
             className={styles.moveNode}
-            disabled={!cssInSync || !canMoveDown}
+            disabled={!generatedCodeInSync || !canMoveDown}
             type="button"
             onClick={onMoveDown}
           >
@@ -497,7 +626,9 @@ function BlueprintNodeInspector({
           {onPickSelector ? (
             <button
               className={styles.pickSelector}
-              disabled={!cssInSync || pickingSelector || testingSelector}
+              disabled={
+                !generatedCodeInSync || pickingSelector || testingSelector
+              }
               type="button"
               onClick={onPickSelector}
             >
@@ -531,13 +662,134 @@ function BlueprintNodeInspector({
 
       <button
         className={styles.removeNode}
-        disabled={!cssInSync || !canRemove}
+        disabled={!generatedCodeInSync || !canRemove}
         type="button"
         onClick={onRemove}
       >
         Remove node
       </button>
     </aside>
+  );
+}
+
+type BlueprintAutomationSettingsProps = {
+  generatedCodeInSync: boolean;
+  node: BlueprintAutomationNode;
+  onFilenameChange(filename: string): void;
+  onRequireVisibleChange(requireVisible: boolean): void;
+  onTimeoutChange(timeoutMs: number): void;
+  onValueChange(value: string): void;
+  onValueFromChange(valueFrom: string | null): void;
+  onVariableNameChange(variableName: string): void;
+};
+
+function BlueprintAutomationSettings({
+  generatedCodeInSync,
+  node,
+  onFilenameChange,
+  onRequireVisibleChange,
+  onTimeoutChange,
+  onValueChange,
+  onValueFromChange,
+  onVariableNameChange,
+}: BlueprintAutomationSettingsProps) {
+  return (
+    <div className={styles.automationSettings}>
+      {'requireVisible' in node ? (
+        <label className={styles.enabledField}>
+          <input
+            aria-label="Require visible element"
+            checked={node.requireVisible}
+            disabled={!generatedCodeInSync}
+            type="checkbox"
+            onChange={(event) =>
+              onRequireVisibleChange(event.currentTarget.checked)
+            }
+          />
+          <span>Require visible</span>
+        </label>
+      ) : null}
+
+      {'timeoutMs' in node ? (
+        <label className={styles.inspectorField}>
+          <span>Timeout</span>
+          <input
+            aria-label="Automation timeout"
+            disabled={!generatedCodeInSync}
+            max={60000}
+            min={250}
+            step={250}
+            type="number"
+            value={node.timeoutMs}
+            onChange={(event) => {
+              const value = event.currentTarget.valueAsNumber;
+
+              if (Number.isFinite(value)) {
+                onTimeoutChange(clampAutomationTimeout(value));
+              }
+            }}
+          />
+        </label>
+      ) : null}
+
+      {node.type === 'set-value' ? (
+        <label className={styles.inspectorField}>
+          <span>Value</span>
+          <input
+            aria-label="Automation value"
+            disabled={!generatedCodeInSync}
+            value={node.value}
+            onChange={(event) => onValueChange(event.currentTarget.value)}
+          />
+        </label>
+      ) : null}
+
+      {node.type === 'extract-text' ? (
+        <label className={styles.inspectorField}>
+          <span>Variable</span>
+          <input
+            aria-label="Automation variable name"
+            disabled={!generatedCodeInSync}
+            value={node.variableName}
+            onChange={(event) =>
+              onVariableNameChange(event.currentTarget.value)
+            }
+          />
+        </label>
+      ) : null}
+
+      {node.type === 'download-json' ? (
+        <>
+          <label className={styles.inspectorField}>
+            <span>Filename</span>
+            <input
+              aria-label="Automation download filename"
+              disabled={!generatedCodeInSync}
+              value={node.filename}
+              onChange={(event) => {
+                const filename = event.currentTarget.value.trim();
+
+                if (filename) {
+                  onFilenameChange(filename);
+                }
+              }}
+            />
+          </label>
+          <label className={styles.inspectorField}>
+            <span>Value from</span>
+            <input
+              aria-label="Automation download value"
+              disabled={!generatedCodeInSync}
+              placeholder="All values"
+              value={node.valueFrom ?? ''}
+              onChange={(event) =>
+                onValueFromChange(event.currentTarget.value.trim() || null)
+              }
+            />
+          </label>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -551,6 +803,16 @@ function selectorTestSummary(result: BlueprintSelectorTestResult): string {
 
 function plural(count: number, label: string): string {
   return `${count} ${label}${count === 1 ? '' : 'es'}`;
+}
+
+function isAutomationNode(
+  node: BlueprintNode,
+): node is BlueprintAutomationNode {
+  return isBlueprintAutomationAction(node.type);
+}
+
+function clampAutomationTimeout(value: number): number {
+  return Math.min(60_000, Math.max(250, Math.round(value)));
 }
 
 function actionLabel(type: BlueprintNode['type']): string {

@@ -9,7 +9,10 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { compileBlueprintCss } from '../../../domain/blueprints/compiler';
+import {
+  compileBlueprintJavaScript,
+  compileBlueprintCss,
+} from '../../../domain/blueprints/compiler';
 import {
   BLUEPRINT_RECIPE_VERSION,
   BlueprintRecipeSchema,
@@ -238,6 +241,50 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('adds automation nodes and regenerates JavaScript', () => {
+    const onChange = vi.fn();
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+    const css = compileBlueprintCss(blueprint);
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={css}
+        js=""
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Click node' }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              id: 'hide-offer',
+              type: 'hide',
+            }),
+            expect.objectContaining({
+              id: 'click-selection',
+              requireVisible: true,
+              timeoutMs: 5000,
+              type: 'click',
+            }),
+          ],
+        }),
+      }),
+      css,
+      expect.stringContaining('"type": "click"'),
+    );
+  });
+
   it('moves selected nodes and regenerates CSS in flow order', () => {
     const onChange = vi.fn();
     const blueprint = twoNodeRecipe();
@@ -423,6 +470,30 @@ describe('BlueprintPreview', () => {
     ).toBe(true);
   });
 
+  it('locks code-changing controls when generated JavaScript has been edited by hand', () => {
+    render(
+      <BlueprintPreview
+        blueprint={automationRecipe()}
+        css=""
+        js="console.log('edited');"
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Code edited')).toBeTruthy();
+    expect(
+      (screen.getByLabelText('Enable blueprint node') as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Add Click node',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+
   it('shows the selected action description in the inspector', () => {
     const blueprint = buildCssBlueprintRecipe({
       id: 'widen-selection',
@@ -446,31 +517,14 @@ describe('BlueprintPreview', () => {
     ).toBeTruthy();
   });
 
-  it('renders automation nodes as read-only actions for now', () => {
-    const blueprint = BlueprintRecipeSchema.parse({
-      version: BLUEPRINT_RECIPE_VERSION,
-      name: 'Wait for deal',
-      graph: {
-        nodes: [
-          {
-            id: 'wait-for-deal',
-            enabled: true,
-            selector: '[data-testid="deal"]',
-            selectorMeta: selectorMeta('attribute'),
-            type: 'wait-for-element',
-          },
-        ],
-        edges: [],
-        layout: {
-          'wait-for-deal': { x: 0, y: 0 },
-        },
-      },
-    });
+  it('renders automation nodes with focused settings', () => {
+    const blueprint = automationRecipe();
 
     render(
       <BlueprintPreview
         blueprint={blueprint}
-        css=""
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
         onChange={() => undefined}
       />,
     );
@@ -479,7 +533,42 @@ describe('BlueprintPreview', () => {
     expect(
       screen.getByText('Pauses the flow until the selected element appears.'),
     ).toBeTruthy();
+    expect(screen.getByLabelText('Require visible element')).toBeTruthy();
+    expect(screen.getByLabelText('Automation timeout')).toBeTruthy();
     expect(screen.queryByLabelText('Blueprint node action')).toBeNull();
+  });
+
+  it('edits automation values and regenerates JavaScript', () => {
+    const onChange = vi.fn();
+    const blueprint = setValueRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Automation value'), {
+      target: { value: 'oliver@example.com' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              type: 'set-value',
+              value: 'oliver@example.com',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"value": "oliver@example.com"'),
+    );
   });
 });
 
@@ -529,4 +618,49 @@ function selectorMeta(strategy: 'attribute' | 'class' | 'id') {
     strategy,
     usesNthOfType: false,
   };
+}
+
+function automationRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Wait for deal',
+    graph: {
+      nodes: [
+        {
+          id: 'wait-for-deal',
+          enabled: true,
+          selector: '[data-testid="deal"]',
+          selectorMeta: selectorMeta('attribute'),
+          type: 'wait-for-element',
+        },
+      ],
+      edges: [],
+      layout: {
+        'wait-for-deal': { x: 0, y: 0 },
+      },
+    },
+  });
+}
+
+function setValueRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Set email',
+    graph: {
+      nodes: [
+        {
+          id: 'set-email',
+          enabled: true,
+          selector: 'input[name="email"]',
+          selectorMeta: selectorMeta('attribute'),
+          type: 'set-value',
+          value: '',
+        },
+      ],
+      edges: [],
+      layout: {
+        'set-email': { x: 0, y: 0 },
+      },
+    },
+  });
 }
