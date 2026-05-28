@@ -39,6 +39,10 @@ describe('runTamprBlueprintPicker', () => {
       }),
     );
 
+    expect(document.body.textContent).toContain('Good selector');
+    expect(document.body.textContent).toContain('Unique class-based target.');
+    expect(document.body.textContent).toContain('aside.subscribe.panel');
+
     const hideButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent === 'Hide',
     );
@@ -114,6 +118,9 @@ describe('runTamprBlueprintPicker', () => {
         clientY: 32,
       }),
     );
+
+    expect(document.body.textContent).toContain('Fragile selector');
+    expect(document.body.textContent).toContain('Depends on page position.');
 
     const highlightButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent === 'Highlight',

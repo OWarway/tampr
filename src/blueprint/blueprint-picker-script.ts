@@ -43,12 +43,18 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
 
   return await new Promise<BlueprintPickerResponse>((resolve) => {
     let hoverTarget: Element | undefined;
+    let selectedPick: BlueprintElementPick | undefined;
     let selectedTarget: Element | undefined;
 
     const root = document.createElement('div');
     const highlight = document.createElement('div');
     const banner = document.createElement('div');
     const palette = document.createElement('div');
+    const paletteInfo = document.createElement('div');
+    const paletteTitle = document.createElement('strong');
+    const paletteSelector = document.createElement('code');
+    const paletteDetail = document.createElement('span');
+    const paletteActions = document.createElement('div');
 
     root.setAttribute('data-tampr-blueprint-picker', 'true');
     root.style.cssText = [
@@ -100,16 +106,57 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       'box-shadow: 0 18px 46px rgba(20, 32, 27, 0.24)',
       'display: none',
       'gap: 8px',
+      'max-width: min(420px, calc(100vw - 24px))',
       'padding: 8px',
       'pointer-events: auto',
       'position: fixed',
     ].join(';');
 
-    palette.append(
+    paletteInfo.style.cssText = [
+      'background: #fff',
+      'border: 1px solid #dbe3de',
+      'border-left: 4px solid #79a78f',
+      'border-radius: 7px',
+      'color: #14201b',
+      'display: grid',
+      'font: 700 12px/1.35 Inter, ui-sans-serif, system-ui, sans-serif',
+      'gap: 5px',
+      'min-width: 220px',
+      'padding: 9px 10px',
+    ].join(';');
+    paletteTitle.style.cssText = ['color: #14594d', 'font-size: 12px'].join(
+      ';',
+    );
+    paletteSelector.style.cssText = [
+      'background: #edf4ef',
+      'border-radius: 5px',
+      'color: #29463d',
+      'display: block',
+      'font: 700 11px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace',
+      'max-width: 360px',
+      'overflow: hidden',
+      'padding: 5px 6px',
+      'text-overflow: ellipsis',
+      'white-space: nowrap',
+    ].join(';');
+    paletteDetail.style.cssText = [
+      'color: #53645b',
+      'font-size: 11px',
+      'font-weight: 700',
+    ].join(';');
+    paletteInfo.append(paletteTitle, paletteSelector, paletteDetail);
+
+    paletteActions.style.cssText = [
+      'display: flex',
+      'flex-wrap: wrap',
+      'gap: 8px',
+    ].join(';');
+    paletteActions.append(
       createPaletteButton('Hide', '#14594d', () => finish('hide')),
       createPaletteButton('Highlight', '#d44d3a', () => finish('highlight')),
       createPaletteButton('Cancel', '#53645b', cancel),
     );
+    palette.append(paletteInfo, paletteActions);
 
     root.append(highlight, banner, palette);
     document.body.append(root);
@@ -178,7 +225,9 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       event.preventDefault();
       event.stopImmediatePropagation();
       selectedTarget = target;
+      selectedPick = describePick(target);
       drawHighlight(target);
+      updatePaletteInfo(selectedPick);
       showPalette(target);
     }
 
@@ -238,11 +287,12 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
     function showPalette(target: Element): void {
       const rect = target.getBoundingClientRect();
       const maxTop = Math.max(12, window.innerHeight - 56);
-      const maxLeft = Math.max(12, window.innerWidth - 232);
+      const maxLeft = Math.max(12, window.innerWidth - 432);
       const top = Math.min(maxTop, Math.max(12, rect.bottom + 8));
       const left = Math.min(maxLeft, Math.max(12, rect.left));
 
       palette.style.display = 'flex';
+      palette.style.flexDirection = 'column';
       palette.style.left = `${left}px`;
       palette.style.top = `${top}px`;
     }
@@ -252,7 +302,7 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
         return;
       }
 
-      const pick = describePick(selectedTarget);
+      const pick = selectedPick ?? describePick(selectedTarget);
       cleanup();
       resolve({ ok: true, action, pick });
     }
@@ -303,6 +353,81 @@ export async function runTamprBlueprintPicker(): Promise<BlueprintPickerResponse
       const text = (target.textContent ?? '').replace(/\s+/g, ' ').trim();
 
       return text ? truncate(text, 120) : undefined;
+    }
+
+    type LocalSelectorQuality = 'strong' | 'good' | 'fragile';
+
+    type LocalSelectorAssessment = {
+      detail: string;
+      quality: LocalSelectorQuality;
+    };
+
+    function updatePaletteInfo(pick: BlueprintElementPick): void {
+      const assessment = selectorAssessment(pick.selectorMeta);
+      const color = selectorQualityColor(assessment.quality);
+
+      paletteInfo.style.borderLeftColor = color;
+      paletteTitle.style.color = color;
+      paletteTitle.textContent = `${capitalize(assessment.quality)} selector`;
+      paletteSelector.textContent = pick.selector;
+      paletteSelector.title = pick.selector;
+      paletteDetail.textContent = assessment.detail;
+    }
+
+    function selectorAssessment(
+      meta: LocalSelectorResult['meta'],
+    ): LocalSelectorAssessment {
+      if (meta.matchCount === 0) {
+        return {
+          quality: 'fragile',
+          detail: 'Selector did not match after generation.',
+        };
+      }
+
+      if (meta.matchCount > 1) {
+        return {
+          quality: 'fragile',
+          detail: `Selector matches ${meta.matchCount} elements.`,
+        };
+      }
+
+      if (meta.usesNthOfType || meta.strategy === 'position') {
+        return {
+          quality: 'fragile',
+          detail: 'Depends on page position.',
+        };
+      }
+
+      if (meta.strategy === 'id' || meta.strategy === 'attribute') {
+        return {
+          quality: 'strong',
+          detail: 'Uses a stable unique page marker.',
+        };
+      }
+
+      if (meta.strategy === 'class' && meta.segmentCount <= 2) {
+        return {
+          quality: 'good',
+          detail: 'Unique class-based target.',
+        };
+      }
+
+      return {
+        quality: 'good',
+        detail: 'Unique path-based target.',
+      };
+    }
+
+    function selectorQualityColor(quality: LocalSelectorQuality): string {
+      if (quality === 'strong') {
+        return '#14594d';
+      }
+
+      return quality === 'good' ? '#29463d' : '#8e2b20';
+    }
+
+    function capitalize(value: string): string {
+      return value.charAt(0).toUpperCase() + value.slice(1);
     }
 
     type LocalSelectorStrategy =
