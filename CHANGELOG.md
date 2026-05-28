@@ -20,6 +20,8 @@ group changes under the headings below.
   from a picked page element.
 - Blueprint recipe metadata stored with generated snippets for future flow
   editing.
+- Workspace Blueprint preview for saved recipe nodes, selectors, and selector
+  quality.
 - User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.

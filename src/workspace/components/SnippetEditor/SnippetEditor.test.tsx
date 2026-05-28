@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { buildCssBlueprintRecipe } from '../../../domain/blueprints/recipe';
 import { buildSnippet, SnippetDraftSchema } from '../../../domain/snippets';
 import type { WorkspaceState } from '../../../shared/workspace-messages';
 import { newSnippetEditor } from '../../editor-state';
@@ -119,6 +120,38 @@ describe('SnippetEditor', () => {
     expect(
       screen.getByText(/User script runs in Chrome isolated script space/),
     ).toBeTruthy();
+  });
+
+  it('renders saved blueprint metadata in the editor', () => {
+    render(
+      <SnippetEditor
+        busy={false}
+        dirty={false}
+        editor={{
+          ...newSnippetEditor,
+          blueprint: buildCssBlueprintRecipe({
+            id: 'hide-signup-modal',
+            label: 'Hide signup modal',
+            selector: '[data-modal="signup"]',
+            selectorMeta: blueprintSelectorMeta(),
+            type: 'hide',
+          }),
+        }}
+        notice="Ready."
+        workspace={undefined}
+        onDelete={() => undefined}
+        onDuplicate={() => undefined}
+        onFolderChange={() => undefined}
+        onSave={() => undefined}
+        onUpdate={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole('region', { name: 'Blueprint preview' }),
+    ).toBeTruthy();
+    expect(screen.getByText('[data-modal="signup"]')).toBeTruthy();
+    expect(screen.getByText('Strong')).toBeTruthy();
   });
 
   it('duplicates drafts and confirms saved snippet deletes', () => {
@@ -300,5 +333,14 @@ function readyRuntime(
     registrations: 0,
     skipped,
     errors: [],
+  };
+}
+
+function blueprintSelectorMeta() {
+  return {
+    matchCount: 1,
+    segmentCount: 1,
+    strategy: 'attribute' as const,
+    usesNthOfType: false,
   };
 }

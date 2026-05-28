@@ -10,6 +10,7 @@ import {
   type EditorState,
 } from '../../editor-state';
 import { runtimeNotice } from '../../runtime-copy';
+import { BlueprintPreview } from '../BlueprintPreview/BlueprintPreview';
 import { CodeEditor } from '../CodeEditor/CodeEditor';
 
 import styles from './SnippetEditor.module.scss';
@@ -202,6 +203,8 @@ export function SnippetEditor({
             {dirty ? 'Unsaved' : 'Saved'}
           </span>
         </div>
+
+        <BlueprintPreview blueprint={editor.blueprint} />
 
         <div className={styles.tabs} aria-label="Editor mode">
           {EDITOR_MODES.map((editorMode) => (
