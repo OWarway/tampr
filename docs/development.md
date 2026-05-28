@@ -109,6 +109,13 @@ regenerate both CSS and JavaScript while the generated code is still in sync; if
 either editor is hand-edited, code-changing Blueprint controls lock until the
 user reconciles the generated source.
 
+Automation safety checks live in the Blueprint domain and are shown in the
+workspace inspector. Keep this signal conservative: warn on selectors that drift,
+clicks that look like submit/buy/send/delete controls, hidden click targets,
+sensitive form-field selectors, empty set-value payloads, flaky timeouts, and
+non-JSON download filenames. Run and recording features should reuse this same
+assessment instead of adding separate UI-only rules.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global

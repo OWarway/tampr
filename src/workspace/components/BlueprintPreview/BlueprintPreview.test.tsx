@@ -535,7 +535,33 @@ describe('BlueprintPreview', () => {
     ).toBeTruthy();
     expect(screen.getByLabelText('Require visible element')).toBeTruthy();
     expect(screen.getByLabelText('Automation timeout')).toBeTruthy();
+    expect(screen.getByLabelText('Automation safety')).toBeTruthy();
+    expect(screen.getByText('Normal')).toBeTruthy();
+    expect(screen.getByText('No automation warnings.')).toBeTruthy();
     expect(screen.queryByLabelText('Blueprint node action')).toBeNull();
+  });
+
+  it('surfaces automation safety warnings in the inspector', () => {
+    const blueprint = riskyClickRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Review')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'This click looks like it may submit, buy, send, or delete.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Click steps should require a visible target.'),
+    ).toBeTruthy();
   });
 
   it('edits automation values and regenerates JavaScript', () => {
@@ -637,6 +663,31 @@ function automationRecipe(): BlueprintRecipe {
       edges: [],
       layout: {
         'wait-for-deal': { x: 0, y: 0 },
+      },
+    },
+  });
+}
+
+function riskyClickRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Risky click',
+    graph: {
+      nodes: [
+        {
+          id: 'submit-order',
+          enabled: true,
+          label: 'Submit order',
+          requireVisible: false,
+          selector: 'button.checkout',
+          selectorMeta: selectorMeta('attribute'),
+          timeoutMs: 5000,
+          type: 'click',
+        },
+      ],
+      edges: [],
+      layout: {
+        'submit-order': { x: 0, y: 0 },
       },
     },
   });

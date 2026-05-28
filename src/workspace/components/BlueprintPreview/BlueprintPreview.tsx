@@ -20,6 +20,11 @@ import {
   isBlueprintJavaScriptInSync,
 } from '../../../domain/blueprints/compiler';
 import {
+  assessBlueprintNodeSafety,
+  highestBlueprintSafetyLevel,
+  type BlueprintSafetyIssue,
+} from '../../../domain/blueprints/safety';
+import {
   getLinearBlueprintNodes,
   insertBlueprintNode,
   moveBlueprintNode,
@@ -530,6 +535,9 @@ function BlueprintNodeInspector({
 }: BlueprintNodeInspectorProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
+  const safetyIssues = isAutomationNode(node)
+    ? assessBlueprintNodeSafety(node)
+    : [];
 
   return (
     <aside className={styles.inspector} aria-label="Blueprint node inspector">
@@ -585,16 +593,19 @@ function BlueprintNodeInspector({
       </label>
 
       {isAutomationNode(node) ? (
-        <BlueprintAutomationSettings
-          generatedCodeInSync={generatedCodeInSync}
-          node={node}
-          onFilenameChange={onFilenameChange}
-          onRequireVisibleChange={onRequireVisibleChange}
-          onTimeoutChange={onTimeoutChange}
-          onValueChange={onValueChange}
-          onValueFromChange={onValueFromChange}
-          onVariableNameChange={onVariableNameChange}
-        />
+        <>
+          <BlueprintSafetySummary issues={safetyIssues} />
+          <BlueprintAutomationSettings
+            generatedCodeInSync={generatedCodeInSync}
+            node={node}
+            onFilenameChange={onFilenameChange}
+            onRequireVisibleChange={onRequireVisibleChange}
+            onTimeoutChange={onTimeoutChange}
+            onValueChange={onValueChange}
+            onValueFromChange={onValueFromChange}
+            onVariableNameChange={onVariableNameChange}
+          />
+        </>
       ) : null}
 
       <div className={styles.selectorField}>
@@ -669,6 +680,35 @@ function BlueprintNodeInspector({
         Remove node
       </button>
     </aside>
+  );
+}
+
+function BlueprintSafetySummary({
+  issues,
+}: {
+  issues: readonly BlueprintSafetyIssue[];
+}) {
+  const level = highestBlueprintSafetyLevel(issues);
+  const label = safetyLabel(level);
+
+  return (
+    <div className={styles.safetyPanel} aria-label="Automation safety">
+      <div className={styles.safetyHeader}>
+        <span>Safety</span>
+        <strong className={`${styles.safetyBadge} ${safetyClass(level)}`}>
+          {label}
+        </strong>
+      </div>
+      {issues.length > 0 ? (
+        <ul>
+          {issues.map((issue) => (
+            <li key={issue.code}>{issue.message}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>No automation warnings.</p>
+      )}
+    </div>
   );
 }
 
@@ -809,6 +849,36 @@ function isAutomationNode(
   node: BlueprintNode,
 ): node is BlueprintAutomationNode {
   return isBlueprintAutomationAction(node.type);
+}
+
+function safetyLabel(
+  level: ReturnType<typeof highestBlueprintSafetyLevel>,
+): string {
+  switch (level) {
+    case 'danger':
+      return 'Review';
+    case 'warning':
+      return 'Caution';
+    case 'info':
+      return 'Note';
+    case undefined:
+      return 'Normal';
+  }
+}
+
+function safetyClass(
+  level: ReturnType<typeof highestBlueprintSafetyLevel>,
+): string {
+  switch (level) {
+    case 'danger':
+      return styles.safetyDanger ?? '';
+    case 'warning':
+      return styles.safetyWarning ?? '';
+    case 'info':
+      return styles.safetyInfo ?? '';
+    case undefined:
+      return styles.safetySafe ?? '';
+  }
 }
 
 function clampAutomationTimeout(value: number): number {
