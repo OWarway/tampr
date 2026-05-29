@@ -3,6 +3,7 @@ import { handleTamprDownloadMessage } from '../runtime/tampr-download-api';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
 import {
   isPickBlueprintSelectorMessage,
+  isRunBlueprintAutomationNodeMessage,
   isStartBlueprintCreatorMessage,
   isTestBlueprintAutomationNodeMessage,
   isTestBlueprintSelectorMessage,
@@ -84,6 +85,17 @@ chrome.runtime.onMessage.addListener(
     if (isTestBlueprintAutomationNodeMessage(message)) {
       void blueprints
         .testAutomationNode(message.sourceTabId, message.node)
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    }
+
+    if (isRunBlueprintAutomationNodeMessage(message)) {
+      void blueprints
+        .runAutomationNode(message.sourceTabId, message.node)
         .then(sendResponse)
         .catch((error: unknown) => {
           sendResponse(toErrorResponse(error));

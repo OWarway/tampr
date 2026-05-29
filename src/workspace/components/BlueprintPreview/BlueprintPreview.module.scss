@@ -573,6 +573,7 @@
 
 .moveNode,
 .pickSelector,
+.runAutomation,
 .testAutomation,
 .testSelector,
 .removeNode {
@@ -614,6 +615,15 @@
   &:hover:not(:disabled),
   &:focus-visible {
     background: #e2f1e7;
+    border-color: #79a78f;
+    color: #14594d;
+  }
+}
+
+.runAutomation {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: #edf4ef;
     border-color: #79a78f;
     color: #14594d;
   }

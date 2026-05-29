@@ -123,6 +123,12 @@ they must not click, type into fields, submit forms, extract saved data, or star
 downloads. Keep this non-mutating test path separate from any future manual run
 or recording path.
 
+Manual automation node runs also use temporary `scripting.executeScript` against
+the source tab. The first supported run actions are intentionally low-risk:
+wait-for-element and extract-text. Click, set-value, and download-json steps must
+remain refused by the manual runner until their confirmation, blocking, and
+result-reporting UX is explicit.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global

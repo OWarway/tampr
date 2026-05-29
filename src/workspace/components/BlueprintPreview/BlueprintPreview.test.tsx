@@ -600,6 +600,46 @@ describe('BlueprintPreview', () => {
     expect(screen.getByText('Deal')).toBeTruthy();
   });
 
+  it('runs supported automation nodes against the source page', async () => {
+    const onRunAutomationNode = vi.fn().mockResolvedValue({
+      action: 'wait-for-element',
+      durationMs: 8,
+      firstTagName: 'section',
+      matchCount: 1,
+      message: 'Element is ready on the source page.',
+      preview: 'Deal',
+      visibleCount: 1,
+    });
+    const blueprint = automationRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+        onChange={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run node' }));
+
+    await waitFor(() =>
+      expect(onRunAutomationNode).toHaveBeenCalledWith({
+        selector: '[data-testid="deal"]',
+        type: 'wait-for-element',
+        requireVisible: true,
+        timeoutMs: 5000,
+      }),
+    );
+    expect(await screen.findByText('Ran on page')).toBeTruthy();
+    expect(screen.getByText('1 match, 1 visible')).toBeTruthy();
+    expect(
+      screen.getByText('Element is ready on the source page.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Deal')).toBeTruthy();
+  });
+
   it('edits automation values and regenerates JavaScript', () => {
     const onChange = vi.fn();
     const blueprint = setValueRecipe();

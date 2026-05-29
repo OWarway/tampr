@@ -342,6 +342,80 @@ describe('BlueprintController', () => {
       ],
     });
   });
+
+  it('runs a supported automation node against the source tab without activating it', async () => {
+    const executeScript = vi.fn().mockResolvedValue([
+      {
+        result: {
+          ok: true,
+          result: {
+            action: 'extract-text',
+            durationMs: 12,
+            firstTagName: 'section',
+            matchCount: 1,
+            message: 'Text extracted from the source page.',
+            preview: 'Deal',
+            value: 'Deal',
+            variableName: 'dealText',
+            visibleCount: 1,
+          },
+        },
+      },
+    ]);
+    const update = vi.fn();
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript,
+      },
+      snippets: new MemorySnippetStore(),
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn(),
+        update,
+      },
+    });
+
+    await expect(
+      controller.runAutomationNode(42, {
+        type: 'extract-text',
+        selector: 'section[data-testid="deal"]',
+        requireVisible: true,
+        timeoutMs: 5000,
+        variableName: 'dealText',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        action: 'extract-text',
+        durationMs: 12,
+        firstTagName: 'section',
+        matchCount: 1,
+        message: 'Text extracted from the source page.',
+        preview: 'Deal',
+        value: 'Deal',
+        variableName: 'dealText',
+        visibleCount: 1,
+      },
+    });
+    expect(update).not.toHaveBeenCalled();
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      func: expect.any(Function),
+      args: [
+        {
+          type: 'extract-text',
+          selector: 'section[data-testid="deal"]',
+          requireVisible: true,
+          timeoutMs: 5000,
+          variableName: 'dealText',
+        },
+      ],
+    });
+  });
 });
 
 class MemorySnippetStore {

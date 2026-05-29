@@ -1,0 +1,228 @@
+import type {
+  BlueprintAutomationNodeRunInput,
+  BlueprintAutomationNodeRunResult,
+} from '../shared/blueprint-messages';
+
+export type BlueprintAutomationNodeRunResponse =
+  | {
+      ok: true;
+      result: BlueprintAutomationNodeRunResult;
+    }
+  | {
+      message: string;
+      ok: false;
+      reason: 'invalid-selector' | 'timeout' | 'unavailable' | 'unsupported';
+    };
+
+type BlueprintAutomationNodeRunResultBase = Pick<
+  BlueprintAutomationNodeRunResult,
+  'action' | 'durationMs' | 'firstTagName' | 'matchCount' | 'visibleCount'
+>;
+
+// Chrome serializes only this function for injection, so helpers stay nested.
+export async function runTamprBlueprintAutomationNode(
+  node: BlueprintAutomationNodeRunInput,
+): Promise<BlueprintAutomationNodeRunResponse> {
+  if (!document?.documentElement) {
+    return {
+      ok: false,
+      reason: 'unavailable',
+      message: 'This page is not ready for automation.',
+    };
+  }
+
+  if (node.type !== 'wait-for-element' && node.type !== 'extract-text') {
+    return {
+      ok: false,
+      reason: 'unsupported',
+      message:
+        'Manual node runs currently support wait and extract-text steps.',
+    };
+  }
+
+  const selector = node.selector.trim();
+
+  if (!selector) {
+    return {
+      ok: false,
+      reason: 'invalid-selector',
+      message: 'Automation node run needs a selector.',
+    };
+  }
+
+  const startedAt = Date.now();
+  const timeoutMs = clampTimeout(node.timeoutMs);
+
+  try {
+    const match = await waitForElement(selector, node, timeoutMs);
+    const durationMs = Date.now() - startedAt;
+
+    if (!match.element) {
+      return {
+        ok: false,
+        reason: 'timeout',
+        message: `Automation node timed out waiting for ${selector}.`,
+      };
+    }
+
+    const element = match.element;
+    const base = runResultBase(
+      {
+        element,
+        matches: match.matches,
+        visibleMatches: match.visibleMatches,
+      },
+      node,
+      durationMs,
+    );
+
+    if (node.type === 'extract-text') {
+      const value = normalizeText(element.textContent ?? '');
+      const preview = truncate(value, 160);
+
+      return {
+        ok: true,
+        result: {
+          ...base,
+          message: 'Text extracted from the source page.',
+          ...(preview ? { preview } : {}),
+          value: truncate(value, 2_000),
+          ...(node.variableName ? { variableName: node.variableName } : {}),
+        },
+      };
+    }
+
+    return {
+      ok: true,
+      result: {
+        ...base,
+        message: 'Element is ready on the source page.',
+        ...previewResult(element),
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      reason: 'invalid-selector',
+      message: 'Automation node selector is not valid CSS.',
+    };
+  }
+
+  async function waitForElement(
+    selectorValue: string,
+    runNode: BlueprintAutomationNodeRunInput,
+    waitMs: number,
+  ): Promise<{
+    element?: Element;
+    matches: Element[];
+    visibleMatches: Element[];
+  }> {
+    const waitStartedAt = Date.now();
+
+    while (Date.now() - waitStartedAt <= waitMs) {
+      const matches = Array.from(document.querySelectorAll(selectorValue));
+      const visibleMatches = matches.filter(isVisibleElement);
+      const element =
+        runNode.requireVisible === false ? matches[0] : visibleMatches[0];
+
+      if (element) {
+        return {
+          element,
+          matches,
+          visibleMatches,
+        };
+      }
+
+      await sleep(100);
+    }
+
+    const matches = Array.from(document.querySelectorAll(selectorValue));
+    const visibleMatches = matches.filter(isVisibleElement);
+
+    return {
+      matches,
+      visibleMatches,
+    };
+  }
+
+  function runResultBase(
+    match: {
+      element: Element;
+      matches: Element[];
+      visibleMatches: Element[];
+    },
+    runNode: BlueprintAutomationNodeRunInput,
+    durationMs: number,
+  ): BlueprintAutomationNodeRunResultBase {
+    return {
+      action: runNode.type,
+      durationMs,
+      firstTagName: match.element.localName.toLowerCase(),
+      matchCount: match.matches.length,
+      visibleCount: match.visibleMatches.length,
+    };
+  }
+
+  function previewFor(element: Element): string | undefined {
+    const text = normalizeText(element.textContent ?? '');
+
+    return text ? truncate(text, 160) : undefined;
+  }
+
+  function previewResult(element: Element): { preview: string } | object {
+    const preview = previewFor(element);
+
+    return preview ? { preview } : {};
+  }
+
+  function normalizeText(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  function isVisibleElement(element: Element): boolean {
+    let current: Element | null = element;
+
+    while (current) {
+      if (current.hasAttribute('hidden')) {
+        return false;
+      }
+
+      const style = window.getComputedStyle(current);
+
+      if (
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        style.visibility === 'collapse' ||
+        style.opacity === '0'
+      ) {
+        return false;
+      }
+
+      current = current.parentElement;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  function clampTimeout(value: number | undefined): number {
+    if (value === undefined || !Number.isFinite(value)) {
+      return 5_000;
+    }
+
+    return Math.min(Math.max(Math.trunc(value), 250), 60_000);
+  }
+
+  function truncate(value: string, maxLength: number): string {
+    if (value.length <= maxLength) {
+      return value;
+    }
+
+    return value.slice(0, maxLength - 1).trimEnd();
+  }
+
+  function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+}

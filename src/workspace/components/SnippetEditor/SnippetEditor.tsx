@@ -4,6 +4,8 @@ import type { PageRulePreset } from '../../../domain/page-rule-presets';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import { DEFAULT_SNIPPET_FOLDER, type Snippet } from '../../../domain/snippets';
 import type {
+  BlueprintAutomationNodeRunInput,
+  BlueprintAutomationNodeRunResult,
   BlueprintAutomationNodeTestInput,
   BlueprintAutomationNodeTestResult,
   BlueprintSelectorTestResult,
@@ -53,6 +55,11 @@ type SnippetEditorProps = {
   onPickBlueprintSelector?:
     | (() => Promise<BlueprintElementPick | undefined>)
     | undefined;
+  onRunBlueprintAutomationNode?:
+    | ((
+        node: BlueprintAutomationNodeRunInput,
+      ) => Promise<BlueprintAutomationNodeRunResult | undefined>)
+    | undefined;
   onSave(): void;
   onTestBlueprintAutomationNode?:
     | ((
@@ -76,6 +83,7 @@ export function SnippetEditor({
   onDuplicate,
   onFolderChange,
   onPickBlueprintSelector,
+  onRunBlueprintAutomationNode,
   onSave,
   onTestBlueprintAutomationNode,
   onTestBlueprintSelector,
@@ -229,6 +237,7 @@ export function SnippetEditor({
           css={editor.css}
           js={editor.js}
           onPickSelector={onPickBlueprintSelector}
+          onRunAutomationNode={onRunBlueprintAutomationNode}
           onTestAutomationNode={onTestBlueprintAutomationNode}
           onTestSelector={onTestBlueprintSelector}
           onChange={(blueprint, css, js = editor.js) =>

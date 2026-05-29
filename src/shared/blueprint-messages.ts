@@ -9,6 +9,8 @@ export const PICK_BLUEPRINT_SELECTOR_MESSAGE = 'blueprints/pick-selector';
 export const TEST_BLUEPRINT_SELECTOR_MESSAGE = 'blueprints/test-selector';
 export const TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE =
   'blueprints/test-automation-node';
+export const RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE =
+  'blueprints/run-automation-node';
 
 export type BlueprintSelectorTestResult = {
   firstTagName?: string;
@@ -36,6 +38,24 @@ export type BlueprintAutomationNodeTestResult = {
   visibleCount: number;
 };
 
+export type BlueprintAutomationNodeRunInput =
+  BlueprintAutomationNodeTestInput & {
+    label?: string;
+    timeoutMs?: number;
+  };
+
+export type BlueprintAutomationNodeRunResult = {
+  action: BlueprintAutomationAction;
+  durationMs: number;
+  firstTagName?: string;
+  matchCount: number;
+  message: string;
+  preview?: string;
+  value?: string;
+  variableName?: string;
+  visibleCount: number;
+};
+
 export type StartBlueprintCreatorMessage = {
   type: typeof START_BLUEPRINT_CREATOR_MESSAGE;
 };
@@ -55,6 +75,12 @@ export type TestBlueprintAutomationNodeMessage = {
   node: BlueprintAutomationNodeTestInput;
   sourceTabId: number;
   type: typeof TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE;
+};
+
+export type RunBlueprintAutomationNodeMessage = {
+  node: BlueprintAutomationNodeRunInput;
+  sourceTabId: number;
+  type: typeof RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE;
 };
 
 export type StartBlueprintCreatorResponse =
@@ -93,6 +119,16 @@ export type TestBlueprintAutomationNodeResponse =
   | {
       ok: true;
       result: BlueprintAutomationNodeTestResult;
+    }
+  | {
+      error: string;
+      ok: false;
+    };
+
+export type RunBlueprintAutomationNodeResponse =
+  | {
+      ok: true;
+      result: BlueprintAutomationNodeRunResult;
     }
   | {
       error: string;
@@ -161,6 +197,23 @@ export function isTestBlueprintAutomationNodeMessage(
   );
 }
 
+export function isRunBlueprintAutomationNodeMessage(
+  message: unknown,
+): message is RunBlueprintAutomationNodeMessage {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'type' in message &&
+    message.type === RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE &&
+    'sourceTabId' in message &&
+    typeof message.sourceTabId === 'number' &&
+    Number.isInteger(message.sourceTabId) &&
+    message.sourceTabId > 0 &&
+    'node' in message &&
+    isAutomationNodeRunInput(message.node)
+  );
+}
+
 function isAutomationNodeTestInput(
   value: unknown,
 ): value is BlueprintAutomationNodeTestInput {
@@ -198,6 +251,28 @@ function isAutomationNodeTestInput(
     optionalString(value, 'valueFrom', 80) &&
     optionalString(value, 'variableName', 80)
   );
+}
+
+function isAutomationNodeRunInput(
+  value: unknown,
+): value is BlueprintAutomationNodeRunInput {
+  if (!isAutomationNodeTestInput(value)) {
+    return false;
+  }
+
+  const timeoutMs = (value as Record<string, unknown>)['timeoutMs'];
+
+  if (
+    timeoutMs !== undefined &&
+    (typeof timeoutMs !== 'number' ||
+      !Number.isInteger(timeoutMs) ||
+      timeoutMs < 250 ||
+      timeoutMs > 60_000)
+  ) {
+    return false;
+  }
+
+  return optionalString(value, 'label', 120);
 }
 
 function optionalString(

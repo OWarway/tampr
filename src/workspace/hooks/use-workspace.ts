@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   pickBlueprintSelector as pickBlueprintSelectorFromTab,
+  runBlueprintAutomationNode as runBlueprintAutomationNodeFromTab,
   testBlueprintAutomationNode as testBlueprintAutomationNodeFromTab,
   testBlueprintSelector as testBlueprintSelectorFromTab,
 } from '../../chrome/blueprints';
@@ -23,6 +24,8 @@ import {
 } from '../../domain/snippets';
 import type { WorkspaceState } from '../../shared/workspace-messages';
 import type {
+  BlueprintAutomationNodeRunInput,
+  BlueprintAutomationNodeRunResult,
   BlueprintAutomationNodeTestInput,
   BlueprintAutomationNodeTestResult,
   BlueprintSelectorTestResult,
@@ -64,6 +67,9 @@ export type UseWorkspaceResult = {
   testBlueprintAutomationNode(
     node: BlueprintAutomationNodeTestInput,
   ): Promise<BlueprintAutomationNodeTestResult | undefined>;
+  runBlueprintAutomationNode(
+    node: BlueprintAutomationNodeRunInput,
+  ): Promise<BlueprintAutomationNodeRunResult | undefined>;
   updateEditor(editor: EditorState): void;
   updateEditorFolder(folder: string): void;
 };
@@ -244,6 +250,42 @@ export function useWorkspace(): UseWorkspaceResult {
 
       setNotice(
         `Automation test complete: ${automationTestNotice(response.result)}.`,
+      );
+      return response.result;
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runBlueprintAutomationNode(
+    node: BlueprintAutomationNodeRunInput,
+  ): Promise<BlueprintAutomationNodeRunResult | undefined> {
+    const sourceTabId = getWorkspaceSourceTabId(window.location.href);
+
+    if (!sourceTabId) {
+      setNotice('Open the workspace from a page before running automation.');
+      return undefined;
+    }
+
+    setBusy(true);
+    setNotice('Running automation node on the source page.');
+
+    try {
+      const response = await runBlueprintAutomationNodeFromTab(
+        sourceTabId,
+        node,
+      );
+
+      if (!response.ok) {
+        setNotice(response.error);
+        return undefined;
+      }
+
+      setNotice(
+        `Automation run complete: ${automationRunNotice(response.result)}.`,
       );
       return response.result;
     } catch (error: unknown) {
@@ -518,6 +560,7 @@ export function useWorkspace(): UseWorkspaceResult {
     importWorkspaceFile,
     pickBlueprintSelector,
     renameFolder,
+    runBlueprintAutomationNode,
     saveEditor,
     selectEditor,
     testBlueprintAutomationNode,
@@ -570,6 +613,12 @@ function automationTestNotice(
   return result.ready
     ? `${result.action} ready`
     : `${result.action} needs review`;
+}
+
+function automationRunNotice(result: BlueprintAutomationNodeRunResult): string {
+  return result.value
+    ? `${result.action} captured ${plural(result.value.length, 'character')}`
+    : `${result.action} ran`;
 }
 
 function plural(count: number, label: string): string {

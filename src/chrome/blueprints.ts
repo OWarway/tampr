@@ -1,10 +1,13 @@
 import {
   PICK_BLUEPRINT_SELECTOR_MESSAGE,
+  RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE,
   START_BLUEPRINT_CREATOR_MESSAGE,
   TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE,
   TEST_BLUEPRINT_SELECTOR_MESSAGE,
+  type BlueprintAutomationNodeRunInput,
   type BlueprintAutomationNodeTestInput,
   type PickBlueprintSelectorResponse,
+  type RunBlueprintAutomationNodeResponse,
   type StartBlueprintCreatorResponse,
   type TestBlueprintAutomationNodeResponse,
   type TestBlueprintSelectorResponse,
@@ -59,6 +62,26 @@ export async function testBlueprintAutomationNode(
     return {
       ok: false,
       error: 'Blueprint automation node test did not return a response.',
+    };
+  }
+
+  return response;
+}
+
+export async function runBlueprintAutomationNode(
+  sourceTabId: number,
+  node: BlueprintAutomationNodeRunInput,
+): Promise<RunBlueprintAutomationNodeResponse> {
+  const response = (await chrome.runtime.sendMessage({
+    type: RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE,
+    sourceTabId,
+    node,
+  })) as RunBlueprintAutomationNodeResponse | undefined;
+
+  if (!response) {
+    return {
+      ok: false,
+      error: 'Blueprint automation node run did not return a response.',
     };
   }
 
