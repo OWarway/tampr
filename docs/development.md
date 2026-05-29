@@ -125,6 +125,13 @@ regenerate both CSS and JavaScript while the generated code is still in sync; if
 either editor is hand-edited, code-changing Blueprint controls lock until the
 user reconciles the generated source.
 
+The saved Blueprint builder renders the recipe as a lightweight flow diagram
+using the graph layout stored in the recipe. The first canvas remains a
+straight-line success path with a start marker, directional connectors, selectable
+node cards, the existing node library, and the existing inspector. Keep the
+canvas custom and dependency-light until branching, drag positioning, or
+multi-port connections are proven necessary.
+
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,
 clicks that look like submit/buy/send/delete controls, hidden click targets,

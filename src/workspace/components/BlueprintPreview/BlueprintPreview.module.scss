@@ -147,56 +147,97 @@
   text-transform: uppercase;
 }
 
+.flowCanvas {
+  background:
+    linear-gradient(#edf4ef 1px, transparent 1px),
+    linear-gradient(90deg, #edf4ef 1px, transparent 1px), #f7fbf8;
+  background-size: 28px 28px;
+  border: 1px solid #dbe3de;
+  border-radius: 8px;
+  min-width: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.flowViewport {
+  position: relative;
+}
+
 .flow {
-  display: grid;
-  gap: 12px;
+  inset: 0;
   list-style: none;
   margin: 0;
   min-width: 0;
   padding: 0;
+  position: absolute;
+}
+
+.flowEdges {
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  position: absolute;
+
+  path {
+    fill: none;
+    stroke: #79a78f;
+    stroke-linecap: round;
+    stroke-width: 2.5;
+  }
+
+  marker path {
+    fill: #79a78f;
+    stroke: none;
+  }
+}
+
+.flowStart {
+  align-items: center;
+  background: #14201b;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #f7fbf8;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 28px;
+  justify-content: center;
+  letter-spacing: 0;
+  position: absolute;
+  text-transform: uppercase;
 }
 
 .node {
   min-width: 0;
-  position: relative;
-
-  &::after {
-    background: #c7d2cc;
-    content: '';
-    height: calc(100% - 18px);
-    left: 13px;
-    position: absolute;
-    top: 34px;
-    width: 2px;
-  }
-}
-
-.lastNode::after {
-  display: none;
+  position: absolute;
 }
 
 .nodeContent,
 .nodeButton {
   align-items: start;
+  background: #fff;
+  border: 1px solid #c7d2cc;
+  border-radius: 8px;
+  box-shadow: 0 10px 22px rgba(20, 32, 27, 0.08);
   display: grid;
-  gap: 12px;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  min-height: 156px;
   min-width: 0;
+  padding: 12px;
   width: 100%;
 }
 
 .nodeButton {
-  background: transparent;
-  border: 1px solid transparent;
   color: inherit;
   font: inherit;
-  padding: 0;
   text-align: left;
 
   &:hover,
   &.selected {
     background: #f7fbf8;
-    border-color: #c7d2cc;
+    border-color: #79a78f;
+    box-shadow: 0 0 0 3px rgba(121, 167, 143, 0.16);
   }
 }
 
@@ -218,6 +259,7 @@
 .body {
   display: grid;
   gap: 7px;
+  grid-row: span 2;
   min-width: 0;
 
   code {
@@ -283,6 +325,8 @@
   background: #edf4ef;
   border: 1px solid #c7d2cc;
   color: #29463d;
+  grid-column: 2;
+  justify-self: start;
 }
 
 .strong {

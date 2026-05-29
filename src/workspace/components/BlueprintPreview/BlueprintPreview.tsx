@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
@@ -46,6 +46,12 @@ import type {
 } from '../../../shared/blueprint-messages';
 
 import styles from './BlueprintPreview.module.scss';
+
+const FLOW_NODE_HEIGHT = 156;
+const FLOW_NODE_WIDTH = 260;
+const FLOW_PADDING = 16;
+const FLOW_START_GAP = 34;
+const FLOW_START_WIDTH = 72;
 
 type BlueprintPreviewProps = {
   blueprint: BlueprintRecipe | undefined;
@@ -453,19 +459,13 @@ export function BlueprintPreview({
           />
         ) : null}
 
-        <ol className={styles.flow}>
-          {nodes.map((node, index) => (
-            <BlueprintPreviewNode
-              editable={editable}
-              index={index}
-              key={node.id}
-              node={node}
-              selected={node.id === selectedNode?.id}
-              total={nodes.length}
-              onSelect={() => setSelectedNodeId(node.id)}
-            />
-          ))}
-        </ol>
+        <BlueprintFlowCanvas
+          editable={editable}
+          nodes={nodes}
+          recipe={recipe}
+          selectedNodeId={selectedNode?.id}
+          onSelectNode={setSelectedNodeId}
+        />
 
         {editable && selectedNode ? (
           <BlueprintNodeInspector
@@ -623,12 +623,163 @@ function BlueprintNodeLibrary({
   );
 }
 
+type BlueprintFlowCanvasProps = {
+  editable: boolean;
+  nodes: BlueprintNode[];
+  recipe: BlueprintRecipe;
+  selectedNodeId?: string | undefined;
+  onSelectNode(nodeId: string): void;
+};
+
+function BlueprintFlowCanvas({
+  editable,
+  nodes,
+  recipe,
+  selectedNodeId,
+  onSelectNode,
+}: BlueprintFlowCanvasProps) {
+  const layoutPoints = nodes.map(
+    (node, index) => recipe.graph.layout[node.id] ?? { x: index * 220, y: 0 },
+  );
+  const minX = Math.min(0, ...layoutPoints.map((point) => point.x));
+  const minY = Math.min(0, ...layoutPoints.map((point) => point.y));
+  const positionedNodes = nodes.map((node, index) => {
+    const point = layoutPoints[index] ?? { x: index * 220, y: 0 };
+
+    return {
+      node,
+      x: point.x - minX + FLOW_PADDING + FLOW_START_WIDTH + FLOW_START_GAP,
+      y: point.y - minY + FLOW_PADDING,
+    };
+  });
+  const firstNode = positionedNodes[0];
+  const canvasWidth =
+    Math.max(
+      FLOW_PADDING + FLOW_START_WIDTH,
+      ...positionedNodes.map((position) => position.x + FLOW_NODE_WIDTH),
+    ) + FLOW_PADDING;
+  const canvasHeight =
+    Math.max(
+      FLOW_NODE_HEIGHT,
+      ...positionedNodes.map((position) => position.y + FLOW_NODE_HEIGHT),
+    ) + FLOW_PADDING;
+  const startTop = firstNode
+    ? firstNode.y + FLOW_NODE_HEIGHT / 2 - 14
+    : FLOW_PADDING;
+  const startCenterY = startTop + 14;
+  const firstNodeCenterY = firstNode
+    ? firstNode.y + FLOW_NODE_HEIGHT / 2
+    : startCenterY;
+
+  return (
+    <div
+      className={styles.flowCanvas}
+      role="group"
+      aria-label="Blueprint flow diagram"
+    >
+      <div
+        className={styles.flowViewport}
+        style={
+          {
+            minHeight: `${canvasHeight}px`,
+            minWidth: `${canvasWidth}px`,
+          } satisfies CSSProperties
+        }
+      >
+        <svg
+          aria-hidden="true"
+          className={styles.flowEdges}
+          height={canvasHeight}
+          viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+          width={canvasWidth}
+        >
+          <defs>
+            <marker
+              id="tampr-blueprint-flow-arrow"
+              markerHeight="8"
+              markerWidth="8"
+              orient="auto"
+              refX="7"
+              refY="4"
+            >
+              <path d="M 0 0 L 8 4 L 0 8 z" />
+            </marker>
+          </defs>
+          {firstNode ? (
+            <path
+              d={`M ${FLOW_PADDING + FLOW_START_WIDTH} ${startCenterY} C ${
+                FLOW_PADDING + FLOW_START_WIDTH + 20
+              } ${startCenterY}, ${firstNode.x - 20} ${firstNodeCenterY}, ${
+                firstNode.x
+              } ${firstNodeCenterY}`}
+              markerEnd="url(#tampr-blueprint-flow-arrow)"
+            />
+          ) : null}
+          {positionedNodes.slice(0, -1).map((position, index) => {
+            const nextPosition = positionedNodes[index + 1];
+
+            if (!nextPosition) {
+              return null;
+            }
+
+            const fromX = position.x + FLOW_NODE_WIDTH;
+            const fromY = position.y + FLOW_NODE_HEIGHT / 2;
+            const toX = nextPosition.x;
+            const toY = nextPosition.y + FLOW_NODE_HEIGHT / 2;
+
+            return (
+              <path
+                d={`M ${fromX} ${fromY} C ${fromX + 34} ${fromY}, ${
+                  toX - 34
+                } ${toY}, ${toX} ${toY}`}
+                key={`${position.node.id}-${nextPosition.node.id}`}
+                markerEnd="url(#tampr-blueprint-flow-arrow)"
+              />
+            );
+          })}
+        </svg>
+        <span
+          className={styles.flowStart}
+          style={
+            {
+              left: `${FLOW_PADDING}px`,
+              top: `${startTop}px`,
+              width: `${FLOW_START_WIDTH}px`,
+            } satisfies CSSProperties
+          }
+        >
+          Start
+        </span>
+        <ol className={styles.flow} aria-label="Blueprint flow nodes">
+          {positionedNodes.map((position, index) => (
+            <BlueprintPreviewNode
+              editable={editable}
+              index={index}
+              key={position.node.id}
+              node={position.node}
+              selected={position.node.id === selectedNodeId}
+              style={
+                {
+                  left: `${position.x}px`,
+                  top: `${position.y}px`,
+                  width: `${FLOW_NODE_WIDTH}px`,
+                } satisfies CSSProperties
+              }
+              onSelect={() => onSelectNode(position.node.id)}
+            />
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
 type BlueprintPreviewNodeProps = {
   editable: boolean;
   index: number;
   node: BlueprintNode;
   selected: boolean;
-  total: number;
+  style: CSSProperties;
   onSelect(): void;
 };
 
@@ -637,7 +788,7 @@ function BlueprintPreviewNode({
   index,
   node,
   selected,
-  total,
+  style,
   onSelect,
 }: BlueprintPreviewNodeProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
@@ -660,9 +811,7 @@ function BlueprintPreviewNode({
   );
 
   return (
-    <li
-      className={`${styles.node} ${index === total - 1 ? styles.lastNode : ''}`}
-    >
+    <li className={styles.node} style={style}>
       {editable ? (
         <button
           aria-pressed={selected}

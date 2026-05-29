@@ -57,6 +57,10 @@ describe('BlueprintPreview', () => {
     render(<BlueprintPreview blueprint={twoNodeRecipe()} />);
 
     expect(
+      screen.getByRole('group', { name: 'Blueprint flow diagram' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Start')).toBeTruthy();
+    expect(
       screen.getAllByRole('listitem').map((item) => item.textContent),
     ).toEqual([
       expect.stringContaining('Hide signup'),

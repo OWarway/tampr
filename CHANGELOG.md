@@ -24,6 +24,8 @@ group changes under the headings below.
   editing.
 - Workspace Blueprint preview for saved recipe nodes, selectors, and selector
   quality.
+- Workspace Blueprint flow diagram canvas with start marker, directional
+  connectors, layout-aware node cards, and inspector selection.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles
   with code-sync protection.
 - Blueprint node library for adding and removing CSS action nodes in a straight
