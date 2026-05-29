@@ -125,9 +125,11 @@ or recording path.
 
 Manual automation node runs also use temporary `scripting.executeScript` against
 the source tab. The first supported run actions are intentionally low-risk:
-wait-for-element and extract-text. Click, set-value, and download-json steps must
-remain refused by the manual runner until their confirmation, blocking, and
-result-reporting UX is explicit.
+wait-for-element and extract-text. Click runs require explicit inspector
+confirmation and are still refused inside the injected runner when the target
+looks like submit, buy, send, delete, publish, or payment behavior. Set-value and
+download-json steps must remain refused by the manual runner until their
+confirmation, blocking, and result-reporting UX is explicit.
 
 ## Script Download API
 

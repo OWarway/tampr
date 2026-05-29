@@ -39,6 +39,8 @@ group changes under the headings below.
   compatibility, and download settings without clicking, typing, or downloading.
 - Manual source-page runs for supported Blueprint automation nodes, starting
   with wait-for-element and extract-text steps.
+- Guarded manual click runs with explicit confirmation and source-page refusal
+  for risky submit, buy, send, delete, and similar targets.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.

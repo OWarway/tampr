@@ -99,6 +99,9 @@ export function BlueprintPreview({
   const [automationRunResults, setAutomationRunResults] = useState<
     Record<string, BlueprintAutomationNodeRunResult>
   >({});
+  const [automationRunConfirmations, setAutomationRunConfirmations] = useState<
+    Record<string, boolean>
+  >({});
 
   if (!blueprint) {
     return null;
@@ -146,6 +149,7 @@ export function BlueprintPreview({
     if (options.regeneratesCode) {
       clearAutomationTestResult(nodeId);
       clearAutomationRunResult(nodeId);
+      clearAutomationRunConfirmation(nodeId);
     }
   }
 
@@ -177,6 +181,7 @@ export function BlueprintPreview({
       clearSelectorTestResult(nodeId);
       clearAutomationTestResult(nodeId);
       clearAutomationRunResult(nodeId);
+      clearAutomationRunConfirmation(nodeId);
     } finally {
       setPickingNodeId(undefined);
     }
@@ -237,10 +242,19 @@ export function BlueprintPreview({
       return;
     }
 
+    if (requiresRunConfirmation(node) && !automationRunConfirmations[node.id]) {
+      return;
+    }
+
     setRunningAutomationNodeId(node.id);
 
     try {
-      const result = await onRunAutomationNode(automationNodeRunInput(node));
+      const result = await onRunAutomationNode(
+        automationNodeRunInput(
+          node,
+          Boolean(automationRunConfirmations[node.id]),
+        ),
+      );
 
       if (!result) {
         return;
@@ -297,6 +311,7 @@ export function BlueprintPreview({
     clearSelectorTestResult(nodeId);
     clearAutomationTestResult(nodeId);
     clearAutomationRunResult(nodeId);
+    clearAutomationRunConfirmation(nodeId);
   }
 
   function moveNode(
@@ -362,6 +377,26 @@ export function BlueprintPreview({
 
       return nextResults;
     });
+  }
+
+  function clearAutomationRunConfirmation(nodeId: string): void {
+    setAutomationRunConfirmations((currentConfirmations) => {
+      const nextConfirmations = { ...currentConfirmations };
+
+      delete nextConfirmations[nodeId];
+
+      return nextConfirmations;
+    });
+  }
+
+  function updateAutomationRunConfirmation(
+    nodeId: string,
+    confirmed: boolean,
+  ): void {
+    setAutomationRunConfirmations((currentConfirmations) => ({
+      ...currentConfirmations,
+      [nodeId]: confirmed,
+    }));
   }
 
   return (
@@ -487,12 +522,22 @@ export function BlueprintPreview({
                 : undefined
             }
             automationRunResult={automationRunResults[selectedNode.id]}
+            automationRunConfirmed={Boolean(
+              automationRunConfirmations[selectedNode.id],
+            )}
             automationTestResult={automationTestResults[selectedNode.id]}
             pickingSelector={pickingNodeId === selectedNode.id}
             runningAutomationNode={runningAutomationNodeId === selectedNode.id}
+            runRequiresConfirmation={
+              isAutomationNode(selectedNode) &&
+              requiresRunConfirmation(selectedNode)
+            }
             selectorTestResult={selectorTestResults[selectedNode.id]}
             testingAutomationNode={testingAutomationNodeId === selectedNode.id}
             testingSelector={testingNodeId === selectedNode.id}
+            onRunConfirmationChange={(confirmed) =>
+              updateAutomationRunConfirmation(selectedNode.id, confirmed)
+            }
           />
         ) : null}
       </div>
@@ -611,6 +656,7 @@ type BlueprintNodeInspectorProps = {
   canMoveDown: boolean;
   canMoveUp: boolean;
   canRemove: boolean;
+  automationRunConfirmed: boolean;
   automationRunResult?: BlueprintAutomationNodeRunResult | undefined;
   automationTestResult?: BlueprintAutomationNodeTestResult | undefined;
   generatedCodeInSync: boolean;
@@ -624,6 +670,7 @@ type BlueprintNodeInspectorProps = {
   onRequireVisibleChange(requireVisible: boolean): void;
   onRemove(): void;
   onRunAutomationNode?: (() => void) | undefined;
+  onRunConfirmationChange(confirmed: boolean): void;
   onTestSelector?: (() => void) | undefined;
   onTestAutomationNode?: (() => void) | undefined;
   onTimeoutChange(timeoutMs: number): void;
@@ -633,6 +680,7 @@ type BlueprintNodeInspectorProps = {
   onVariableNameChange(variableName: string): void;
   pickingSelector: boolean;
   runningAutomationNode: boolean;
+  runRequiresConfirmation: boolean;
   selectorTestResult?: BlueprintSelectorTestResult | undefined;
   testingAutomationNode: boolean;
   testingSelector: boolean;
@@ -642,6 +690,7 @@ function BlueprintNodeInspector({
   canMoveDown,
   canMoveUp,
   canRemove,
+  automationRunConfirmed,
   automationRunResult,
   automationTestResult,
   generatedCodeInSync,
@@ -655,6 +704,7 @@ function BlueprintNodeInspector({
   onRequireVisibleChange,
   onRemove,
   onRunAutomationNode,
+  onRunConfirmationChange,
   onTestSelector,
   onTestAutomationNode,
   onTimeoutChange,
@@ -664,6 +714,7 @@ function BlueprintNodeInspector({
   onVariableNameChange,
   pickingSelector,
   runningAutomationNode,
+  runRequiresConfirmation,
   selectorTestResult,
   testingAutomationNode,
   testingSelector,
@@ -737,10 +788,13 @@ function BlueprintNodeInspector({
             onTest={onTestAutomationNode}
           />
           <BlueprintAutomationRunPanel
+            confirmed={automationRunConfirmed}
             generatedCodeInSync={generatedCodeInSync}
             result={automationRunResult}
             running={runningAutomationNode}
+            requiresConfirmation={runRequiresConfirmation}
             onRun={onRunAutomationNode}
+            onConfirmChange={onRunConfirmationChange}
           />
           <BlueprintAutomationSettings
             generatedCodeInSync={generatedCodeInSync}
@@ -884,16 +938,22 @@ function BlueprintAutomationTestPanel({
 }
 
 type BlueprintAutomationRunPanelProps = {
+  confirmed: boolean;
   generatedCodeInSync: boolean;
   result?: BlueprintAutomationNodeRunResult | undefined;
+  requiresConfirmation: boolean;
   running: boolean;
+  onConfirmChange(confirmed: boolean): void;
   onRun?: (() => void) | undefined;
 };
 
 function BlueprintAutomationRunPanel({
+  confirmed,
   generatedCodeInSync,
   result,
+  requiresConfirmation,
   running,
+  onConfirmChange,
   onRun,
 }: BlueprintAutomationRunPanelProps) {
   if (!onRun) {
@@ -902,9 +962,23 @@ function BlueprintAutomationRunPanel({
 
   return (
     <div className={styles.automationTestPanel}>
+      {requiresConfirmation ? (
+        <label className={styles.runConfirmation}>
+          <input
+            checked={confirmed}
+            type="checkbox"
+            onChange={(event) => onConfirmChange(event.currentTarget.checked)}
+          />
+          <span>Confirm click on source page</span>
+        </label>
+      ) : null}
       <button
         className={styles.runAutomation}
-        disabled={!generatedCodeInSync || running}
+        disabled={
+          !generatedCodeInSync ||
+          running ||
+          (requiresConfirmation && !confirmed)
+        }
         type="button"
         onClick={onRun}
       >
@@ -1117,16 +1191,26 @@ function automationNodeTestInput(
 
 function automationNodeRunInput(
   node: BlueprintAutomationNode,
+  confirmed: boolean,
 ): BlueprintAutomationNodeRunInput {
   return {
     ...automationNodeTestInput(node),
+    ...(confirmed ? { confirmAction: true } : {}),
     ...('timeoutMs' in node ? { timeoutMs: node.timeoutMs } : {}),
     ...(node.label ? { label: node.label } : {}),
   };
 }
 
 function canRunAutomationNode(node: BlueprintAutomationNode): boolean {
-  return node.type === 'wait-for-element' || node.type === 'extract-text';
+  return (
+    node.type === 'wait-for-element' ||
+    node.type === 'extract-text' ||
+    node.type === 'click'
+  );
+}
+
+function requiresRunConfirmation(node: BlueprintAutomationNode): boolean {
+  return node.type === 'click';
 }
 
 function safetyLabel(

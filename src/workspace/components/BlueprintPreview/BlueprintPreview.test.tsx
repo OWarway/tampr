@@ -640,6 +640,49 @@ describe('BlueprintPreview', () => {
     expect(screen.getByText('Deal')).toBeTruthy();
   });
 
+  it('requires explicit confirmation before running click nodes', async () => {
+    const onRunAutomationNode = vi.fn().mockResolvedValue({
+      action: 'click',
+      durationMs: 8,
+      firstTagName: 'button',
+      matchCount: 1,
+      message: 'Element clicked on the source page.',
+      preview: 'Open panel',
+      visibleCount: 1,
+    });
+    const blueprint = safeClickRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+        onChange={() => undefined}
+      />,
+    );
+
+    const runButton = screen.getByRole('button', { name: 'Run node' });
+
+    expect((runButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('Confirm click on source page'));
+    fireEvent.click(runButton);
+
+    await waitFor(() =>
+      expect(onRunAutomationNode).toHaveBeenCalledWith({
+        selector: 'button[data-testid="open"]',
+        type: 'click',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+      }),
+    );
+    expect(await screen.findByText('Ran on page')).toBeTruthy();
+    expect(
+      screen.getByText('Element clicked on the source page.'),
+    ).toBeTruthy();
+  });
+
   it('edits automation values and regenerates JavaScript', () => {
     const onChange = vi.fn();
     const blueprint = setValueRecipe();
@@ -764,6 +807,30 @@ function riskyClickRecipe(): BlueprintRecipe {
       edges: [],
       layout: {
         'submit-order': { x: 0, y: 0 },
+      },
+    },
+  });
+}
+
+function safeClickRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Open panel',
+    graph: {
+      nodes: [
+        {
+          id: 'open-panel',
+          enabled: true,
+          requireVisible: true,
+          selector: 'button[data-testid="open"]',
+          selectorMeta: selectorMeta('attribute'),
+          timeoutMs: 5000,
+          type: 'click',
+        },
+      ],
+      edges: [],
+      layout: {
+        'open-panel': { x: 0, y: 0 },
       },
     },
   });

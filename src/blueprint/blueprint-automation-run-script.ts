@@ -11,7 +11,13 @@ export type BlueprintAutomationNodeRunResponse =
   | {
       message: string;
       ok: false;
-      reason: 'invalid-selector' | 'timeout' | 'unavailable' | 'unsupported';
+      reason:
+        | 'invalid-selector'
+        | 'requires-confirmation'
+        | 'timeout'
+        | 'unavailable'
+        | 'unsafe-target'
+        | 'unsupported';
     };
 
 type BlueprintAutomationNodeRunResultBase = Pick<
@@ -31,12 +37,32 @@ export async function runTamprBlueprintAutomationNode(
     };
   }
 
-  if (node.type !== 'wait-for-element' && node.type !== 'extract-text') {
+  if (
+    node.type !== 'wait-for-element' &&
+    node.type !== 'extract-text' &&
+    node.type !== 'click'
+  ) {
     return {
       ok: false,
       reason: 'unsupported',
       message:
-        'Manual node runs currently support wait and extract-text steps.',
+        'Manual node runs currently support wait, extract-text, and confirmed click steps.',
+    };
+  }
+
+  if (node.type === 'click' && !node.confirmAction) {
+    return {
+      ok: false,
+      reason: 'requires-confirmation',
+      message: 'Manual click runs need explicit confirmation.',
+    };
+  }
+
+  if (node.type === 'click' && node.requireVisible !== true) {
+    return {
+      ok: false,
+      reason: 'unsupported',
+      message: 'Manual click runs require a visible target.',
     };
   }
 
@@ -88,6 +114,37 @@ export async function runTamprBlueprintAutomationNode(
           ...(preview ? { preview } : {}),
           value: truncate(value, 2_000),
           ...(node.variableName ? { variableName: node.variableName } : {}),
+        },
+      };
+    }
+
+    if (node.type === 'click') {
+      if (!(element instanceof HTMLElement)) {
+        return {
+          ok: false,
+          reason: 'unsafe-target',
+          message: 'Manual click run needs an HTML element target.',
+        };
+      }
+
+      const unsafeMessage = unsafeClickMessage(element);
+
+      if (unsafeMessage) {
+        return {
+          ok: false,
+          reason: 'unsafe-target',
+          message: unsafeMessage,
+        };
+      }
+
+      element.click();
+
+      return {
+        ok: true,
+        result: {
+          ...base,
+          message: 'Element clicked on the source page.',
+          ...previewResult(element),
         },
       };
     }
@@ -173,6 +230,33 @@ export async function runTamprBlueprintAutomationNode(
     const preview = previewFor(element);
 
     return preview ? { preview } : {};
+  }
+
+  function unsafeClickMessage(element: Element): string | undefined {
+    const copy = [
+      element.getAttribute('aria-label'),
+      element.getAttribute('title'),
+      element.textContent,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const riskyWords = [
+      'buy',
+      'checkout',
+      'delete',
+      'order',
+      'pay',
+      'purchase',
+      'publish',
+      'remove',
+      'send',
+      'submit',
+    ];
+
+    return riskyWords.some((word) => copy.includes(word))
+      ? 'Manual click run refused a risky target.'
+      : undefined;
   }
 
   function normalizeText(value: string): string {

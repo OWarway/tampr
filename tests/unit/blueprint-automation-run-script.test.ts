@@ -70,7 +70,61 @@ describe('runTamprBlueprintAutomationNode', () => {
     });
   });
 
-  it('refuses unsupported mutating node types in the manual runner', async () => {
+  it('runs a confirmed click node against a safe visible element', async () => {
+    document.body.innerHTML = '<button data-testid="open">Open panel</button>';
+    const button = document.querySelector('button') as HTMLButtonElement;
+    const click = vi.fn();
+
+    button.addEventListener('click', click);
+    stubRect(button);
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'click',
+        selector: 'button[data-testid="open"]',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        action: 'click',
+        durationMs: expect.any(Number),
+        firstTagName: 'button',
+        matchCount: 1,
+        message: 'Element clicked on the source page.',
+        preview: 'Open panel',
+        visibleCount: 1,
+      },
+    });
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses unconfirmed click nodes', async () => {
+    document.body.innerHTML = '<button data-testid="open">Open panel</button>';
+    const button = document.querySelector('button') as HTMLButtonElement;
+    const click = vi.fn();
+
+    button.addEventListener('click', click);
+    stubRect(button);
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'click',
+        selector: 'button[data-testid="open"]',
+        requireVisible: true,
+        timeoutMs: 5000,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'requires-confirmation',
+      message: 'Manual click runs need explicit confirmation.',
+    });
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it('refuses risky confirmed click targets', async () => {
     document.body.innerHTML = '<button>Buy now</button>';
     const button = document.querySelector('button') as HTMLButtonElement;
     const click = vi.fn();
@@ -82,16 +136,38 @@ describe('runTamprBlueprintAutomationNode', () => {
       runTamprBlueprintAutomationNode({
         type: 'click',
         selector: 'button',
+        confirmAction: true,
         requireVisible: true,
         timeoutMs: 5000,
       }),
     ).resolves.toEqual({
       ok: false,
-      reason: 'unsupported',
-      message:
-        'Manual node runs currently support wait and extract-text steps.',
+      reason: 'unsafe-target',
+      message: 'Manual click run refused a risky target.',
     });
     expect(click).not.toHaveBeenCalled();
+  });
+
+  it('refuses unsupported mutating node types in the manual runner', async () => {
+    document.body.innerHTML = '<input value="original">';
+    const input = document.querySelector('input') as HTMLInputElement;
+    stubRect(input);
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'set-value',
+        selector: 'input',
+        requireVisible: true,
+        timeoutMs: 5000,
+        value: 'changed',
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'unsupported',
+      message:
+        'Manual node runs currently support wait, extract-text, and confirmed click steps.',
+    });
+    expect(input.value).toBe('original');
   });
 
   it('returns an invalid selector error', async () => {

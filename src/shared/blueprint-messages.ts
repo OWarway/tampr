@@ -40,6 +40,7 @@ export type BlueprintAutomationNodeTestResult = {
 
 export type BlueprintAutomationNodeRunInput =
   BlueprintAutomationNodeTestInput & {
+    confirmAction?: boolean;
     label?: string;
     timeoutMs?: number;
   };
@@ -261,6 +262,7 @@ function isAutomationNodeRunInput(
   }
 
   const timeoutMs = (value as Record<string, unknown>)['timeoutMs'];
+  const confirmAction = (value as Record<string, unknown>)['confirmAction'];
 
   if (
     timeoutMs !== undefined &&
@@ -269,6 +271,10 @@ function isAutomationNodeRunInput(
       timeoutMs < 250 ||
       timeoutMs > 60_000)
   ) {
+    return false;
+  }
+
+  if (confirmAction !== undefined && typeof confirmAction !== 'boolean') {
     return false;
   }
 

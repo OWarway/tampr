@@ -411,6 +411,27 @@
   gap: 8px;
 }
 
+.runConfirmation {
+  align-items: center;
+  background: #fff4e4;
+  border: 1px solid #d8ad72;
+  border-radius: 6px;
+  color: #7d4a16;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  line-height: 1.35;
+  padding: 8px 10px;
+
+  input {
+    accent-color: #7d4a16;
+    height: 16px;
+    margin: 0;
+    width: 16px;
+  }
+}
+
 .automationTestResult {
   border: 1px solid #c7d2cc;
   border-radius: 6px;
