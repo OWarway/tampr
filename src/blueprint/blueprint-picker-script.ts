@@ -1141,6 +1141,8 @@ export async function runTamprBlueprintPicker({
     type LocalSelectorAssessment = {
       detail: string;
       quality: LocalSelectorQuality;
+      recommendation: string;
+      score: number;
     };
 
     function updatePaletteInfo(pick: BlueprintElementPick): void {
@@ -1152,7 +1154,7 @@ export async function runTamprBlueprintPicker({
       paletteTitle.textContent = `${capitalize(assessment.quality)} selector`;
       paletteSelector.textContent = pick.selector;
       paletteSelector.title = pick.selector;
-      paletteDetail.textContent = assessment.detail;
+      paletteDetail.textContent = `${assessment.score}% confidence. ${assessment.detail} ${assessment.recommendation}`;
     }
 
     function selectorAssessment(
@@ -1161,41 +1163,53 @@ export async function runTamprBlueprintPicker({
       if (meta.matchCount === 0) {
         return {
           quality: 'fragile',
+          score: 0,
           detail: 'Selector did not match after generation.',
+          recommendation: 'Pick the element again before running this flow.',
         };
       }
 
       if (meta.matchCount > 1) {
         return {
           quality: 'fragile',
+          score: Math.max(20, 55 - meta.matchCount * 5),
           detail: `Selector matches ${meta.matchCount} elements.`,
+          recommendation: 'Pick a more specific target.',
         };
       }
 
       if (meta.usesNthOfType || meta.strategy === 'position') {
         return {
           quality: 'fragile',
+          score: 45,
           detail: 'Depends on page position.',
+          recommendation: 'Prefer a stable page marker before automating.',
         };
       }
 
       if (meta.strategy === 'id' || meta.strategy === 'attribute') {
         return {
           quality: 'strong',
+          score: meta.strategy === 'id' ? 96 : 95,
           detail: 'Uses a stable unique page marker.',
+          recommendation: 'Ready for normal Blueprint use.',
         };
       }
 
       if (meta.strategy === 'class' && meta.segmentCount <= 2) {
         return {
           quality: 'good',
+          score: 78,
           detail: 'Unique class-based target.',
+          recommendation: 'Test before high-impact automation.',
         };
       }
 
       return {
         quality: 'good',
+        score: 68,
         detail: 'Unique path-based target.',
+        recommendation: 'Re-pick if the page layout changes.',
       };
     }
 

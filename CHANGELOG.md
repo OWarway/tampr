@@ -50,6 +50,8 @@ group changes under the headings below.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.
+- Blueprint selector confidence scoring with workspace and page-picker
+  recommendations.
 - User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.

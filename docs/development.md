@@ -87,6 +87,12 @@ settings, and return a draft Blueprint flow. The service worker creates a normal
 local snippet in the Blueprints folder, syncs runtime registrations, and opens
 the new snippet in the workspace.
 
+Selector metadata is assessed in the Blueprint domain as a confidence score,
+quality label, detail, and recommendation. The injected page picker mirrors the
+same rules locally because Chrome serializes the picker function into the page.
+Keep those two assessment paths aligned until selector generation moves out of
+the injected function.
+
 Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
 remove an overlay, make an element sticky, widen a content container, or hide an
 element only for print. Keep new Blueprint actions CSS-first until the selector

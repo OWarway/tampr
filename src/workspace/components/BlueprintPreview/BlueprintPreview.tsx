@@ -627,7 +627,7 @@ function BlueprintPreviewNode({
           <span className={styles.action}>{actionLabel(node.type)}</span>
         </div>
         <code>{node.selector}</code>
-        <p>{assessment.detail}</p>
+        <p>{selectorConfidenceSummary(assessment)}</p>
       </div>
       <span className={`${styles.quality} ${styles[assessment.quality]}`}>
         {qualityLabel(assessment.quality)}
@@ -876,6 +876,8 @@ function BlueprintNodeInspector({
         <strong className={`${styles.health} ${styles[assessment.quality]}`}>
           {qualityLabel(assessment.quality)}
         </strong>
+        <p>{selectorConfidenceSummary(assessment)}</p>
+        <p>{assessment.recommendation}</p>
       </div>
 
       <button
@@ -1180,6 +1182,12 @@ function selectorTestSummary(result: BlueprintSelectorTestResult): string {
   } visible`;
 
   return result.firstTagName ? `${result.firstTagName}: ${summary}` : summary;
+}
+
+function selectorConfidenceSummary(
+  assessment: ReturnType<typeof assessBlueprintSelector>,
+): string {
+  return `${assessment.score}% confidence. ${assessment.detail}`;
 }
 
 function plural(count: number, label: string): string {

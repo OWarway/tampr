@@ -49,6 +49,7 @@ describe('BlueprintPreview', () => {
     expect(screen.getAllByText('Hide offer')).toHaveLength(2);
     expect(screen.getByText('[data-testid="offer"]')).toBeTruthy();
     expect(screen.getByText('Strong')).toBeTruthy();
+    expect(screen.getByText(/95% confidence/)).toBeTruthy();
     expect(screen.getByText('1 node')).toBeTruthy();
   });
 
