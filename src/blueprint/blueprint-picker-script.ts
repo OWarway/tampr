@@ -72,6 +72,9 @@ export async function runTamprBlueprintPicker({
     const flowTitle = document.createElement('strong');
     const flowSteps = document.createElement('div');
     const flowActions = document.createElement('div');
+    const stepEditor = document.createElement('div');
+    const stepEditorTitle = document.createElement('strong');
+    const stepEditorBody = document.createElement('div');
     const moveUpButton = document.createElement('button');
     const moveDownButton = document.createElement('button');
     const removeButton = document.createElement('button');
@@ -168,6 +171,32 @@ export async function runTamprBlueprintPicker({
       'flex: 0 0 auto',
       'gap: 6px',
     ].join(';');
+
+    stepEditor.style.cssText = [
+      'background: #f7fbf8',
+      'border: 1px solid #b9cac1',
+      'border-radius: 8px',
+      'box-shadow: 0 18px 46px rgba(20, 32, 27, 0.24)',
+      'color: #14201b',
+      'display: none',
+      'gap: 8px',
+      'left: 50%',
+      'max-width: min(520px, calc(100vw - 28px))',
+      'min-width: min(360px, calc(100vw - 28px))',
+      'padding: 10px',
+      'pointer-events: auto',
+      'position: fixed',
+      'top: 72px',
+      'transform: translateX(-50%)',
+    ].join(';');
+
+    stepEditorTitle.style.cssText = [
+      'color: #14594d',
+      'font: 900 12px/1.2 Inter, ui-sans-serif, system-ui, sans-serif',
+    ].join(';');
+
+    stepEditorBody.style.cssText = ['display: grid', 'gap: 8px'].join(';');
+    stepEditor.append(stepEditorTitle, stepEditorBody);
 
     moveUpButton.type = 'button';
     moveUpButton.textContent = 'Up';
@@ -328,7 +357,7 @@ export async function runTamprBlueprintPicker({
     }
     palette.append(paletteInfo, paletteActions);
 
-    root.append(highlight, banner, flowBar, palette);
+    root.append(highlight, banner, flowBar, stepEditor, palette);
     document.body.append(root);
 
     document.addEventListener('mousemove', handleMouseMove, true);
@@ -494,7 +523,7 @@ export async function runTamprBlueprintPicker({
       };
 
       if (action === 'set-value') {
-        node.value = window.prompt('Value to set for this field', '') ?? '';
+        node.value = '';
       }
 
       if (action === 'extract-text') {
@@ -502,10 +531,7 @@ export async function runTamprBlueprintPicker({
       }
 
       if (action === 'custom-code') {
-        node.code = [
-          '// element is the selected page element.',
-          '// values stores extracted Blueprint values.',
-        ].join('\n');
+        node.code = defaultCustomCode();
       }
 
       draftNodes.push(node);
@@ -643,6 +669,124 @@ export async function runTamprBlueprintPicker({
       }
     }
 
+    function updateStepEditor(): void {
+      const node = draftNodes[selectedDraftIndex];
+
+      stepEditorBody.replaceChildren();
+
+      if (!node || !isEditableDraftNode(node)) {
+        stepEditor.style.display = 'none';
+        stepEditorTitle.textContent = '';
+        return;
+      }
+
+      stepEditor.style.display = 'grid';
+      stepEditorTitle.textContent = `Step ${selectedDraftIndex + 1}: ${nodeLabel(
+        node.action,
+      )}`;
+
+      const selectorPreview = document.createElement('code');
+      selectorPreview.textContent = node.pick.selector;
+      selectorPreview.title = node.pick.selector;
+      selectorPreview.style.cssText = [
+        'background: #edf4ef',
+        'border-radius: 5px',
+        'color: #29463d',
+        'display: block',
+        'font: 700 11px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace',
+        'overflow: hidden',
+        'padding: 5px 6px',
+        'text-overflow: ellipsis',
+        'white-space: nowrap',
+      ].join(';');
+      stepEditorBody.append(selectorPreview);
+
+      if (node.action === 'set-value') {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.maxLength = 10_000;
+        input.placeholder = 'Value to type into the selected field';
+        input.value = node.value ?? '';
+        input.setAttribute('aria-label', 'Blueprint set value');
+        input.style.cssText = editorControlStyle();
+        input.addEventListener('input', () => {
+          node.value = input.value;
+        });
+        stepEditorBody.append(
+          createEditorField(
+            'Value',
+            'Used by Run and the saved set-value step.',
+            input,
+          ),
+        );
+        return;
+      }
+
+      if (node.action === 'extract-text') {
+        const fallback = uniqueVariableName(selectedDraftIndex + 1);
+        node.variableName = normalizeVariableName(
+          node.variableName ?? fallback,
+          fallback,
+        );
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.maxLength = 80;
+        input.placeholder = 'dealTitle';
+        input.value = node.variableName;
+        input.setAttribute('aria-label', 'Blueprint variable name');
+        input.style.cssText = editorControlStyle();
+        input.addEventListener('input', () => {
+          const nextValue = normalizeVariableName(input.value, fallback);
+          node.variableName = nextValue;
+
+          if (input.value !== nextValue) {
+            input.value = nextValue;
+          }
+        });
+        stepEditorBody.append(
+          createEditorField(
+            'Variable name',
+            'The extracted text is stored under this JavaScript-safe name.',
+            input,
+          ),
+        );
+        return;
+      }
+
+      if (node.action === 'custom-code') {
+        node.code = node.code ?? defaultCustomCode();
+
+        const textarea = document.createElement('textarea');
+        textarea.maxLength = 10_000;
+        textarea.rows = 6;
+        textarea.spellcheck = false;
+        textarea.value = node.code;
+        textarea.setAttribute('aria-label', 'Blueprint custom code');
+        textarea.style.cssText = editorControlStyle([
+          'font: 700 11px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace',
+          'min-height: 118px',
+          'resize: vertical',
+        ]);
+        textarea.addEventListener('input', () => {
+          node.code = textarea.value.slice(0, 10_000);
+
+          if (textarea.value !== node.code) {
+            textarea.value = node.code;
+          }
+        });
+        stepEditorBody.append(
+          createEditorField(
+            'Code',
+            'Runs with element and values arguments during preview and in the saved snippet.',
+            textarea,
+          ),
+        );
+      }
+    }
+
     function updateFlowBar(): void {
       const hasDraft = draftNodes.length > 0;
 
@@ -698,6 +842,77 @@ export async function runTamprBlueprintPicker({
       removeButton.disabled = !hasDraft || selectedDraftIndex < 0;
       runButton.toggleAttribute('disabled', !hasDraft);
       saveButton.toggleAttribute('disabled', !hasDraft);
+      updateStepEditor();
+    }
+
+    function createEditorField(
+      labelText: string,
+      helpText: string,
+      control: HTMLElement,
+    ): HTMLLabelElement {
+      const field = document.createElement('label');
+      const label = document.createElement('span');
+      const help = document.createElement('span');
+
+      field.style.cssText = ['display: grid', 'gap: 4px'].join(';');
+      label.textContent = labelText;
+      label.style.cssText = [
+        'color: #14201b',
+        'font: 900 12px/1.2 Inter, ui-sans-serif, system-ui, sans-serif',
+      ].join(';');
+      help.textContent = helpText;
+      help.style.cssText = [
+        'color: #53645b',
+        'font: 700 11px/1.35 Inter, ui-sans-serif, system-ui, sans-serif',
+      ].join(';');
+      field.append(label, help, control);
+
+      return field;
+    }
+
+    function editorControlStyle(extra: string[] = []): string {
+      return [
+        'appearance: none',
+        'background: #fff',
+        'border: 1px solid #b9cac1',
+        'border-radius: 6px',
+        'box-sizing: border-box',
+        'color: #14201b',
+        'font: 800 12px/1.35 Inter, ui-sans-serif, system-ui, sans-serif',
+        'min-height: 34px',
+        'outline: none',
+        'padding: 7px 8px',
+        'width: 100%',
+        ...extra,
+      ].join(';');
+    }
+
+    function isEditableDraftNode(node: DraftNode): boolean {
+      return (
+        node.action === 'set-value' ||
+        node.action === 'extract-text' ||
+        node.action === 'custom-code'
+      );
+    }
+
+    function normalizeVariableName(value: string, fallback: string): string {
+      let normalized = value
+        .trim()
+        .replace(/[^A-Za-z0-9_$]/g, '_')
+        .slice(0, 80);
+
+      if (normalized && !/^[A-Za-z_$]/.test(normalized)) {
+        normalized = `value_${normalized}`.slice(0, 80);
+      }
+
+      return normalized || fallback;
+    }
+
+    function defaultCustomCode(): string {
+      return [
+        '// element is the selected page element.',
+        '// values stores extracted Blueprint values.',
+      ].join('\n');
     }
 
     function previewCssForNode(node: DraftNode): string {

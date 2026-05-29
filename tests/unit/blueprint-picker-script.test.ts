@@ -326,6 +326,99 @@ describe('runTamprBlueprintPicker', () => {
     });
   });
 
+  it('edits page-side draft step settings before saving', async () => {
+    document.body.innerHTML = `
+      <main>
+        <input data-testid="email" aria-label="Email" />
+        <h1 data-testid="headline">Deal</h1>
+      </main>
+    `;
+    const input = document.querySelector('input') as HTMLElement;
+    const headline = document.querySelector('h1') as HTMLElement;
+    let currentTarget = input;
+
+    stubElementFromPointGetter(() => currentTarget);
+    stubRect(input);
+    stubRect(headline);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Set value');
+    setDraftField('Blueprint set value', 'oliver@example.com');
+    clickButton('Pick next');
+
+    currentTarget = headline;
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Extract');
+    setDraftField('Blueprint variable name', 'dealText');
+    clickButton('Custom code');
+    setDraftField(
+      'Blueprint custom code',
+      'values.dealLength = element.textContent?.trim().length ?? 0;',
+    );
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'set-value',
+            value: 'oliver@example.com',
+            pick: {
+              selector: 'input[data-testid="email"]',
+            },
+          },
+          {
+            action: 'extract-text',
+            variableName: 'dealText',
+            pick: {
+              selector: 'h1[data-testid="headline"]',
+            },
+          },
+          {
+            action: 'custom-code',
+            code: 'values.dealLength = element.textContent?.trim().length ?? 0;',
+            pick: {
+              selector: 'h1[data-testid="headline"]',
+            },
+          },
+        ],
+      },
+    });
+  });
+
   it('reorders and removes draft steps before saving', async () => {
     document.body.innerHTML = `
       <main>
@@ -490,6 +583,20 @@ function clickButton(label: string): void {
   button?.dispatchEvent(
     new MouseEvent('click', { bubbles: true, cancelable: true }),
   );
+}
+
+function setDraftField(label: string, value: string): void {
+  const field = document.querySelector(`[aria-label="${label}"]`);
+
+  expect(field).toBeTruthy();
+
+  if (
+    field instanceof HTMLInputElement ||
+    field instanceof HTMLTextAreaElement
+  ) {
+    field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 }
 
 function stubRect(element: HTMLElement): void {
