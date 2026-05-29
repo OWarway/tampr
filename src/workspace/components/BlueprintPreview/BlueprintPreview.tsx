@@ -76,6 +76,16 @@ type BlueprintPreviewProps = {
   onChange?(blueprint: BlueprintRecipe, css: string, js?: string): void;
 };
 
+type BlueprintFlowTestStep = {
+  details: string[];
+  id: string;
+  label: string;
+  preview?: string;
+  ready: boolean;
+  status: 'ready' | 'review' | 'skipped';
+  summary: string;
+};
+
 export function BlueprintPreview({
   blueprint,
   css,
@@ -109,6 +119,10 @@ export function BlueprintPreview({
   const [automationRunConfirmations, setAutomationRunConfirmations] = useState<
     Record<string, boolean>
   >({});
+  const [flowTestResults, setFlowTestResults] = useState<
+    BlueprintFlowTestStep[] | undefined
+  >();
+  const [testingFlow, setTestingFlow] = useState(false);
 
   if (!blueprint) {
     return null;
@@ -296,6 +310,120 @@ export function BlueprintPreview({
     }
   }
 
+  async function testFlow(): Promise<void> {
+    if (!onTestSelector && !onTestAutomationNode) {
+      return;
+    }
+
+    setTestingFlow(true);
+    setFlowTestResults([]);
+
+    const results: BlueprintFlowTestStep[] = [];
+
+    try {
+      for (const node of nodes) {
+        const result = await testFlowNode(node);
+
+        results.push(result);
+        setFlowTestResults([...results]);
+      }
+    } finally {
+      setTestingFlow(false);
+    }
+  }
+
+  async function testFlowNode(
+    node: BlueprintNode,
+  ): Promise<BlueprintFlowTestStep> {
+    const label = node.label ?? actionLabel(node.type);
+
+    if (!node.enabled) {
+      return {
+        details: ['Disabled nodes are skipped by generated Blueprint code.'],
+        id: node.id,
+        label,
+        ready: true,
+        status: 'skipped',
+        summary: 'Skipped',
+      };
+    }
+
+    if (isAutomationNode(node)) {
+      if (!onTestAutomationNode) {
+        return {
+          details: ['Automation testing is unavailable for this workspace.'],
+          id: node.id,
+          label,
+          ready: false,
+          status: 'skipped',
+          summary: 'Not tested',
+        };
+      }
+
+      const result = await onTestAutomationNode(automationNodeTestInput(node));
+
+      if (!result) {
+        return {
+          details: [
+            'The source page did not return an automation test result.',
+          ],
+          id: node.id,
+          label,
+          ready: false,
+          status: 'review',
+          summary: 'No result',
+        };
+      }
+
+      return {
+        details: result.issues,
+        id: node.id,
+        label,
+        ...(result.preview ? { preview: result.preview } : {}),
+        ready: result.ready,
+        status: result.ready ? 'ready' : 'review',
+        summary: `${actionLabel(result.action)}: ${selectorTestSummary(
+          result,
+        )}`,
+      };
+    }
+
+    if (!onTestSelector) {
+      return {
+        details: ['Selector testing is unavailable for this workspace.'],
+        id: node.id,
+        label,
+        ready: false,
+        status: 'skipped',
+        summary: 'Not tested',
+      };
+    }
+
+    const result = await onTestSelector(node.selector);
+
+    if (!result) {
+      return {
+        details: ['The source page did not return a selector test result.'],
+        id: node.id,
+        label,
+        ready: false,
+        status: 'review',
+        summary: 'No result',
+      };
+    }
+
+    const details = selectorFlowTestDetails(result);
+
+    return {
+      details,
+      id: node.id,
+      label,
+      ready: details.length === 0,
+      status: details.length === 0 ? 'ready' : 'review',
+      summary: `${actionLabel(node.type)}: ${selectorTestSummary(result)}`,
+    };
+  }
+
   function applyGeneratedBlueprint(
     nextBlueprint: BlueprintRecipe,
     nextSelectedNodeId?: string,
@@ -447,6 +575,17 @@ export function BlueprintPreview({
         ) : null}
       </header>
 
+      <BlueprintFlowTestPanel
+        generatedCodeInSync={generatedCodeInSync}
+        results={flowTestResults}
+        testing={testingFlow}
+        onTest={
+          onTestSelector || onTestAutomationNode
+            ? () => void testFlow()
+            : undefined
+        }
+      />
+
       <div
         className={`${styles.builder} ${
           editable ? styles.editableBuilder : styles.readOnlyBuilder
@@ -576,6 +715,83 @@ type BlueprintNodeLibraryProps = {
   generatedCodeInSync: boolean;
   onAdd(type: BlueprintNodeType): void;
 };
+
+type BlueprintFlowTestPanelProps = {
+  generatedCodeInSync: boolean;
+  results: BlueprintFlowTestStep[] | undefined;
+  testing: boolean;
+  onTest?: (() => void) | undefined;
+};
+
+function BlueprintFlowTestPanel({
+  generatedCodeInSync,
+  results,
+  testing,
+  onTest,
+}: BlueprintFlowTestPanelProps) {
+  if (!onTest) {
+    return null;
+  }
+
+  const readyCount =
+    results?.filter((result) => result.status === 'ready').length ?? 0;
+  const reviewCount = results?.filter((result) => !result.ready).length ?? 0;
+  const skippedCount =
+    results?.filter((result) => result.status === 'skipped').length ?? 0;
+
+  return (
+    <div className={styles.flowTestPanel}>
+      <div>
+        <strong>Flow preview</strong>
+        <p>
+          Checks every step on the source page without clicking, typing, or
+          downloading.
+        </p>
+      </div>
+      <button
+        className={styles.testAutomation}
+        disabled={!generatedCodeInSync || testing}
+        type="button"
+        onClick={onTest}
+      >
+        {testing ? 'Testing flow...' : 'Test flow'}
+      </button>
+      {results ? (
+        <div className={styles.flowTestResults} aria-live="polite">
+          <span>
+            {readyCount} ready, {reviewCount} need review
+            {skippedCount > 0 ? `, ${skippedCount} skipped` : ''}
+          </span>
+          <ol>
+            {results.map((result) => (
+              <li
+                className={`${styles.flowTestStep} ${
+                  result.status === 'ready'
+                    ? styles.testReady
+                    : result.status === 'skipped'
+                      ? styles.testSkipped
+                      : styles.testReview
+                }`}
+                key={result.id}
+              >
+                <strong>{result.label}</strong>
+                <span>{result.summary}</span>
+                {result.preview ? <p>{result.preview}</p> : null}
+                {result.details.length > 0 ? (
+                  <ul>
+                    {result.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function BlueprintNodeLibrary({
   generatedCodeInSync,
@@ -1386,6 +1602,29 @@ function selectorTestSummary(result: BlueprintSelectorTestResult): string {
   } visible`;
 
   return result.firstTagName ? `${result.firstTagName}: ${summary}` : summary;
+}
+
+function selectorFlowTestDetails(
+  result: BlueprintSelectorTestResult,
+): string[] {
+  const details: string[] = [];
+
+  if (result.matchCount === 0) {
+    details.push('Selector does not match anything on the source page.');
+    return details;
+  }
+
+  if (result.matchCount > 1) {
+    details.push(
+      `Selector matches ${result.matchCount} elements on the source page.`,
+    );
+  }
+
+  if (result.visibleCount === 0) {
+    details.push('No matching elements are visible.');
+  }
+
+  return details;
 }
 
 function selectorConfidenceSummary(

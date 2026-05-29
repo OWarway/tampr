@@ -26,6 +26,8 @@ group changes under the headings below.
   quality.
 - Workspace Blueprint flow diagram canvas with start marker, directional
   connectors, layout-aware node cards, and inspector selection.
+- Workspace Blueprint flow preview that checks every step on the source page
+  without clicking, typing, or downloading.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles
   with code-sync protection.
 - Blueprint node library for adding and removing CSS action nodes in a straight

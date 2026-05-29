@@ -407,6 +407,53 @@ describe('BlueprintPreview', () => {
     expect(await screen.findByText('button: 1 match, 1 visible')).toBeTruthy();
   });
 
+  it('tests the whole flow through safe source-page checks', async () => {
+    const onTestSelector = vi.fn().mockResolvedValue({
+      firstTagName: 'aside',
+      matchCount: 1,
+      visibleCount: 1,
+    });
+    const onTestAutomationNode = vi.fn().mockResolvedValue({
+      action: 'wait-for-element',
+      firstTagName: 'section',
+      issues: [],
+      matchCount: 1,
+      preview: 'Deal',
+      ready: true,
+      visibleCount: 1,
+    });
+    const blueprint = flowPreviewRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onTestSelector={onTestSelector}
+        onTestAutomationNode={onTestAutomationNode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test flow' }));
+
+    await waitFor(() =>
+      expect(onTestSelector).toHaveBeenCalledWith('aside.signup'),
+    );
+    await waitFor(() =>
+      expect(onTestAutomationNode).toHaveBeenCalledWith({
+        selector: '[data-testid="deal"]',
+        type: 'wait-for-element',
+        requireVisible: true,
+      }),
+    );
+    expect(await screen.findByText('2 ready, 0 need review')).toBeTruthy();
+    expect(screen.getByText('Hide: aside: 1 match, 1 visible')).toBeTruthy();
+    expect(
+      screen.getByText('Wait for element: section: 1 match, 1 visible'),
+    ).toBeTruthy();
+    expect(screen.getByText('Deal')).toBeTruthy();
+  });
+
   it('applies selector repair suggestions from the source page test', async () => {
     const onChange = vi.fn();
     const onTestSelector = vi.fn().mockResolvedValue({
@@ -865,6 +912,46 @@ function selectorMeta(strategy: 'attribute' | 'class' | 'id') {
     strategy,
     usesNthOfType: false,
   };
+}
+
+function flowPreviewRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Preview flow',
+    graph: {
+      nodes: [
+        {
+          id: 'hide-signup',
+          enabled: true,
+          label: 'Hide signup',
+          selector: 'aside.signup',
+          selectorMeta: selectorMeta('class'),
+          type: 'hide',
+        },
+        {
+          id: 'wait-for-deal',
+          enabled: true,
+          label: 'Wait for deal',
+          requireVisible: true,
+          selector: '[data-testid="deal"]',
+          selectorMeta: selectorMeta('attribute'),
+          type: 'wait-for-element',
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-wait-for-deal',
+          fromNodeId: 'hide-signup',
+          fromPort: 'success',
+          toNodeId: 'wait-for-deal',
+        },
+      ],
+      layout: {
+        'hide-signup': { x: 0, y: 0 },
+        'wait-for-deal': { x: 220, y: 0 },
+      },
+    },
+  });
 }
 
 function automationRecipe(): BlueprintRecipe {

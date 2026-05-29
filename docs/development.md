@@ -132,6 +132,13 @@ node cards, the existing node library, and the existing inspector. Keep the
 canvas custom and dependency-light until branching, drag positioning, or
 multi-port connections are proven necessary.
 
+The workspace flow preview runs the existing safe source-page checks in order
+for every enabled node. CSS nodes use selector tests; automation nodes use
+automation node tests. This preview is intentionally non-mutating: it must not
+click, type into fields, submit forms, execute custom code, or start downloads.
+Keep full flow execution separate from this preview until step-by-step
+confirmation and cancellation are explicit.
+
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,
 clicks that look like submit/buy/send/delete controls, hidden click targets,

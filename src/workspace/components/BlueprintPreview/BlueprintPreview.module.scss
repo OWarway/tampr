@@ -70,6 +70,78 @@
   color: #7d4a16;
 }
 
+.flowTestPanel {
+  align-items: start;
+  background: #f7fbf8;
+  border: 1px solid #dbe3de;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+
+  strong {
+    color: #14201b;
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  p {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    margin: 0;
+  }
+}
+
+.flowTestResults {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+
+  > span {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  ol,
+  ul {
+    margin: 0;
+  }
+
+  ol {
+    display: grid;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+  }
+
+  ul {
+    display: grid;
+    gap: 4px;
+    padding-left: 16px;
+  }
+}
+
+.flowTestStep {
+  border: 1px solid #c7d2cc;
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  padding: 8px 10px;
+
+  span,
+  li {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+}
+
 .builder {
   align-items: start;
   display: grid;
@@ -535,6 +607,15 @@
 
   strong {
     color: #7d4a16;
+  }
+}
+
+.testSkipped {
+  background: #edf4ef;
+  border-color: #c7d2cc;
+
+  strong {
+    color: #29463d;
   }
 }
 
