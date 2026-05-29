@@ -81,9 +81,10 @@ The popup Blueprint action uses `activeTab` plus `scripting` to run a temporary
 element picker on the current http or https page. The picker returns only the
 chosen action, selector metadata, and optional draft flow to the service worker.
 The page-side builder can append several selected-element actions before saving,
-run a temporary preview against the current page, and return a draft Blueprint
-flow. The service worker creates a normal local snippet in the Blueprints folder,
-syncs runtime registrations, and opens the new snippet in the workspace.
+select draft steps, move them up or down, remove them, run a temporary preview
+against the current page, and return a draft Blueprint flow. The service worker
+creates a normal local snippet in the Blueprints folder, syncs runtime
+registrations, and opens the new snippet in the workspace.
 
 Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
 remove an overlay, make an element sticky, widen a content container, or hide an

@@ -56,6 +56,7 @@ export async function runTamprBlueprintPicker({
 
   return await new Promise<BlueprintPickerResponse>((resolve) => {
     let hoverTarget: Element | undefined;
+    let selectedDraftIndex = -1;
     let selectedPick: BlueprintElementPick | undefined;
     let selectedTarget: Element | undefined;
     let previewStyle: HTMLStyleElement | undefined;
@@ -71,6 +72,9 @@ export async function runTamprBlueprintPicker({
     const flowTitle = document.createElement('strong');
     const flowSteps = document.createElement('div');
     const flowActions = document.createElement('div');
+    const moveUpButton = document.createElement('button');
+    const moveDownButton = document.createElement('button');
+    const removeButton = document.createElement('button');
     const runButton = document.createElement('button');
     const saveButton = document.createElement('button');
     const cancelButton = document.createElement('button');
@@ -165,6 +169,33 @@ export async function runTamprBlueprintPicker({
       'gap: 6px',
     ].join(';');
 
+    moveUpButton.type = 'button';
+    moveUpButton.textContent = 'Up';
+    moveUpButton.style.cssText = flowButtonStyle('#53645b');
+    moveUpButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      moveSelectedDraftNode(-1);
+    });
+
+    moveDownButton.type = 'button';
+    moveDownButton.textContent = 'Down';
+    moveDownButton.style.cssText = flowButtonStyle('#53645b');
+    moveDownButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      moveSelectedDraftNode(1);
+    });
+
+    removeButton.type = 'button';
+    removeButton.textContent = 'Remove';
+    removeButton.style.cssText = flowButtonStyle('#7d4a16');
+    removeButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeSelectedDraftNode();
+    });
+
     runButton.type = 'button';
     runButton.textContent = 'Run';
     runButton.style.cssText = flowButtonStyle('#14594d');
@@ -192,7 +223,14 @@ export async function runTamprBlueprintPicker({
       cancel();
     });
 
-    flowActions.append(runButton, saveButton, cancelButton);
+    flowActions.append(
+      moveUpButton,
+      moveDownButton,
+      removeButton,
+      runButton,
+      saveButton,
+      cancelButton,
+    );
     flowBar.append(flowTitle, flowSteps, flowActions);
 
     palette.style.cssText = [
@@ -471,6 +509,7 @@ export async function runTamprBlueprintPicker({
       }
 
       draftNodes.push(node);
+      selectedDraftIndex = draftNodes.length - 1;
       updateFlowBar();
       updatePaletteInfo(pick);
     }
@@ -498,6 +537,38 @@ export async function runTamprBlueprintPicker({
         pick: firstNode.pick,
         ...(isCssAction(firstNode.action) ? { action: firstNode.action } : {}),
       });
+    }
+
+    function moveSelectedDraftNode(direction: -1 | 1): void {
+      if (selectedDraftIndex < 0) {
+        return;
+      }
+
+      const targetIndex = selectedDraftIndex + direction;
+
+      if (targetIndex < 0 || targetIndex >= draftNodes.length) {
+        return;
+      }
+
+      const [node] = draftNodes.splice(selectedDraftIndex, 1);
+
+      if (!node) {
+        return;
+      }
+
+      draftNodes.splice(targetIndex, 0, node);
+      selectedDraftIndex = targetIndex;
+      updateFlowBar();
+    }
+
+    function removeSelectedDraftNode(): void {
+      if (selectedDraftIndex < 0) {
+        return;
+      }
+
+      draftNodes.splice(selectedDraftIndex, 1);
+      selectedDraftIndex = Math.min(selectedDraftIndex, draftNodes.length - 1);
+      updateFlowBar();
     }
 
     async function runDraft(): Promise<void> {
@@ -578,16 +649,30 @@ export async function runTamprBlueprintPicker({
       flowBar.style.display = hasDraft ? 'flex' : 'none';
       banner.style.display = hasDraft ? 'none' : '';
       flowTitle.textContent = `Tampr Blueprint`;
+      if (!hasDraft) {
+        selectedDraftIndex = -1;
+      }
       flowSteps.replaceChildren(
         ...draftNodes.map((node, index) => {
-          const step = document.createElement('span');
+          const step = document.createElement('button');
 
+          step.type = 'button';
           step.textContent = `${index + 1}. ${nodeLabel(node.action)}`;
           step.style.cssText = [
-            'background: rgba(255, 255, 255, 0.1)',
-            'border: 1px solid rgba(255, 255, 255, 0.16)',
+            'appearance: none',
+            `background: ${
+              selectedDraftIndex === index
+                ? 'rgba(255, 255, 255, 0.24)'
+                : 'rgba(255, 255, 255, 0.1)'
+            }`,
+            `border: 1px solid ${
+              selectedDraftIndex === index
+                ? 'rgba(255, 255, 255, 0.46)'
+                : 'rgba(255, 255, 255, 0.16)'
+            }`,
             'border-radius: 999px',
             'color: #f7fbf8',
+            'cursor: pointer',
             'font: 800 11px/1 Inter, ui-sans-serif, system-ui, sans-serif',
             'max-width: 150px',
             'overflow: hidden',
@@ -595,10 +680,22 @@ export async function runTamprBlueprintPicker({
             'text-overflow: ellipsis',
             'white-space: nowrap',
           ].join(';');
+          step.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            selectedDraftIndex = index;
+            updateFlowBar();
+          });
 
           return step;
         }),
       );
+      moveUpButton.disabled = !hasDraft || selectedDraftIndex <= 0;
+      moveDownButton.disabled =
+        !hasDraft ||
+        selectedDraftIndex < 0 ||
+        selectedDraftIndex >= draftNodes.length - 1;
+      removeButton.disabled = !hasDraft || selectedDraftIndex < 0;
       runButton.toggleAttribute('disabled', !hasDraft);
       saveButton.toggleAttribute('disabled', !hasDraft);
     }

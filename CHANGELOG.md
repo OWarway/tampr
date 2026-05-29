@@ -43,6 +43,8 @@ group changes under the headings below.
   for risky submit, buy, send, delete, and similar targets.
 - Page-side Blueprint draft builder for chaining selected-element actions before
   saving, including run preview and custom-code steps.
+- Page-side Blueprint draft step selection with move up, move down, and remove
+  controls before saving.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.

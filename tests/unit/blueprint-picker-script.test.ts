@@ -326,6 +326,60 @@ describe('runTamprBlueprintPicker', () => {
     });
   });
 
+  it('reorders and removes draft steps before saving', async () => {
+    document.body.innerHTML = `
+      <main>
+        <button data-testid="open">Open</button>
+      </main>
+    `;
+    const button = document.querySelector('button') as HTMLElement;
+
+    stubElementFromPoint(button);
+    stubRect(button);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Wait');
+    clickButton('Click');
+    clickButton('Custom code');
+
+    clickButton('2. Click');
+    clickButton('Up');
+    clickButton('3. Custom code');
+    clickButton('Remove');
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'click',
+          },
+          {
+            action: 'wait-for-element',
+          },
+        ],
+      },
+    });
+  });
+
   it('cancels with Escape', async () => {
     const resultPromise = runTamprBlueprintPicker();
 
