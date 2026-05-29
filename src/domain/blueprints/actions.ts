@@ -13,6 +13,7 @@ export const BLUEPRINT_AUTOMATION_ACTIONS = [
   'set-value',
   'extract-text',
   'download-json',
+  'custom-code',
 ] as const;
 
 export const BLUEPRINT_NODE_TYPES = [
@@ -78,6 +79,10 @@ const BLUEPRINT_AUTOMATION_ACTION_DEFINITIONS = {
   'download-json': {
     label: 'Download JSON',
     description: 'Downloads collected automation values as a JSON file.',
+  },
+  'custom-code': {
+    label: 'Custom code',
+    description: 'Runs a visible custom JavaScript step in the Blueprint flow.',
   },
 } satisfies Record<BlueprintAutomationAction, BlueprintActionDefinition>;
 

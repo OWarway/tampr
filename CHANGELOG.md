@@ -41,6 +41,8 @@ group changes under the headings below.
   with wait-for-element and extract-text steps.
 - Guarded manual click runs with explicit confirmation and source-page refusal
   for risky submit, buy, send, delete, and similar targets.
+- Page-side Blueprint draft builder for chaining selected-element actions before
+  saving, including run preview and custom-code steps.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.

@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe('runTamprBlueprintPicker', () => {
-  it('returns a selected element and action', async () => {
+  it('builds and saves a page-side draft flow', async () => {
     document.body.innerHTML = `
       <main>
         <aside class="subscribe panel">Join the list</aside>
@@ -46,6 +46,7 @@ describe('runTamprBlueprintPicker', () => {
     expect(document.body.textContent).toContain('Make sticky');
     expect(document.body.textContent).toContain('Widen');
     expect(document.body.textContent).toContain('Print cleanup');
+    expect(document.body.textContent).toContain('Custom code');
 
     const hideButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent === 'Hide',
@@ -55,9 +56,51 @@ describe('runTamprBlueprintPicker', () => {
       new MouseEvent('click', { bubbles: true, cancelable: true }),
     );
 
+    expect(document.body.textContent).toContain('1. Hide');
+
+    const runButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Run',
+    );
+
+    runButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
+    expect(
+      document.querySelector('[data-tampr-blueprint-preview]')?.textContent,
+    ).toContain('aside.subscribe.panel { display: none !important; }');
+
+    const saveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Save',
+    );
+
+    saveButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
     await expect(resultPromise).resolves.toEqual({
       ok: true,
       action: 'hide',
+      draft: {
+        nodes: [
+          {
+            action: 'hide',
+            label: 'Hide Join the list',
+            pick: {
+              label: 'Join the list',
+              selector: 'aside.subscribe.panel',
+              selectorMeta: {
+                matchCount: 1,
+                segmentCount: 1,
+                strategy: 'class',
+                usesNthOfType: false,
+              },
+              tagName: 'aside',
+              text: 'Join the list',
+            },
+          },
+        ],
+      },
       pick: {
         label: 'Join the list',
         selector: 'aside.subscribe.panel',
@@ -72,6 +115,7 @@ describe('runTamprBlueprintPicker', () => {
       },
     });
     expect(document.querySelector('[data-tampr-blueprint-picker]')).toBeNull();
+    expect(document.querySelector('[data-tampr-blueprint-preview]')).toBeNull();
   });
 
   it('returns new CSS action choices from the palette', async () => {
@@ -111,9 +155,24 @@ describe('runTamprBlueprintPicker', () => {
       new MouseEvent('click', { bubbles: true, cancelable: true }),
     );
 
+    const saveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Save',
+    );
+
+    saveButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
     await expect(resultPromise).resolves.toMatchObject({
       ok: true,
       action: 'widen',
+      draft: {
+        nodes: [
+          {
+            action: 'widen',
+          },
+        ],
+      },
       pick: {
         selector: 'article.content',
       },
@@ -173,6 +232,96 @@ describe('runTamprBlueprintPicker', () => {
         },
         tagName: 'button',
         text: 'Buy now',
+      },
+    });
+  });
+
+  it('continues picking elements and saves chained automation actions', async () => {
+    document.body.innerHTML = `
+      <main>
+        <button data-testid="open">Open</button>
+        <h1 data-testid="headline">Deal</h1>
+      </main>
+    `;
+    const button = document.querySelector('button') as HTMLElement;
+    const headline = document.querySelector('h1') as HTMLElement;
+    let currentTarget = button;
+
+    stubElementFromPointGetter(() => currentTarget);
+    stubRect(button);
+    stubRect(headline);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Click');
+    clickButton('Pick next');
+
+    currentTarget = headline;
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Extract');
+    clickButton('Custom code');
+    expect(document.body.textContent).toContain('1. Click');
+    expect(document.body.textContent).toContain('2. Extract text');
+    expect(document.body.textContent).toContain('3. Custom code');
+
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'click',
+            pick: {
+              selector: 'button[data-testid="open"]',
+            },
+          },
+          {
+            action: 'extract-text',
+            variableName: 'value2',
+            pick: {
+              selector: 'h1[data-testid="headline"]',
+            },
+          },
+          {
+            action: 'custom-code',
+            code: expect.stringContaining('values stores'),
+            pick: {
+              selector: 'h1[data-testid="headline"]',
+            },
+          },
+        ],
       },
     });
   });
@@ -237,9 +386,24 @@ describe('runTamprBlueprintPicker', () => {
       new MouseEvent('click', { bubbles: true, cancelable: true }),
     );
 
+    const saveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Save',
+    );
+
+    saveButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
     await expect(resultPromise).resolves.toMatchObject({
       ok: true,
       action: 'highlight',
+      draft: {
+        nodes: [
+          {
+            action: 'highlight',
+          },
+        ],
+      },
       pick: {
         selector: 'button:nth-of-type(2)',
         selectorMeta: {
@@ -254,10 +418,24 @@ describe('runTamprBlueprintPicker', () => {
 });
 
 function stubElementFromPoint(element: Element): void {
+  stubElementFromPointGetter(() => element);
+}
+
+function stubElementFromPointGetter(getElement: () => Element): void {
   Object.defineProperty(document, 'elementFromPoint', {
     configurable: true,
-    value: vi.fn(() => element),
+    value: vi.fn(() => getElement()),
   });
+}
+
+function clickButton(label: string): void {
+  const button = [...document.querySelectorAll('button')].find(
+    (candidate) => candidate.textContent === label,
+  );
+
+  button?.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, cancelable: true }),
+  );
 }
 
 function stubRect(element: HTMLElement): void {

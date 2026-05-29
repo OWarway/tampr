@@ -458,6 +458,9 @@ export function BlueprintPreview({
             onEnabledChange={(enabled) =>
               editNode(selectedNode.id, { enabled }, { regeneratesCode: true })
             }
+            onCodeChange={(code) =>
+              editNode(selectedNode.id, { code }, { regeneratesCode: true })
+            }
             onLabelChange={(label) =>
               editNode(selectedNode.id, { label }, { regeneratesCode: true })
             }
@@ -662,6 +665,7 @@ type BlueprintNodeInspectorProps = {
   generatedCodeInSync: boolean;
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
+  onCodeChange(code: string): void;
   onFilenameChange(filename: string): void;
   onLabelChange(label: string): void;
   onMoveDown(): void;
@@ -696,6 +700,7 @@ function BlueprintNodeInspector({
   generatedCodeInSync,
   node,
   onEnabledChange,
+  onCodeChange,
   onFilenameChange,
   onLabelChange,
   onMoveDown,
@@ -799,6 +804,7 @@ function BlueprintNodeInspector({
           <BlueprintAutomationSettings
             generatedCodeInSync={generatedCodeInSync}
             node={node}
+            onCodeChange={onCodeChange}
             onFilenameChange={onFilenameChange}
             onRequireVisibleChange={onRequireVisibleChange}
             onTimeoutChange={onTimeoutChange}
@@ -1035,6 +1041,7 @@ function BlueprintSafetySummary({
 type BlueprintAutomationSettingsProps = {
   generatedCodeInSync: boolean;
   node: BlueprintAutomationNode;
+  onCodeChange(code: string): void;
   onFilenameChange(filename: string): void;
   onRequireVisibleChange(requireVisible: boolean): void;
   onTimeoutChange(timeoutMs: number): void;
@@ -1046,6 +1053,7 @@ type BlueprintAutomationSettingsProps = {
 function BlueprintAutomationSettings({
   generatedCodeInSync,
   node,
+  onCodeChange,
   onFilenameChange,
   onRequireVisibleChange,
   onTimeoutChange,
@@ -1149,6 +1157,19 @@ function BlueprintAutomationSettings({
           </label>
         </>
       ) : null}
+
+      {node.type === 'custom-code' ? (
+        <label className={styles.inspectorField}>
+          <span>Code</span>
+          <textarea
+            aria-label="Automation custom code"
+            disabled={!generatedCodeInSync}
+            rows={6}
+            value={node.code}
+            onChange={(event) => onCodeChange(event.currentTarget.value)}
+          />
+        </label>
+      ) : null}
     </div>
   );
 }
@@ -1178,6 +1199,7 @@ function automationNodeTestInput(
     selector: node.selector,
     type: node.type,
     ...('filename' in node ? { filename: node.filename } : {}),
+    ...('code' in node ? { code: node.code } : {}),
     ...('requireVisible' in node
       ? { requireVisible: node.requireVisible }
       : {}),

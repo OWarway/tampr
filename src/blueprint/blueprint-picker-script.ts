@@ -1,11 +1,18 @@
 import type {
   BlueprintAction,
   BlueprintElementPick,
+  BlueprintFlowDraftNode,
 } from '../domain/blueprint-snippets';
+import type { BlueprintNodeAction } from '../domain/blueprints/actions';
+
+export type BlueprintDraftFlow = {
+  nodes: BlueprintFlowDraftNode[];
+};
 
 export type BlueprintPickerResponse =
   | {
       action?: BlueprintAction;
+      draft?: BlueprintDraftFlow;
       ok: true;
       pick: BlueprintElementPick;
     }
@@ -51,10 +58,22 @@ export async function runTamprBlueprintPicker({
     let hoverTarget: Element | undefined;
     let selectedPick: BlueprintElementPick | undefined;
     let selectedTarget: Element | undefined;
+    let previewStyle: HTMLStyleElement | undefined;
+
+    type DraftNode = BlueprintFlowDraftNode;
+
+    const draftNodes: DraftNode[] = [];
 
     const root = document.createElement('div');
     const highlight = document.createElement('div');
     const banner = document.createElement('div');
+    const flowBar = document.createElement('div');
+    const flowTitle = document.createElement('strong');
+    const flowSteps = document.createElement('div');
+    const flowActions = document.createElement('div');
+    const runButton = document.createElement('button');
+    const saveButton = document.createElement('button');
+    const cancelButton = document.createElement('button');
     const palette = document.createElement('div');
     const paletteInfo = document.createElement('div');
     const paletteTitle = document.createElement('strong');
@@ -105,7 +124,76 @@ export async function runTamprBlueprintPicker({
     banner.textContent =
       mode === 'selector'
         ? 'Tampr Blueprint: pick a replacement element.'
-        : 'Tampr Blueprint: pick an element, then choose what to create.';
+        : 'Tampr Blueprint: pick an element, choose actions, then run or save the flow.';
+
+    flowBar.style.cssText = [
+      'align-items: center',
+      'background: #14201b',
+      'border: 1px solid rgba(255, 255, 255, 0.18)',
+      'border-radius: 8px',
+      'box-shadow: 0 16px 40px rgba(20, 32, 27, 0.22)',
+      'color: #f7fbf8',
+      'display: none',
+      'gap: 10px',
+      'left: 50%',
+      'max-width: min(860px, calc(100vw - 28px))',
+      'min-height: 42px',
+      'padding: 8px 10px',
+      'pointer-events: auto',
+      'position: fixed',
+      'top: 14px',
+      'transform: translateX(-50%)',
+    ].join(';');
+
+    flowTitle.style.cssText = [
+      'font: 900 12px/1.2 Inter, ui-sans-serif, system-ui, sans-serif',
+      'white-space: nowrap',
+    ].join(';');
+    flowTitle.textContent = 'Tampr Blueprint';
+
+    flowSteps.style.cssText = [
+      'display: flex',
+      'flex: 1 1 auto',
+      'gap: 6px',
+      'min-width: 0',
+      'overflow: hidden',
+    ].join(';');
+
+    flowActions.style.cssText = [
+      'display: flex',
+      'flex: 0 0 auto',
+      'gap: 6px',
+    ].join(';');
+
+    runButton.type = 'button';
+    runButton.textContent = 'Run';
+    runButton.style.cssText = flowButtonStyle('#14594d');
+    runButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void runDraft();
+    });
+
+    saveButton.type = 'button';
+    saveButton.textContent = 'Save';
+    saveButton.style.cssText = flowButtonStyle('#d44d3a');
+    saveButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      saveDraft();
+    });
+
+    cancelButton.type = 'button';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.cssText = flowButtonStyle('#53645b');
+    cancelButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      cancel();
+    });
+
+    flowActions.append(runButton, saveButton, cancelButton);
+    flowBar.append(flowTitle, flowSteps, flowActions);
 
     palette.style.cssText = [
       'background: #f7fbf8',
@@ -166,22 +254,43 @@ export async function runTamprBlueprintPicker({
       );
     } else {
       paletteActions.append(
-        createPaletteButton('Hide', '#14594d', () => finish('hide')),
-        createPaletteButton('Highlight', '#d44d3a', () => finish('highlight')),
+        createPaletteButton('Hide', '#14594d', () => appendAction('hide')),
+        createPaletteButton('Highlight', '#d44d3a', () =>
+          appendAction('highlight'),
+        ),
         createPaletteButton('Remove overlay', '#7d4a16', () =>
-          finish('remove-overlay'),
+          appendAction('remove-overlay'),
         ),
-        createPaletteButton('Make sticky', '#2d7d56', () => finish('sticky')),
-        createPaletteButton('Widen', '#29463d', () => finish('widen')),
+        createPaletteButton('Make sticky', '#2d7d56', () =>
+          appendAction('sticky'),
+        ),
+        createPaletteButton('Widen', '#29463d', () => appendAction('widen')),
         createPaletteButton('Print cleanup', '#53645b', () =>
-          finish('print-cleanup'),
+          appendAction('print-cleanup'),
         ),
+        createPaletteButton('Wait', '#14594d', () =>
+          appendAction('wait-for-element'),
+        ),
+        createPaletteButton('Click', '#29463d', () => appendAction('click')),
+        createPaletteButton('Set value', '#7d4a16', () =>
+          appendAction('set-value'),
+        ),
+        createPaletteButton('Extract', '#2d7d56', () =>
+          appendAction('extract-text'),
+        ),
+        createPaletteButton('Download JSON', '#29463d', () =>
+          appendAction('download-json'),
+        ),
+        createPaletteButton('Custom code', '#53645b', () =>
+          appendAction('custom-code'),
+        ),
+        createPaletteButton('Pick next', '#14594d', pickNext),
         createPaletteButton('Cancel', '#53645b', cancel),
       );
     }
     palette.append(paletteInfo, paletteActions);
 
-    root.append(highlight, banner, palette);
+    root.append(highlight, banner, flowBar, palette);
     document.body.append(root);
 
     document.addEventListener('mousemove', handleMouseMove, true);
@@ -215,6 +324,20 @@ export async function runTamprBlueprintPicker({
         onClick();
       });
       return button;
+    }
+
+    function flowButtonStyle(color: string): string {
+      return [
+        'appearance: none',
+        `background: ${color}`,
+        'border: 1px solid transparent',
+        'border-radius: 6px',
+        'color: #fff',
+        'cursor: pointer',
+        'font: 900 12px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+        'min-height: 30px',
+        'padding: 0 10px',
+      ].join(';');
     }
 
     function handleMouseMove(event: MouseEvent): void {
@@ -320,6 +443,328 @@ export async function runTamprBlueprintPicker({
       palette.style.top = `${top}px`;
     }
 
+    function appendAction(action: BlueprintNodeAction): void {
+      if (!selectedTarget) {
+        return;
+      }
+
+      const pick = selectedPick ?? describePick(selectedTarget);
+      const node: DraftNode = {
+        action,
+        label: `${nodeLabel(action)} ${pick.label}`.slice(0, 120),
+        pick,
+      };
+
+      if (action === 'set-value') {
+        node.value = window.prompt('Value to set for this field', '') ?? '';
+      }
+
+      if (action === 'extract-text') {
+        node.variableName = uniqueVariableName(draftNodes.length + 1);
+      }
+
+      if (action === 'custom-code') {
+        node.code = [
+          '// element is the selected page element.',
+          '// values stores extracted Blueprint values.',
+        ].join('\n');
+      }
+
+      draftNodes.push(node);
+      updateFlowBar();
+      updatePaletteInfo(pick);
+    }
+
+    function pickNext(): void {
+      selectedPick = undefined;
+      selectedTarget = undefined;
+      hoverTarget = undefined;
+      palette.style.display = 'none';
+      highlight.style.display = 'none';
+      banner.style.display = draftNodes.length > 0 ? 'none' : '';
+    }
+
+    function saveDraft(): void {
+      const firstNode = draftNodes[0];
+
+      if (!firstNode) {
+        return;
+      }
+
+      cleanup();
+      resolve({
+        ok: true,
+        draft: { nodes: draftNodes },
+        pick: firstNode.pick,
+        ...(isCssAction(firstNode.action) ? { action: firstNode.action } : {}),
+      });
+    }
+
+    async function runDraft(): Promise<void> {
+      if (draftNodes.length === 0) {
+        return;
+      }
+
+      const values: Record<string, unknown> = {};
+
+      previewStyle?.remove();
+      previewStyle = document.createElement('style');
+      previewStyle.setAttribute('data-tampr-blueprint-preview', 'true');
+      previewStyle.textContent = draftNodes
+        .map(previewCssForNode)
+        .filter(Boolean)
+        .join('\n\n');
+
+      if (previewStyle.textContent) {
+        document.head.append(previewStyle);
+      }
+
+      flowTitle.textContent = 'Running Blueprint';
+
+      try {
+        for (const node of draftNodes) {
+          if (isCssAction(node.action)) {
+            continue;
+          }
+
+          if (node.action === 'download-json') {
+            continue;
+          }
+
+          const element = await waitForDraftElement(node);
+
+          if (node.action === 'wait-for-element') {
+            continue;
+          }
+
+          if (node.action === 'click') {
+            assertSafeClickTarget(element);
+            (element as HTMLElement).click();
+            continue;
+          }
+
+          if (node.action === 'set-value') {
+            setDraftFieldValue(element, node.value ?? '');
+            continue;
+          }
+
+          if (node.action === 'extract-text') {
+            values[node.variableName ?? uniqueVariableName(1)] =
+              visibleText(element);
+            continue;
+          }
+
+          if (node.action === 'custom-code') {
+            const run = new Function(
+              'element',
+              'values',
+              `"use strict";\n${node.code ?? ''}`,
+            );
+
+            await run(element, values);
+          }
+        }
+
+        flowTitle.textContent = 'Run complete';
+      } catch (error: unknown) {
+        flowTitle.textContent =
+          error instanceof Error ? error.message : 'Run failed';
+      }
+    }
+
+    function updateFlowBar(): void {
+      const hasDraft = draftNodes.length > 0;
+
+      flowBar.style.display = hasDraft ? 'flex' : 'none';
+      banner.style.display = hasDraft ? 'none' : '';
+      flowTitle.textContent = `Tampr Blueprint`;
+      flowSteps.replaceChildren(
+        ...draftNodes.map((node, index) => {
+          const step = document.createElement('span');
+
+          step.textContent = `${index + 1}. ${nodeLabel(node.action)}`;
+          step.style.cssText = [
+            'background: rgba(255, 255, 255, 0.1)',
+            'border: 1px solid rgba(255, 255, 255, 0.16)',
+            'border-radius: 999px',
+            'color: #f7fbf8',
+            'font: 800 11px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+            'max-width: 150px',
+            'overflow: hidden',
+            'padding: 6px 8px',
+            'text-overflow: ellipsis',
+            'white-space: nowrap',
+          ].join(';');
+
+          return step;
+        }),
+      );
+      runButton.toggleAttribute('disabled', !hasDraft);
+      saveButton.toggleAttribute('disabled', !hasDraft);
+    }
+
+    function previewCssForNode(node: DraftNode): string {
+      switch (node.action) {
+        case 'hide':
+          return `${node.pick.selector} { display: none !important; }`;
+        case 'highlight':
+          return `${node.pick.selector} { outline: 3px solid #d44d3a !important; outline-offset: 3px !important; }`;
+        case 'remove-overlay':
+          return `${node.pick.selector} { display: none !important; pointer-events: none !important; }\nhtml, body { overflow: auto !important; }`;
+        case 'sticky':
+          return `${node.pick.selector} { position: sticky !important; top: 0 !important; z-index: 2147483646 !important; }`;
+        case 'widen':
+          return `${node.pick.selector} { max-width: none !important; width: min(100%, 1200px) !important; }`;
+        case 'print-cleanup':
+          return `@media print { ${node.pick.selector} { display: none !important; } }`;
+        default:
+          return '';
+      }
+    }
+
+    function isCssAction(
+      action: BlueprintNodeAction,
+    ): action is BlueprintAction {
+      return (
+        action === 'hide' ||
+        action === 'highlight' ||
+        action === 'remove-overlay' ||
+        action === 'sticky' ||
+        action === 'widen' ||
+        action === 'print-cleanup'
+      );
+    }
+
+    function nodeLabel(action: BlueprintNodeAction): string {
+      switch (action) {
+        case 'hide':
+          return 'Hide';
+        case 'highlight':
+          return 'Highlight';
+        case 'remove-overlay':
+          return 'Remove overlay';
+        case 'sticky':
+          return 'Make sticky';
+        case 'widen':
+          return 'Widen';
+        case 'print-cleanup':
+          return 'Print cleanup';
+        case 'wait-for-element':
+          return 'Wait';
+        case 'click':
+          return 'Click';
+        case 'set-value':
+          return 'Set value';
+        case 'extract-text':
+          return 'Extract text';
+        case 'download-json':
+          return 'Download JSON';
+        case 'custom-code':
+          return 'Custom code';
+      }
+    }
+
+    function uniqueVariableName(index: number): string {
+      return `value${index}`;
+    }
+
+    async function waitForDraftElement(node: DraftNode): Promise<Element> {
+      const startedAt = Date.now();
+
+      while (Date.now() - startedAt <= 5000) {
+        const element = document.querySelector(node.pick.selector);
+
+        if (element && isVisibleElement(element)) {
+          return element;
+        }
+
+        await sleep(100);
+      }
+
+      throw new Error(`Step ${nodeLabel(node.action)} could not find target.`);
+    }
+
+    function isVisibleElement(element: Element): boolean {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.visibility !== 'collapse' &&
+        style.opacity !== '0'
+      );
+    }
+
+    function assertSafeClickTarget(element: Element): void {
+      const copy = [
+        element.getAttribute('aria-label'),
+        element.getAttribute('title'),
+        element.textContent,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const riskyWords = [
+        'buy',
+        'checkout',
+        'delete',
+        'order',
+        'pay',
+        'purchase',
+        'publish',
+        'remove',
+        'send',
+        'submit',
+      ];
+
+      if (!(element instanceof HTMLElement)) {
+        throw new Error('Click target is not an HTML element.');
+      }
+
+      if (riskyWords.some((word) => copy.includes(word))) {
+        throw new Error('Click target needs manual review.');
+      }
+    }
+
+    function setDraftFieldValue(element: Element, value: string): void {
+      if (
+        !(
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement
+        )
+      ) {
+        throw new Error('Set value target is not a form field.');
+      }
+
+      if (element instanceof HTMLInputElement) {
+        const blockedTypes = [
+          'button',
+          'checkbox',
+          'file',
+          'hidden',
+          'password',
+          'radio',
+          'submit',
+        ];
+
+        if (blockedTypes.includes(element.type)) {
+          throw new Error('Set value target is a protected field.');
+        }
+      }
+
+      element.value = value;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function sleep(ms: number): Promise<void> {
+      return new Promise((resolveSleep) => window.setTimeout(resolveSleep, ms));
+    }
+
     function finish(action?: BlueprintAction): void {
       if (!selectedTarget) {
         return;
@@ -345,6 +790,7 @@ export async function runTamprBlueprintPicker({
       document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('resize', redraw, true);
       window.removeEventListener('scroll', redraw, true);
+      previewStyle?.remove();
       root.remove();
       delete pickerWindow.__tamprBlueprintPickerActive;
     }

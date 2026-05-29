@@ -109,6 +109,91 @@ describe('BlueprintController', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it('creates a snippet from a page-side Blueprint draft flow', async () => {
+    const snippets = new MemorySnippetStore();
+    const runtimeSync = vi.fn(async () => readyRuntime());
+    const create = vi.fn().mockResolvedValue(undefined);
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync,
+      scripting: {
+        executeScript: vi.fn().mockResolvedValue([
+          {
+            result: {
+              ok: true,
+              action: 'click',
+              pick: {
+                label: 'Open panel',
+                selector: 'button[data-testid="open"]',
+                selectorMeta: selectorMeta(),
+                tagName: 'button',
+              },
+              draft: {
+                nodes: [
+                  {
+                    action: 'click',
+                    pick: {
+                      label: 'Open panel',
+                      selector: 'button[data-testid="open"]',
+                      selectorMeta: selectorMeta(),
+                      tagName: 'button',
+                    },
+                  },
+                  {
+                    action: 'custom-code',
+                    code: 'values.opened = true;',
+                    pick: {
+                      label: 'Panel',
+                      selector: '[data-testid="panel"]',
+                      selectorMeta: selectorMeta(),
+                      tagName: 'section',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      },
+      snippets,
+      tabs: {
+        create,
+        query: vi.fn().mockResolvedValue([
+          {
+            id: 42,
+            url: 'https://docs.example.com/articles/intro?secret=1#comments',
+          },
+        ]),
+        update: vi.fn(),
+      },
+    });
+
+    await expect(controller.startCreator()).resolves.toEqual({
+      ok: true,
+      snippetId: 'blueprint-snippet',
+      status: 'created',
+    });
+    expect(snippets.values[0]).toMatchObject({
+      folder: 'Blueprints',
+      name: 'Click Open panel + 1 steps',
+      js: expect.stringContaining('values.opened = true;'),
+    });
+    expect(snippets.values[0]?.blueprint?.graph.nodes).toEqual([
+      expect.objectContaining({
+        id: 'click-step-1',
+        type: 'click',
+      }),
+      expect.objectContaining({
+        id: 'custom-code-step-2',
+        type: 'custom-code',
+      }),
+    ]);
+    expect(runtimeSync).toHaveBeenCalledWith(snippets.values);
+    expect(create).toHaveBeenCalled();
+  });
+
   it('rejects unsupported active pages', async () => {
     const controller = new BlueprintController({
       createId: () => 'blueprint-snippet',
@@ -501,5 +586,14 @@ function readyRuntime(): RuntimeStatus {
     registrations: 1,
     skipped: [],
     errors: [],
+  };
+}
+
+function selectorMeta() {
+  return {
+    matchCount: 1,
+    segmentCount: 1,
+    strategy: 'attribute' as const,
+    usesNthOfType: false,
   };
 }

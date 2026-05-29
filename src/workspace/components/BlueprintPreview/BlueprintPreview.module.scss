@@ -353,7 +353,8 @@
   gap: 7px;
   min-width: 0;
 
-  input {
+  input,
+  textarea {
     background: #fff;
     border: 1px solid #b9cac1;
     border-radius: 6px;
@@ -361,6 +362,16 @@
     min-height: 38px;
     min-width: 0;
     padding: 0 10px;
+  }
+
+  textarea {
+    font:
+      700 12px/1.45 ui-monospace,
+      'SFMono-Regular',
+      Consolas,
+      monospace;
+    padding-block: 8px;
+    resize: vertical;
   }
 
   select {

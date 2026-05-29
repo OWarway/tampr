@@ -1,6 +1,8 @@
 import {
+  buildBlueprintFlowSnippetDraft,
   buildBlueprintSnippetDraft,
   type BlueprintAction,
+  type BlueprintFlowDraftNode,
   type BlueprintElementPick,
 } from '../domain/blueprint-snippets';
 import { buildSnippet, type Snippet } from '../domain/snippets';
@@ -60,6 +62,9 @@ type BlueprintInjectionResult = {
     ok: boolean;
     pick?: BlueprintElementPick;
     reason?: string;
+    draft?: {
+      nodes: BlueprintFlowDraftNode[];
+    };
   };
 };
 
@@ -89,6 +94,26 @@ type BlueprintAutomationNodeRunInjectionResult = {
     result?: BlueprintAutomationNodeRunResult;
   };
 };
+
+type BlueprintCreateResult = {
+  action?: BlueprintAction;
+  pick?: BlueprintElementPick;
+};
+
+function buildSingleActionDraft(
+  pickerResponse: BlueprintCreateResult,
+  pageUrl: string,
+) {
+  if (!pickerResponse.action || !pickerResponse.pick) {
+    throw new Error('Blueprint creator returned an incomplete selection.');
+  }
+
+  return buildBlueprintSnippetDraft({
+    action: pickerResponse.action,
+    pageUrl,
+    pick: pickerResponse.pick,
+  });
+}
 
 export class BlueprintController {
   constructor(private readonly dependencies: BlueprintControllerDependencies) {}
@@ -179,19 +204,17 @@ export class BlueprintController {
       return { ok: true, status: 'cancelled' };
     }
 
-    if (!pickerResponse.action || !pickerResponse.pick) {
-      throw new Error('Blueprint creator returned an incomplete selection.');
-    }
-
     const snippetId = this.dependencies.createId();
+    const draft = pickerResponse.draft
+      ? buildBlueprintFlowSnippetDraft({
+          nodes: pickerResponse.draft.nodes,
+          pageUrl: tab.pageUrl,
+        })
+      : buildSingleActionDraft(pickerResponse, tab.pageUrl);
     const snippet = buildSnippet({
       id: snippetId,
       now: this.dependencies.now(),
-      draft: buildBlueprintSnippetDraft({
-        action: pickerResponse.action,
-        pageUrl: tab.pageUrl,
-        pick: pickerResponse.pick,
-      }),
+      draft,
     });
     const snippets = await this.dependencies.snippets.save(snippet);
 

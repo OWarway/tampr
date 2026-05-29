@@ -715,6 +715,39 @@ describe('BlueprintPreview', () => {
       expect.stringContaining('"value": "oliver@example.com"'),
     );
   });
+
+  it('edits custom code nodes and regenerates JavaScript', () => {
+    const onChange = vi.fn();
+    const blueprint = customCodeRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Automation custom code'), {
+      target: { value: 'values.ready = true;' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              code: 'values.ready = true;',
+              type: 'custom-code',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('values.ready = true;'),
+    );
+  });
 });
 
 function twoNodeRecipe(): BlueprintRecipe {
@@ -854,6 +887,29 @@ function setValueRecipe(): BlueprintRecipe {
       edges: [],
       layout: {
         'set-email': { x: 0, y: 0 },
+      },
+    },
+  });
+}
+
+function customCodeRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Custom code',
+    graph: {
+      nodes: [
+        {
+          id: 'custom-code',
+          code: '// ready',
+          enabled: true,
+          selector: 'main',
+          selectorMeta: selectorMeta('attribute'),
+          type: 'custom-code',
+        },
+      ],
+      edges: [],
+      layout: {
+        'custom-code': { x: 0, y: 0 },
       },
     },
   });

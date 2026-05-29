@@ -387,6 +387,51 @@ body {
     expect(js).toContain('globalThis.Tampr.download');
   });
 
+  it('compiles custom code nodes into visible JavaScript steps', () => {
+    const recipe = BlueprintRecipeSchema.parse({
+      version: BLUEPRINT_RECIPE_VERSION,
+      name: 'Custom flow',
+      graph: {
+        nodes: [
+          {
+            ...node('custom-step', 'custom-code', 'main'),
+            code: 'values.custom = element.textContent;',
+          },
+        ],
+        edges: [],
+        layout: {
+          'custom-step': { x: 0, y: 0 },
+        },
+      },
+    });
+    const js = compileBlueprintJavaScript(recipe);
+
+    expect(js).toContain('"type": "custom-code"');
+    expect(js).toContain('await runCustomCode(step, element);');
+    expect(js).toContain('values.custom = element.textContent;');
+  });
+
+  it('updates custom code nodes and regenerates JavaScript', () => {
+    const recipe = BlueprintRecipeSchema.parse({
+      version: BLUEPRINT_RECIPE_VERSION,
+      name: 'Custom flow',
+      graph: {
+        nodes: [node('custom-step', 'custom-code', 'main')],
+        edges: [],
+        layout: {
+          'custom-step': { x: 0, y: 0 },
+        },
+      },
+    });
+    const updated = updateBlueprintNode(recipe, 'custom-step', {
+      code: 'values.ready = true;',
+    });
+
+    expect(compileBlueprintJavaScript(updated)).toContain(
+      'values.ready = true;',
+    );
+  });
+
   it('skips disabled automation nodes when compiling JavaScript', () => {
     const recipe = updateBlueprintNode(automationRecipe(), 'click-login', {
       enabled: false,

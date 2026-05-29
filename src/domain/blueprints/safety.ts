@@ -104,6 +104,14 @@ export function assessBlueprintNodeSafety(
     case 'extract-text':
       addTimeoutIssues(node, issues);
       break;
+    case 'custom-code':
+      addTimeoutIssues(node, issues);
+      issues.push({
+        code: 'custom-code-review',
+        level: 'info',
+        message: 'Custom code is user-authored and should be reviewed.',
+      });
+      break;
     case 'download-json':
       if (!node.filename.toLowerCase().endsWith('.json')) {
         issues.push({

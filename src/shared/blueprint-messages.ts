@@ -19,6 +19,7 @@ export type BlueprintSelectorTestResult = {
 };
 
 export type BlueprintAutomationNodeTestInput = {
+  code?: string;
   filename?: string;
   requireVisible?: boolean;
   selector: string;
@@ -248,6 +249,7 @@ function isAutomationNodeTestInput(
 
   return (
     optionalString(value, 'filename', 160) &&
+    optionalString(value, 'code', 10_000) &&
     optionalString(value, 'value', 10_000) &&
     optionalString(value, 'valueFrom', 80) &&
     optionalString(value, 'variableName', 80)

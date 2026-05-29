@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BLUEPRINT_SNIPPET_FOLDER,
+  buildBlueprintFlowSnippetDraft,
   buildBlueprintSnippetDraft,
 } from '../../src/domain/blueprint-snippets';
 import { BLUEPRINT_RECIPE_VERSION } from '../../src/domain/blueprints/recipe';
@@ -112,6 +113,68 @@ body {
         },
       }),
     ).toThrow('Blueprints need an http or https page.');
+  });
+
+  it('creates multi-step flow snippets from page-side draft nodes', () => {
+    const draft = buildBlueprintFlowSnippetDraft({
+      pageUrl: 'https://example.com/deals/today?token=private',
+      nodes: [
+        {
+          action: 'click',
+          pick: {
+            label: 'Open panel',
+            selector: 'button[data-testid="open"]',
+            selectorMeta: strongSelectorMeta(),
+            tagName: 'button',
+          },
+        },
+        {
+          action: 'extract-text',
+          pick: {
+            label: 'Deal headline',
+            selector: 'h1[data-testid="deal"]',
+            selectorMeta: strongSelectorMeta(),
+            tagName: 'h1',
+          },
+          variableName: 'headline',
+        },
+        {
+          action: 'custom-code',
+          code: 'values.custom = element.textContent;',
+          pick: {
+            label: 'Deal headline',
+            selector: 'h1[data-testid="deal"]',
+            selectorMeta: strongSelectorMeta(),
+            tagName: 'h1',
+          },
+        },
+      ],
+    });
+
+    expect(draft.name).toBe('Click Open panel + 2 steps');
+    expect(draft.matches).toEqual(['https://example.com/deals/today*']);
+    expect(draft.css).toBe('');
+    expect(draft.js).toContain('"type": "click"');
+    expect(draft.js).toContain('"type": "custom-code"');
+    expect(draft.js).toContain('values.custom = element.textContent;');
+    expect(draft.blueprint?.graph.nodes).toEqual([
+      expect.objectContaining({
+        id: 'click-step-1',
+        selector: 'button[data-testid="open"]',
+        type: 'click',
+      }),
+      expect.objectContaining({
+        id: 'extract-text-step-2',
+        selector: 'h1[data-testid="deal"]',
+        type: 'extract-text',
+        variableName: 'headline',
+      }),
+      expect.objectContaining({
+        code: 'values.custom = element.textContent;',
+        id: 'custom-code-step-3',
+        type: 'custom-code',
+      }),
+    ]);
   });
 });
 

@@ -65,6 +65,12 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
 
       if (step.type === 'download-json') {
         await downloadJson(step);
+        continue;
+      }
+
+      if (step.type === 'custom-code') {
+        const element = await waitForElement(step);
+        await runCustomCode(step, element);
       }
     }
   }
@@ -205,6 +211,17 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
     });
   }
 
+  async function runCustomCode(step, element) {
+    const run = new Function(
+      'element',
+      'values',
+      'step',
+      \`"use strict";\\n\${step.code}\`,
+    );
+
+    await run(element, values, step);
+  }
+
   function sleep(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
@@ -306,6 +323,13 @@ function automationStepDefinition(node: BlueprintAutomationNode) {
         ...(node.valueFrom ? { valueFrom: node.valueFrom } : {}),
         requireVisible: false,
         timeoutMs: 0,
+      };
+    case 'custom-code':
+      return {
+        ...base,
+        code: node.code,
+        requireVisible: node.requireVisible,
+        timeoutMs: node.timeoutMs,
       };
   }
 

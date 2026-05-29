@@ -79,9 +79,11 @@ user-invoked handoff rather than broad tab access.
 
 The popup Blueprint action uses `activeTab` plus `scripting` to run a temporary
 element picker on the current http or https page. The picker returns only the
-chosen action and selector metadata to the service worker. The service worker
-creates a normal local CSS snippet in the Blueprints folder, syncs runtime
-registrations, and opens the new snippet in the workspace.
+chosen action, selector metadata, and optional draft flow to the service worker.
+The page-side builder can append several selected-element actions before saving,
+run a temporary preview against the current page, and return a draft Blueprint
+flow. The service worker creates a normal local snippet in the Blueprints folder,
+syncs runtime registrations, and opens the new snippet in the workspace.
 
 Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
 remove an overlay, make an element sticky, widen a content container, or hide an
@@ -97,11 +99,11 @@ source tab.
 
 Automation Blueprint nodes are domain-supported before they are fully exposed in
 the workspace builder. Recipes can model wait-for-element, click, set-value,
-extract-text, and download-json steps. The JavaScript compiler emits a readable
-local runner with timeouts, visible-element checks, protected-field refusal,
-risky-click refusal, and `Tampr.download()` JSON output. Keep automation
-generated code visible in the normal snippet editor; do not move execution into a
-hidden interpreter.
+extract-text, download-json, and custom-code steps. The JavaScript compiler emits
+a readable local runner with timeouts, visible-element checks, protected-field
+refusal, risky-click refusal, visible custom code execution, and
+`Tampr.download()` JSON output. Keep automation generated code visible in the
+normal snippet editor; do not move execution into a hidden interpreter.
 
 The workspace builder can add automation nodes to the same straight-line flow as
 CSS nodes and edits their core settings in the inspector. Blueprint changes

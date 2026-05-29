@@ -96,6 +96,22 @@ export const BlueprintDownloadJsonNodeSchema =
     valueFrom: BlueprintVariableNameSchema.optional(),
   });
 
+export const BlueprintCustomCodeNodeSchema =
+  BlueprintElementNodeBaseSchema.extend({
+    type: z.literal('custom-code'),
+    code: z
+      .string()
+      .max(10_000)
+      .default(
+        [
+          '// element is the selected page element.',
+          '// values stores extracted Blueprint values.',
+        ].join('\n'),
+      ),
+    requireVisible: z.boolean().default(true),
+    timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
+  });
+
 export const BlueprintNodeSchema = z.discriminatedUnion('type', [
   BlueprintCssNodeSchema,
   BlueprintWaitForElementNodeSchema,
@@ -103,6 +119,7 @@ export const BlueprintNodeSchema = z.discriminatedUnion('type', [
   BlueprintSetValueNodeSchema,
   BlueprintExtractTextNodeSchema,
   BlueprintDownloadJsonNodeSchema,
+  BlueprintCustomCodeNodeSchema,
 ]);
 
 export const BlueprintEdgeSchema = z.object({
@@ -273,6 +290,7 @@ export type BlueprintNodeUpdate = {
   selector?: string;
   selectorMeta?: BlueprintNode['selectorMeta'];
   filename?: string;
+  code?: string;
   requireVisible?: boolean;
   timeoutMs?: number;
   type?: BlueprintNodeType;
@@ -355,6 +373,7 @@ export function updateBlueprintNode(
         ? { selectorMeta: update.selectorMeta }
         : {}),
       ...(update.filename !== undefined ? { filename: update.filename } : {}),
+      ...(update.code !== undefined ? { code: update.code } : {}),
       ...(update.requireVisible !== undefined
         ? { requireVisible: update.requireVisible }
         : {}),
