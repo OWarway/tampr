@@ -93,6 +93,12 @@ same rules locally because Chrome serializes the picker function into the page.
 Keep those two assessment paths aligned until selector generation moves out of
 the injected function.
 
+Source-page selector tests may also return repair suggestions when a selector is
+too broad. Suggestions are generated from visible matches using stable IDs,
+data/ARIA/name/title attributes, unique class combinations, and finally a
+clearly-labelled positional path fallback. The workspace can apply a suggestion
+only while generated Blueprint code is still in sync.
+
 Blueprint output is deliberately plain CSS. Current actions can hide, highlight,
 remove an overlay, make an element sticky, widen a content container, or hide an
 element only for print. Keep new Blueprint actions CSS-first until the selector

@@ -1,4 +1,5 @@
 import type { BlueprintElementPick } from '../domain/blueprint-snippets';
+import type { BlueprintSelectorMeta } from '../domain/blueprint-selectors';
 import {
   BLUEPRINT_AUTOMATION_ACTIONS,
   type BlueprintAutomationAction,
@@ -15,6 +16,16 @@ export const RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE =
 export type BlueprintSelectorTestResult = {
   firstTagName?: string;
   matchCount: number;
+  recommendation?: string;
+  suggestions?: BlueprintSelectorSuggestion[];
+  visibleCount: number;
+};
+
+export type BlueprintSelectorSuggestion = {
+  matchCount: number;
+  reason: string;
+  selector: string;
+  selectorMeta: BlueprintSelectorMeta;
   visibleCount: number;
 };
 

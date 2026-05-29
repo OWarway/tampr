@@ -403,6 +403,70 @@ describe('BlueprintPreview', () => {
     expect(await screen.findByText('button: 1 match, 1 visible')).toBeTruthy();
   });
 
+  it('applies selector repair suggestions from the source page test', async () => {
+    const onChange = vi.fn();
+    const onTestSelector = vi.fn().mockResolvedValue({
+      firstTagName: 'button',
+      matchCount: 2,
+      recommendation:
+        'Selector matches multiple elements. Use a unique repair suggestion or pick the exact element again.',
+      suggestions: [
+        {
+          matchCount: 1,
+          reason: 'Unique data-testid marker on the matched element.',
+          selector: 'button[data-testid="offer-primary"]',
+          selectorMeta: selectorMeta('attribute'),
+          visibleCount: 1,
+        },
+      ],
+      visibleCount: 2,
+    });
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: 'button',
+      selectorMeta: {
+        matchCount: 2,
+        segmentCount: 1,
+        strategy: 'path',
+        usesNthOfType: false,
+      },
+      type: 'hide',
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        onChange={onChange}
+        onTestSelector={onTestSelector}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test selector' }));
+
+    expect(
+      await screen.findByText('button[data-testid="offer-primary"]'),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Use selector' }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              selector: 'button[data-testid="offer-primary"]',
+              selectorMeta: selectorMeta('attribute'),
+            }),
+          ],
+        }),
+      }),
+      `button[data-testid="offer-primary"] {
+  display: none !important;
+}`,
+    );
+  });
+
   it('removes the selected node and regenerates CSS', () => {
     const onChange = vi.fn();
     const blueprint = twoNodeRecipe();

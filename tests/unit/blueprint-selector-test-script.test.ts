@@ -26,12 +26,62 @@ describe('runTamprBlueprintSelectorTest', () => {
       runTamprBlueprintSelectorTest({
         selector: 'button[data-testid="buy"]',
       }),
-    ).toEqual({
+    ).toMatchObject({
       ok: true,
       result: {
         firstTagName: 'button',
         matchCount: 2,
         visibleCount: 1,
+      },
+    });
+  });
+
+  it('suggests unique selector repairs when a selector matches too broadly', () => {
+    document.body.innerHTML = `
+      <main>
+        <button data-testid="buy-primary">Buy now</button>
+        <button data-testid="buy-secondary">Buy later</button>
+      </main>
+    `;
+
+    for (const button of document.querySelectorAll('button')) {
+      stubRect(button);
+    }
+
+    expect(runTamprBlueprintSelectorTest({ selector: 'button' })).toEqual({
+      ok: true,
+      result: {
+        firstTagName: 'button',
+        matchCount: 2,
+        recommendation:
+          'Selector matches multiple elements. Use a unique repair suggestion or pick the exact element again.',
+        suggestions: [
+          {
+            matchCount: 1,
+            reason: 'Unique data-testid marker on the matched element.',
+            selector: 'button[data-testid="buy-primary"]',
+            selectorMeta: {
+              matchCount: 1,
+              segmentCount: 1,
+              strategy: 'attribute',
+              usesNthOfType: false,
+            },
+            visibleCount: 1,
+          },
+          {
+            matchCount: 1,
+            reason: 'Unique data-testid marker on the matched element.',
+            selector: 'button[data-testid="buy-secondary"]',
+            selectorMeta: {
+              matchCount: 1,
+              segmentCount: 1,
+              strategy: 'attribute',
+              usesNthOfType: false,
+            },
+            visibleCount: 1,
+          },
+        ],
+        visibleCount: 2,
       },
     });
   });
@@ -45,6 +95,8 @@ describe('runTamprBlueprintSelectorTest', () => {
       ok: true,
       result: {
         matchCount: 0,
+        recommendation:
+          'Selector does not match this page anymore. Pick the element again from the source page.',
         visibleCount: 0,
       },
     });

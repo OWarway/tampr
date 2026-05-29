@@ -52,6 +52,8 @@ group changes under the headings below.
   counts from the original tab.
 - Blueprint selector confidence scoring with workspace and page-picker
   recommendations.
+- Source-page selector repair suggestions with one-click workspace application
+  when generated code is still in sync.
 - User Scripts setup prompts that open Tampr's Chrome extension details page.
 - Workspace with searchable snippet rail, CodeMirror editing, match-rule
   authoring, snippet CRUD, import/export, and trust status.

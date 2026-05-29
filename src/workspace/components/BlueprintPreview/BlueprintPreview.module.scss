@@ -603,6 +603,62 @@
   padding: 8px 10px;
 }
 
+.selectorRecommendation {
+  background: #fff4e4;
+  border: 1px solid #d8ad72;
+  border-radius: 6px;
+  color: #7d4a16;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.selectorSuggestions {
+  border: 1px solid #dbe3de;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+
+  > strong {
+    color: #14201b;
+    font-size: 12px;
+    font-weight: 900;
+  }
+}
+
+.selectorSuggestion {
+  background: #f7fbf8;
+  border: 1px solid #dbe3de;
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+
+  p {
+    color: #53645b;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  button {
+    background: #fff;
+    border-color: #79a78f;
+    color: #14594d;
+    justify-self: start;
+    min-height: 32px;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      background: #edf4ef;
+    }
+  }
+}
+
 .moveNode,
 .pickSelector,
 .runAutomation,

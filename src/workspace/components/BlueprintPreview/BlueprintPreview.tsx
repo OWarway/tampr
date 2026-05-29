@@ -41,6 +41,7 @@ import type {
   BlueprintAutomationNodeRunResult,
   BlueprintAutomationNodeTestInput,
   BlueprintAutomationNodeTestResult,
+  BlueprintSelectorSuggestion,
   BlueprintSelectorTestResult,
 } from '../../../shared/blueprint-messages';
 
@@ -185,6 +186,26 @@ export function BlueprintPreview({
     } finally {
       setPickingNodeId(undefined);
     }
+  }
+
+  function applySelectorSuggestion(
+    nodeId: string,
+    suggestion: BlueprintSelectorSuggestion,
+  ): void {
+    if (!onChange || css === undefined || !generatedCodeInSync) {
+      return;
+    }
+
+    const nextBlueprint = updateBlueprintNode(recipe, nodeId, {
+      selector: suggestion.selector,
+      selectorMeta: suggestion.selectorMeta,
+    });
+
+    emitGeneratedChange(nextBlueprint);
+    clearSelectorTestResult(nodeId);
+    clearAutomationTestResult(nodeId);
+    clearAutomationRunResult(nodeId);
+    clearAutomationRunConfirmation(nodeId);
   }
 
   async function testSelector(node: BlueprintNode): Promise<void> {
@@ -509,6 +530,9 @@ export function BlueprintPreview({
                 ? () => void pickSelector(selectedNode.id)
                 : undefined
             }
+            onApplySelectorSuggestion={(suggestion) =>
+              applySelectorSuggestion(selectedNode.id, suggestion)
+            }
             onRunAutomationNode={
               onRunAutomationNode &&
               isAutomationNode(selectedNode) &&
@@ -670,6 +694,7 @@ type BlueprintNodeInspectorProps = {
   onLabelChange(label: string): void;
   onMoveDown(): void;
   onMoveUp(): void;
+  onApplySelectorSuggestion(suggestion: BlueprintSelectorSuggestion): void;
   onPickSelector?: (() => void) | undefined;
   onRequireVisibleChange(requireVisible: boolean): void;
   onRemove(): void;
@@ -705,6 +730,7 @@ function BlueprintNodeInspector({
   onLabelChange,
   onMoveDown,
   onMoveUp,
+  onApplySelectorSuggestion,
   onPickSelector,
   onRequireVisibleChange,
   onRemove,
@@ -868,6 +894,35 @@ function BlueprintNodeInspector({
           <p className={styles.selectorResult} aria-live="polite">
             {selectorTestSummary(selectorTestResult)}
           </p>
+        ) : null}
+        {selectorTestResult?.recommendation ? (
+          <p className={styles.selectorRecommendation}>
+            {selectorTestResult.recommendation}
+          </p>
+        ) : null}
+        {selectorTestResult?.suggestions?.length ? (
+          <div
+            className={styles.selectorSuggestions}
+            aria-label="Selector repair suggestions"
+          >
+            <strong>Repair suggestions</strong>
+            {selectorTestResult.suggestions.map((suggestion) => (
+              <div
+                className={styles.selectorSuggestion}
+                key={suggestion.selector}
+              >
+                <code>{suggestion.selector}</code>
+                <p>{suggestion.reason}</p>
+                <button
+                  disabled={!generatedCodeInSync}
+                  type="button"
+                  onClick={() => onApplySelectorSuggestion(suggestion)}
+                >
+                  Use selector
+                </button>
+              </div>
+            ))}
+          </div>
         ) : null}
       </div>
 
