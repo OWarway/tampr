@@ -161,6 +161,14 @@ looks like submit, buy, send, delete, publish, or payment behavior. Set-value an
 download-json steps must remain refused by the manual runner until their
 confirmation, blocking, and result-reporting UX is explicit.
 
+Click execution resolves the selected element to the closest interactive ancestor
+before safety checks and dispatch. This keeps child selections inside buttons or
+links usable while still reviewing the actual control that will receive the
+click. Both manual click runs and compiled Blueprint snippets use the same
+pointerdown, mousedown, pointerup, mouseup, and click sequence. These synthetic
+events are still not trusted browser events, so sites that require
+`isTrusted === true` may ignore them.
+
 ## Script Download API
 
 Snippets that run in the default `USER_SCRIPT` world receive a small global

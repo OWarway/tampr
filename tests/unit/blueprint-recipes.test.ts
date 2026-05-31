@@ -383,7 +383,13 @@ body {
     expect(js).toContain('"value": "oliver@example.com"');
     expect(js).toContain('"variableName": "headline"');
     expect(js).toContain('"filename": "tampr-flow.json"');
-    expect(js).toContain('assertSafeClickTarget(element, step);');
+    expect(js).toContain('const target = resolveClickTarget(element);');
+    expect(js).toContain('assertSafeClickTarget(target, step);');
+    expect(js).toContain('synthesizeClick(target);');
+    expect(js).toContain('element.closest(');
+    expect(js).toContain("['pointerdown', 'mousedown']");
+    expect(js).toContain("['pointerup', 'mouseup']");
+    expect(js).toContain('new MouseEvent(mouseType, init)');
     expect(js).toContain('globalThis.Tampr.download');
   });
 

@@ -46,8 +46,9 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
 
       if (step.type === 'click') {
         const element = await waitForElement(step);
-        assertSafeClickTarget(element, step);
-        element.click();
+        const target = resolveClickTarget(element);
+        assertSafeClickTarget(target, step);
+        synthesizeClick(target);
         continue;
       }
 
@@ -103,6 +104,44 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
       rect.width > 0 &&
       rect.height > 0
     );
+  }
+
+  function resolveClickTarget(element) {
+    const interactive = element.closest(
+      'button, a[href], [role="button"], [role="link"], summary, label, input[type="button"], input[type="submit"], input[type="reset"]',
+    );
+
+    return interactive instanceof HTMLElement ? interactive : element;
+  }
+
+  function synthesizeClick(element) {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    const pointerInit = { ...init, pointerType: 'mouse', isPrimary: true };
+
+    for (const [pointerType, mouseType] of [
+      ['pointerdown', 'mousedown'],
+      ['pointerup', 'mouseup'],
+    ]) {
+      if (typeof PointerEvent === 'function') {
+        const pointerEvent = createPointerEvent(pointerType, pointerInit);
+
+        if (pointerEvent) {
+          element.dispatchEvent(pointerEvent);
+        }
+      }
+
+      element.dispatchEvent(new MouseEvent(mouseType, init));
+    }
+
+    element.click();
+  }
+
+  function createPointerEvent(type, init) {
+    try {
+      return new PointerEvent(type, init);
+    } catch {
+      return undefined;
+    }
   }
 
   function assertSafeClickTarget(element, step) {

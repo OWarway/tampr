@@ -127,7 +127,8 @@ export async function runTamprBlueprintAutomationNode(
         };
       }
 
-      const unsafeMessage = unsafeClickMessage(element);
+      const target = resolveClickTarget(element);
+      const unsafeMessage = unsafeClickMessage(target);
 
       if (unsafeMessage) {
         return {
@@ -137,14 +138,14 @@ export async function runTamprBlueprintAutomationNode(
         };
       }
 
-      element.click();
+      synthesizeClick(target);
 
       return {
         ok: true,
         result: {
           ...base,
           message: 'Element clicked on the source page.',
-          ...previewResult(element),
+          ...previewResult(target),
         },
       };
     }
@@ -157,12 +158,23 @@ export async function runTamprBlueprintAutomationNode(
         ...previewResult(element),
       },
     };
-  } catch {
-    return {
-      ok: false,
-      reason: 'invalid-selector',
-      message: 'Automation node selector is not valid CSS.',
-    };
+  } catch (error: unknown) {
+    if (isSelectorSyntaxError(error)) {
+      return {
+        ok: false,
+        reason: 'invalid-selector',
+        message: 'Automation node selector is not valid CSS.',
+      };
+    }
+
+    throw error;
+  }
+
+  function isSelectorSyntaxError(error: unknown): boolean {
+    return (
+      error instanceof SyntaxError ||
+      (error instanceof DOMException && error.name === 'SyntaxError')
+    );
   }
 
   async function waitForElement(
@@ -230,6 +242,58 @@ export async function runTamprBlueprintAutomationNode(
     const preview = previewFor(element);
 
     return preview ? { preview } : {};
+  }
+
+  function resolveClickTarget(element: HTMLElement): HTMLElement {
+    const interactive = element.closest(
+      'button, a[href], [role="button"], [role="link"], summary, label, input[type="button"], input[type="submit"], input[type="reset"]',
+    );
+
+    return interactive instanceof HTMLElement ? interactive : element;
+  }
+
+  function synthesizeClick(element: HTMLElement): void {
+    const init: MouseEventInit = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    };
+    const pointerInit: PointerEventInit = {
+      ...init,
+      pointerType: 'mouse',
+      isPrimary: true,
+    };
+    const pointerSequence: Array<
+      ['pointerdown' | 'pointerup', 'mousedown' | 'mouseup']
+    > = [
+      ['pointerdown', 'mousedown'],
+      ['pointerup', 'mouseup'],
+    ];
+
+    for (const [pointerType, mouseType] of pointerSequence) {
+      if (typeof PointerEvent === 'function') {
+        const pointerEvent = createPointerEvent(pointerType, pointerInit);
+
+        if (pointerEvent) {
+          element.dispatchEvent(pointerEvent);
+        }
+      }
+
+      element.dispatchEvent(new MouseEvent(mouseType, init));
+    }
+
+    element.click();
+  }
+
+  function createPointerEvent(
+    type: 'pointerdown' | 'pointerup',
+    init: PointerEventInit,
+  ): PointerEvent | undefined {
+    try {
+      return new PointerEvent(type, init);
+    } catch {
+      return undefined;
+    }
   }
 
   function unsafeClickMessage(element: Element): string | undefined {

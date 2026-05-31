@@ -45,6 +45,8 @@ group changes under the headings below.
   with wait-for-element and extract-text steps.
 - Guarded manual click runs with explicit confirmation and source-page refusal
   for risky submit, buy, send, delete, and similar targets.
+- Blueprint click runs resolve child selections to the closest interactive
+  ancestor and dispatch pointer/mouse/click event sequences for SPA controls.
 - Page-side Blueprint draft builder for chaining selected-element actions before
   saving, including run preview and custom-code steps.
 - Page-side Blueprint draft step selection with move up, move down, and remove
