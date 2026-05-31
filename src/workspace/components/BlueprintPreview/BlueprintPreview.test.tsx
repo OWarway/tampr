@@ -447,6 +447,7 @@ describe('BlueprintPreview', () => {
       }),
     );
     expect(await screen.findByText('2 ready, 0 need review')).toBeTruthy();
+    expect(screen.getAllByText('Ready')).toHaveLength(2);
     expect(screen.getByText('Hide: aside: 1 match, 1 visible')).toBeTruthy();
     expect(
       screen.getByText('Wait for element: section: 1 match, 1 visible'),

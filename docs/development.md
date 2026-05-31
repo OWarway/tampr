@@ -136,8 +136,9 @@ The workspace flow preview runs the existing safe source-page checks in order
 for every enabled node. CSS nodes use selector tests; automation nodes use
 automation node tests. This preview is intentionally non-mutating: it must not
 click, type into fields, submit forms, execute custom code, or start downloads.
-Keep full flow execution separate from this preview until step-by-step
-confirmation and cancellation are explicit.
+Preview results are shown in the report panel and reflected back onto the flow
+canvas node cards. Keep full flow execution separate from this preview until
+step-by-step confirmation and cancellation are explicit.
 
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,

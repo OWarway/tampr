@@ -28,6 +28,7 @@ group changes under the headings below.
   connectors, layout-aware node cards, and inspector selection.
 - Workspace Blueprint flow preview that checks every step on the source page
   without clicking, typing, or downloading.
+- Flow preview statuses are reflected directly on Blueprint canvas node cards.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles
   with code-sync protection.
 - Blueprint node library for adding and removing CSS action nodes in a straight

@@ -401,6 +401,69 @@
   justify-self: start;
 }
 
+.flowNodeStatus {
+  align-items: center;
+  border: 1px solid #c7d2cc;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  grid-column: 2;
+  justify-self: start;
+  letter-spacing: 0;
+  min-height: 24px;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.statusCard {
+  border-left-width: 4px;
+}
+
+.flowPending {
+  background: #edf4ef;
+  border-color: #c7d2cc;
+  color: #29463d;
+}
+
+.flowReady {
+  background: #e2f1e7;
+  border-color: #79a78f;
+  color: #14594d;
+}
+
+.flowReview {
+  background: #fff4e4;
+  border-color: #d8ad72;
+  color: #7d4a16;
+}
+
+.flowSkipped {
+  background: #eef3f1;
+  border-color: #c7d2cc;
+  color: #53645b;
+}
+
+.statusCard.flowPending {
+  background: #fff;
+  border-color: #c7d2cc;
+}
+
+.statusCard.flowReady {
+  background: #fbfffc;
+  border-color: #79a78f;
+}
+
+.statusCard.flowReview {
+  background: #fffaf1;
+  border-color: #d8ad72;
+}
+
+.statusCard.flowSkipped {
+  background: #f7fbf8;
+  border-color: #c7d2cc;
+}
+
 .strong {
   background: #e2f1e7;
   border-color: #79a78f;

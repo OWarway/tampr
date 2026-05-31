@@ -86,6 +86,8 @@ type BlueprintFlowTestStep = {
   summary: string;
 };
 
+type BlueprintFlowNodeStatus = BlueprintFlowTestStep['status'] | 'pending';
+
 export function BlueprintPreview({
   blueprint,
   css,
@@ -142,6 +144,9 @@ export function BlueprintPreview({
     : true;
   const generatedCodeInSync = cssInSync && jsInSync;
   const editable = Boolean(onChange && cssSourceKnown && selectedNode);
+  const flowTestResultByNodeId = Object.fromEntries(
+    (flowTestResults ?? []).map((result) => [result.id, result]),
+  );
 
   function editNode(
     nodeId: string,
@@ -480,6 +485,7 @@ export function BlueprintPreview({
   }
 
   function emitGeneratedChange(nextBlueprint: BlueprintRecipe): void {
+    setFlowTestResults(undefined);
     emitChange(
       nextBlueprint,
       compileBlueprintCss(nextBlueprint),
@@ -600,6 +606,8 @@ export function BlueprintPreview({
 
         <BlueprintFlowCanvas
           editable={editable}
+          flowTestResultByNodeId={flowTestResultByNodeId}
+          testingFlow={testingFlow}
           nodes={nodes}
           recipe={recipe}
           selectedNodeId={selectedNode?.id}
@@ -841,17 +849,21 @@ function BlueprintNodeLibrary({
 
 type BlueprintFlowCanvasProps = {
   editable: boolean;
+  flowTestResultByNodeId: Record<string, BlueprintFlowTestStep>;
   nodes: BlueprintNode[];
   recipe: BlueprintRecipe;
   selectedNodeId?: string | undefined;
+  testingFlow: boolean;
   onSelectNode(nodeId: string): void;
 };
 
 function BlueprintFlowCanvas({
   editable,
+  flowTestResultByNodeId,
   nodes,
   recipe,
   selectedNodeId,
+  testingFlow,
   onSelectNode,
 }: BlueprintFlowCanvasProps) {
   const layoutPoints = nodes.map(
@@ -974,6 +986,10 @@ function BlueprintFlowCanvas({
               key={position.node.id}
               node={position.node}
               selected={position.node.id === selectedNodeId}
+              status={
+                flowTestResultByNodeId[position.node.id]?.status ??
+                (testingFlow ? 'pending' : undefined)
+              }
               style={
                 {
                   left: `${position.x}px`,
@@ -995,6 +1011,7 @@ type BlueprintPreviewNodeProps = {
   index: number;
   node: BlueprintNode;
   selected: boolean;
+  status?: BlueprintFlowNodeStatus | undefined;
   style: CSSProperties;
   onSelect(): void;
 };
@@ -1004,11 +1021,13 @@ function BlueprintPreviewNode({
   index,
   node,
   selected,
+  status,
   style,
   onSelect,
 }: BlueprintPreviewNodeProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
+  const statusClass = status ? flowNodeStatusClass(status) : '';
   const content = (
     <>
       <span className={styles.step}>{index + 1}</span>
@@ -1023,6 +1042,11 @@ function BlueprintPreviewNode({
       <span className={`${styles.quality} ${styles[assessment.quality]}`}>
         {qualityLabel(assessment.quality)}
       </span>
+      {status ? (
+        <span className={`${styles.flowNodeStatus} ${statusClass}`}>
+          {flowNodeStatusLabel(status)}
+        </span>
+      ) : null}
     </>
   );
 
@@ -1031,14 +1055,22 @@ function BlueprintPreviewNode({
       {editable ? (
         <button
           aria-pressed={selected}
-          className={`${styles.nodeButton} ${selected ? styles.selected : ''}`}
+          className={`${styles.nodeButton} ${selected ? styles.selected : ''} ${
+            statusClass ? styles.statusCard : ''
+          } ${statusClass}`}
           type="button"
           onClick={onSelect}
         >
           {content}
         </button>
       ) : (
-        <div className={styles.nodeContent}>{content}</div>
+        <div
+          className={`${styles.nodeContent} ${
+            statusClass ? styles.statusCard : ''
+          } ${statusClass}`}
+        >
+          {content}
+        </div>
       )}
     </li>
   );
@@ -1625,6 +1657,32 @@ function selectorFlowTestDetails(
   }
 
   return details;
+}
+
+function flowNodeStatusClass(status: BlueprintFlowNodeStatus): string {
+  switch (status) {
+    case 'pending':
+      return styles.flowPending ?? '';
+    case 'ready':
+      return styles.flowReady ?? '';
+    case 'review':
+      return styles.flowReview ?? '';
+    case 'skipped':
+      return styles.flowSkipped ?? '';
+  }
+}
+
+function flowNodeStatusLabel(status: BlueprintFlowNodeStatus): string {
+  switch (status) {
+    case 'pending':
+      return 'Pending';
+    case 'ready':
+      return 'Ready';
+    case 'review':
+      return 'Review';
+    case 'skipped':
+      return 'Skipped';
+  }
 }
 
 function selectorConfidenceSummary(
