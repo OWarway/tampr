@@ -150,11 +150,13 @@ canvas node cards.
 Full workspace flow runs are a separate guarded action. They reuse the manual
 automation node runner, skip CSS nodes because generated CSS already applies
 them, run wait-for-element and extract-text steps, and run click steps only after
-an explicit flow-level confirmation. Set-value, download-json, and custom-code
-steps remain blocked in full-flow runs until their confirmation, cancellation,
-and result-reporting UX is explicit. Flow runs stop on the first blocked or
-failed step and reflect pending, running, complete, blocked, failed, and skipped
-states back onto the canvas node cards.
+an explicit flow-level confirmation. The same runner can stop at the selected
+node for debugger-style verification, and click confirmation is scoped to the
+steps that will actually run. Set-value, download-json, and custom-code steps
+remain blocked in full-flow runs until their confirmation, cancellation, and
+result-reporting UX is explicit. Flow runs stop on the first blocked or failed
+step and reflect pending, running, complete, blocked, failed, and skipped states
+back onto the canvas node cards.
 
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,

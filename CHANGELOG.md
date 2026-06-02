@@ -32,6 +32,8 @@ group changes under the headings below.
 - Guarded workspace Blueprint flow runs for supported wait, extract, and
   confirmed click steps, with CSS skips, unsupported-step blocking, and canvas
   run statuses.
+- Workspace Blueprint flow runs can stop at the selected node, with click
+  confirmation scoped to only the steps that will actually run.
 - Blueprint click UIs now surface that synthetic clicks run with
   `event.isTrusted === false`.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles

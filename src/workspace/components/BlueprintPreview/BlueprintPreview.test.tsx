@@ -538,6 +538,77 @@ describe('BlueprintPreview', () => {
     expect(screen.getAllByText('Skipped')).toHaveLength(1);
   });
 
+  it('runs the flow only through the selected node', async () => {
+    const onRunAutomationNode = vi
+      .fn()
+      .mockResolvedValueOnce({
+        action: 'wait-for-element',
+        durationMs: 8,
+        firstTagName: 'section',
+        matchCount: 1,
+        message: 'Element is ready on the source page.',
+        preview: 'Deal',
+        visibleCount: 1,
+      })
+      .mockResolvedValueOnce({
+        action: 'extract-text',
+        durationMs: 10,
+        firstTagName: 'h2',
+        matchCount: 1,
+        message: 'Text extracted from the source page.',
+        value: 'Deal title',
+        variableName: 'dealTitle',
+        visibleCount: 1,
+      });
+    const blueprint = flowRunRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+        onChange={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Extract title/ }));
+
+    const runFlowButton = screen.getByRole('button', { name: 'Run flow' });
+    const runToSelectedButton = screen.getByRole('button', {
+      name: 'Run to selected',
+    });
+
+    expect((runFlowButton as HTMLButtonElement).disabled).toBe(true);
+    expect((runToSelectedButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(runToSelectedButton);
+
+    await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(2));
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(1, {
+      label: 'Wait for deal',
+      selector: '[data-testid="deal"]',
+      type: 'wait-for-element',
+      requireVisible: true,
+      timeoutMs: 5000,
+    });
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(2, {
+      label: 'Extract title',
+      selector: '[data-testid="deal-title"]',
+      type: 'extract-text',
+      requireVisible: true,
+      timeoutMs: 5000,
+      variableName: 'dealTitle',
+    });
+    expect(
+      await screen.findByText('2 complete, 0 need review, 1 skipped'),
+    ).toBeTruthy();
+    expect(screen.getByText('Deal title')).toBeTruthy();
+    expect(
+      screen.queryByText('Element clicked on the source page.'),
+    ).toBeNull();
+  });
+
   it('blocks unsupported flow run steps before touching the page', async () => {
     const onRunAutomationNode = vi.fn();
     const blueprint = setValueRecipe();

@@ -141,6 +141,7 @@ export function BlueprintPreview({
     BlueprintFlowRunStep[] | undefined
   >();
   const [runningFlow, setRunningFlow] = useState(false);
+  const [activeFlowRunNodeIds, setActiveFlowRunNodeIds] = useState<string[]>();
   const [flowRunConfirmed, setFlowRunConfirmed] = useState(false);
 
   if (!blueprint) {
@@ -161,9 +162,11 @@ export function BlueprintPreview({
     : true;
   const generatedCodeInSync = cssInSync && jsInSync;
   const editable = Boolean(onChange && cssSourceKnown && selectedNode);
-  const flowRunRequiresConfirmation = nodes.some(
-    (node) =>
-      node.enabled && isAutomationNode(node) && requiresRunConfirmation(node),
+  const nodesThroughSelectedNode = flowNodesUntil(nodes, selectedNode?.id);
+  const flowRunRequiresConfirmation =
+    flowRequiresRunConfirmationForNodes(nodes);
+  const runToSelectedRequiresConfirmation = flowRequiresRunConfirmationForNodes(
+    nodesThroughSelectedNode,
   );
   const flowNodeStatusByNodeId: Record<string, BlueprintFlowNodeStatus> = {
     ...Object.fromEntries(
@@ -173,6 +176,9 @@ export function BlueprintPreview({
       (flowRunResults ?? []).map((result) => [result.id, result.status]),
     ),
   };
+  const pendingFlowNodeIds = testingFlow
+    ? nodes.map((node) => node.id)
+    : activeFlowRunNodeIds;
 
   function editNode(
     nodeId: string,
@@ -364,23 +370,28 @@ export function BlueprintPreview({
     }
   }
 
-  async function runFlow(): Promise<void> {
+  async function runFlow(untilNodeId?: string): Promise<void> {
     if (!onRunAutomationNode) {
       return;
     }
 
-    if (flowRunRequiresConfirmation && !flowRunConfirmed) {
+    const nodesToRun = flowNodesUntil(nodes, untilNodeId);
+    const runRequiresConfirmation =
+      flowRequiresRunConfirmationForNodes(nodesToRun);
+
+    if (runRequiresConfirmation && !flowRunConfirmed) {
       return;
     }
 
     setRunningFlow(true);
+    setActiveFlowRunNodeIds(nodesToRun.map((node) => node.id));
     setFlowTestResults(undefined);
     setFlowRunResults([]);
 
     const results: BlueprintFlowRunStep[] = [];
 
     try {
-      for (const node of nodes) {
+      for (const node of nodesToRun) {
         results.push(runningFlowStep(node));
         setFlowRunResults([...results]);
 
@@ -395,6 +406,7 @@ export function BlueprintPreview({
       }
     } finally {
       setRunningFlow(false);
+      setActiveFlowRunNodeIds(undefined);
     }
   }
 
@@ -754,12 +766,23 @@ export function BlueprintPreview({
         generatedCodeInSync={generatedCodeInSync}
         runConfirmed={flowRunConfirmed}
         runRequiresConfirmation={flowRunRequiresConfirmation}
+        runToSelectedRequiresConfirmation={runToSelectedRequiresConfirmation}
         runResults={flowRunResults}
         running={runningFlow}
+        selectedNodeLabel={
+          selectedNode
+            ? (selectedNode.label ?? actionLabel(selectedNode.type))
+            : undefined
+        }
         results={flowTestResults}
         testing={testingFlow}
         onRun={onRunAutomationNode ? () => void runFlow() : undefined}
         onRunConfirmChange={setFlowRunConfirmed}
+        onRunToSelected={
+          onRunAutomationNode && selectedNode && nodes.length > 1
+            ? () => void runFlow(selectedNode.id)
+            : undefined
+        }
         onTest={
           onTestSelector || onTestAutomationNode
             ? () => void testFlow()
@@ -782,9 +805,9 @@ export function BlueprintPreview({
         <BlueprintFlowCanvas
           editable={editable}
           flowNodeStatusByNodeId={flowNodeStatusByNodeId}
-          runningFlow={runningFlow}
           testingFlow={testingFlow}
           nodes={nodes}
+          pendingNodeIds={pendingFlowNodeIds}
           recipe={recipe}
           selectedNodeId={selectedNode?.id}
           onSelectNode={setSelectedNodeId}
@@ -904,12 +927,15 @@ type BlueprintFlowTestPanelProps = {
   generatedCodeInSync: boolean;
   runConfirmed: boolean;
   runRequiresConfirmation: boolean;
+  runToSelectedRequiresConfirmation: boolean;
   runResults: BlueprintFlowRunStep[] | undefined;
   running: boolean;
+  selectedNodeLabel?: string | undefined;
   results: BlueprintFlowTestStep[] | undefined;
   testing: boolean;
   onRun?: (() => void) | undefined;
   onRunConfirmChange(confirmed: boolean): void;
+  onRunToSelected?: (() => void) | undefined;
   onTest?: (() => void) | undefined;
 };
 
@@ -917,15 +943,18 @@ function BlueprintFlowTestPanel({
   generatedCodeInSync,
   runConfirmed,
   runRequiresConfirmation,
+  runToSelectedRequiresConfirmation,
   runResults,
   running,
+  selectedNodeLabel,
   results,
   testing,
   onRun,
   onRunConfirmChange,
+  onRunToSelected,
   onTest,
 }: BlueprintFlowTestPanelProps) {
-  if (!onTest && !onRun) {
+  if (!onTest && !onRun && !onRunToSelected) {
     return null;
   }
 
@@ -980,8 +1009,29 @@ function BlueprintFlowTestPanel({
             {running ? 'Running flow...' : 'Run flow'}
           </button>
         ) : null}
+        {onRunToSelected ? (
+          <button
+            className={styles.runAutomation}
+            disabled={
+              !generatedCodeInSync ||
+              running ||
+              testing ||
+              (runToSelectedRequiresConfirmation && !runConfirmed)
+            }
+            title={
+              selectedNodeLabel
+                ? `Run through ${selectedNodeLabel}`
+                : 'Run through the selected node'
+            }
+            type="button"
+            onClick={onRunToSelected}
+          >
+            {running ? 'Running...' : 'Run to selected'}
+          </button>
+        ) : null}
       </div>
-      {onRun && runRequiresConfirmation ? (
+      {(onRun || onRunToSelected) &&
+      (runRequiresConfirmation || runToSelectedRequiresConfirmation) ? (
         <label className={`${styles.runConfirmation} ${styles.flowRunConfirm}`}>
           <input
             aria-label="Confirm flow click steps on source page"
@@ -991,7 +1041,9 @@ function BlueprintFlowTestPanel({
               onRunConfirmChange(event.currentTarget.checked)
             }
           />
-          <span>Confirm click steps on source page</span>
+          <span>
+            Confirm click steps before running them on the source page
+          </span>
         </label>
       ) : null}
       {results ? (
@@ -1111,8 +1163,8 @@ type BlueprintFlowCanvasProps = {
   editable: boolean;
   flowNodeStatusByNodeId: Record<string, BlueprintFlowNodeStatus>;
   nodes: BlueprintNode[];
+  pendingNodeIds?: readonly string[] | undefined;
   recipe: BlueprintRecipe;
-  runningFlow: boolean;
   selectedNodeId?: string | undefined;
   testingFlow: boolean;
   onSelectNode(nodeId: string): void;
@@ -1122,8 +1174,8 @@ function BlueprintFlowCanvas({
   editable,
   flowNodeStatusByNodeId,
   nodes,
+  pendingNodeIds,
   recipe,
-  runningFlow,
   selectedNodeId,
   testingFlow,
   onSelectNode,
@@ -1250,7 +1302,9 @@ function BlueprintFlowCanvas({
               selected={position.node.id === selectedNodeId}
               status={
                 flowNodeStatusByNodeId[position.node.id] ??
-                (testingFlow || runningFlow ? 'pending' : undefined)
+                (testingFlow || pendingNodeIds?.includes(position.node.id)
+                  ? 'pending'
+                  : undefined)
               }
               style={
                 {
@@ -2043,6 +2097,28 @@ function canRunAutomationNode(node: BlueprintAutomationNode): boolean {
     node.type === 'wait-for-element' ||
     node.type === 'extract-text' ||
     node.type === 'click'
+  );
+}
+
+function flowNodesUntil(
+  nodes: readonly BlueprintNode[],
+  untilNodeId?: string,
+): BlueprintNode[] {
+  if (!untilNodeId) {
+    return [...nodes];
+  }
+
+  const targetIndex = nodes.findIndex((node) => node.id === untilNodeId);
+
+  return targetIndex >= 0 ? nodes.slice(0, targetIndex + 1) : [...nodes];
+}
+
+function flowRequiresRunConfirmationForNodes(
+  nodes: readonly BlueprintNode[],
+): boolean {
+  return nodes.some(
+    (node) =>
+      node.enabled && isAutomationNode(node) && requiresRunConfirmation(node),
   );
 }
 
