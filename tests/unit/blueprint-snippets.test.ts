@@ -141,6 +141,7 @@ body {
         {
           action: 'custom-code',
           code: 'values.custom = element.textContent;',
+          reviewed: true,
           pick: {
             label: 'Deal headline',
             selector: 'h1[data-testid="deal"]',
@@ -172,6 +173,7 @@ body {
       expect.objectContaining({
         code: 'values.custom = element.textContent;',
         id: 'custom-code-step-3',
+        reviewed: true,
         type: 'custom-code',
       }),
     ]);

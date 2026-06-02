@@ -130,6 +130,12 @@ refusal, risky-click refusal, visible custom code execution, and
 `Tampr.download()` JSON output. Keep automation generated code visible in the
 normal snippet editor; do not move execution into a hidden interpreter.
 
+Custom-code nodes are an explicit escape hatch. They default to unreviewed, show
+danger-level safety copy until reviewed, and generated snippets refuse to execute
+unreviewed custom code. Editing the custom code clears the review flag. Page-side
+preview uses the same rule, so temporary draft runs cannot execute a custom-code
+step until the author marks it reviewed.
+
 The workspace builder can add automation nodes to the same straight-line flow as
 CSS nodes and edits their core settings in the inspector. Blueprint changes
 regenerate both CSS and JavaScript while the generated code is still in sync; if
@@ -172,8 +178,10 @@ Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,
 clicks that look like submit/buy/send/delete controls, hidden click targets,
 sensitive form-field selectors, empty set-value payloads, flaky timeouts, and
-non-JSON download filenames. Run and recording features should reuse this same
-assessment instead of adding separate UI-only rules.
+non-JSON download filenames. Custom code should stay visible as source-code risk,
+and obvious dynamic execution, network, or page-storage APIs should raise
+additional warnings. Run and recording features should reuse this same assessment
+instead of adding separate UI-only rules.
 
 Automation node tests use a temporary `scripting.executeScript` call against the
 source tab to preflight one node at a time. They read selector matches,

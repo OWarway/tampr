@@ -78,6 +78,43 @@ describe('blueprint safety', () => {
       },
     ]);
   });
+
+  it('flags unreviewed custom code and risky custom code APIs', () => {
+    const issues = assessBlueprintNodeSafety(
+      BlueprintNodeSchema.parse({
+        ...node('custom-code', 'main'),
+        code: 'const data = await fetch("/api"); eval(await data.text()); localStorage.setItem("x", "1");',
+      }),
+    );
+
+    expect(issues.map((issue) => issue.code)).toEqual([
+      'custom-code-unreviewed',
+      'custom-code-review',
+      'custom-code-dynamic-execution',
+      'custom-code-network',
+      'custom-code-storage',
+    ]);
+    expect(highestBlueprintSafetyLevel(issues)).toBe('danger');
+  });
+
+  it('keeps reviewed custom code visible as source-code risk', () => {
+    const issues = assessBlueprintNodeSafety(
+      BlueprintNodeSchema.parse({
+        ...node('custom-code', 'main'),
+        code: 'values.ready = true;',
+        reviewed: true,
+      }),
+    );
+
+    expect(issues).toEqual([
+      {
+        code: 'custom-code-review',
+        level: 'info',
+        message: 'Custom code is user-authored and should be reviewed.',
+      },
+    ]);
+    expect(highestBlueprintSafetyLevel(issues)).toBe('info');
+  });
 });
 
 function node(

@@ -38,6 +38,8 @@ group changes under the headings below.
   nodes can pause for review before they run.
 - Workspace Blueprint flow runs can now download JSON from values collected
   earlier in the same guarded run.
+- Custom-code Blueprint nodes now require explicit review before generated
+  snippets or page-side previews execute them.
 - Blueprint click UIs now surface that synthetic clicks run with
   `event.isTrusted === false`.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles

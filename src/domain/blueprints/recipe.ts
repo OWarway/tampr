@@ -115,6 +115,7 @@ export const BlueprintCustomCodeNodeSchema =
       ),
     pauseBeforeRun: z.boolean().default(false),
     requireVisible: z.boolean().default(true),
+    reviewed: z.boolean().default(false),
     timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
   });
 
@@ -299,6 +300,7 @@ export type BlueprintNodeUpdate = {
   code?: string;
   pauseBeforeRun?: boolean;
   requireVisible?: boolean;
+  reviewed?: boolean;
   timeoutMs?: number;
   type?: BlueprintNodeType;
   value?: string;
@@ -387,6 +389,7 @@ export function updateBlueprintNode(
       ...(update.requireVisible !== undefined
         ? { requireVisible: update.requireVisible }
         : {}),
+      ...(update.reviewed !== undefined ? { reviewed: update.reviewed } : {}),
       ...(update.timeoutMs !== undefined
         ? { timeoutMs: update.timeoutMs }
         : {}),

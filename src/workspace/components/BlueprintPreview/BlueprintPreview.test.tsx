@@ -1339,19 +1339,56 @@ describe('BlueprintPreview', () => {
       target: { value: 'values.ready = true;' },
     });
 
+    expect(
+      screen.getByText(
+        'Custom code must be reviewed before generated snippets run it.',
+      ),
+    ).toBeTruthy();
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
         graph: expect.objectContaining({
           nodes: [
             expect.objectContaining({
               code: 'values.ready = true;',
+              reviewed: false,
               type: 'custom-code',
             }),
           ],
         }),
       }),
       '',
-      expect.stringContaining('values.ready = true;'),
+      expect.stringContaining('"reviewed": false'),
+    );
+  });
+
+  it('marks custom code nodes as reviewed and regenerates JavaScript', () => {
+    const onChange = vi.fn();
+    const blueprint = customCodeRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Mark custom code as reviewed'));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              reviewed: true,
+              type: 'custom-code',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"reviewed": true'),
     );
   });
 });

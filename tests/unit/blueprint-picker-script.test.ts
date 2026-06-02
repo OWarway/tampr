@@ -647,6 +647,7 @@ describe('runTamprBlueprintPicker', () => {
       'Blueprint custom code',
       'values.dealLength = element.textContent?.trim().length ?? 0;',
     );
+    setDraftCheckbox('Review blueprint custom code', true);
     clickButton('Save');
 
     await expect(resultPromise).resolves.toMatchObject({
@@ -670,12 +671,58 @@ describe('runTamprBlueprintPicker', () => {
           {
             action: 'custom-code',
             code: 'values.dealLength = element.textContent?.trim().length ?? 0;',
+            reviewed: true,
             pick: {
               selector: 'h1[data-testid="headline"]',
             },
           },
         ],
       },
+    });
+  });
+
+  it('refuses page-side custom code preview until the code is reviewed', async () => {
+    document.body.innerHTML = `
+      <main>
+        <h1 data-testid="headline">Deal</h1>
+      </main>
+    `;
+    const headline = document.querySelector('h1') as HTMLElement;
+
+    stubElementFromPoint(headline);
+    stubRect(headline);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Custom code');
+    setDraftField('Blueprint custom code', 'values.ready = true;');
+    clickButton('Run');
+    await flushPromises();
+
+    expect(document.body.textContent).toContain(
+      'Custom code needs review before running.',
+    );
+
+    clickButton('Cancel');
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: false,
+      reason: 'cancelled',
     });
   });
 
@@ -856,6 +903,17 @@ function setDraftField(label: string, value: string): void {
   ) {
     field.value = value;
     field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+function setDraftCheckbox(label: string, checked: boolean): void {
+  const field = document.querySelector(`[aria-label="${label}"]`);
+
+  expect(field).toBeTruthy();
+
+  if (field instanceof HTMLInputElement) {
+    field.checked = checked;
+    field.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
 

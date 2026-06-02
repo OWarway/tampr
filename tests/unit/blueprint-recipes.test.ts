@@ -425,7 +425,34 @@ body {
     const js = compileBlueprintJavaScript(recipe);
 
     expect(js).toContain('"type": "custom-code"');
+    expect(js).toContain('"reviewed": false');
+    expect(js).toContain('assertCustomCodeReviewed(step);');
+    expect(js).toContain('has not been reviewed');
     expect(js).toContain('await runCustomCode(step, element);');
+    expect(js).toContain('values.custom = element.textContent;');
+  });
+
+  it('compiles reviewed custom code nodes into executable JavaScript steps', () => {
+    const recipe = BlueprintRecipeSchema.parse({
+      version: BLUEPRINT_RECIPE_VERSION,
+      name: 'Custom flow',
+      graph: {
+        nodes: [
+          {
+            ...node('custom-step', 'custom-code', 'main'),
+            code: 'values.custom = element.textContent;',
+            reviewed: true,
+          },
+        ],
+        edges: [],
+        layout: {
+          'custom-step': { x: 0, y: 0 },
+        },
+      },
+    });
+    const js = compileBlueprintJavaScript(recipe);
+
+    expect(js).toContain('"reviewed": true');
     expect(js).toContain('values.custom = element.textContent;');
   });
 

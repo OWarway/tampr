@@ -764,6 +764,7 @@ export async function runTamprBlueprintPicker({
 
       if (action === 'custom-code') {
         node.code = defaultCustomCode();
+        node.reviewed = false;
       }
 
       draftNodes.push(node);
@@ -901,6 +902,10 @@ export async function runTamprBlueprintPicker({
           }
 
           if (node.action === 'custom-code') {
+            if (!node.reviewed) {
+              throw new Error('Custom code needs review before running.');
+            }
+
             const run = new Function(
               'element',
               'values',
@@ -1023,6 +1028,7 @@ export async function runTamprBlueprintPicker({
         ]);
         textarea.addEventListener('input', () => {
           node.code = textarea.value.slice(0, 10_000);
+          node.reviewed = false;
 
           if (textarea.value !== node.code) {
             textarea.value = node.code;
@@ -1033,6 +1039,22 @@ export async function runTamprBlueprintPicker({
             'Code',
             'Runs with element and values arguments during preview and in the saved snippet.',
             textarea,
+          ),
+        );
+
+        const reviewed = document.createElement('input');
+
+        reviewed.type = 'checkbox';
+        reviewed.checked = node.reviewed ?? false;
+        reviewed.setAttribute('aria-label', 'Review blueprint custom code');
+        reviewed.addEventListener('change', () => {
+          node.reviewed = reviewed.checked;
+        });
+        stepEditorBody.append(
+          createEditorField(
+            'Review',
+            'Required before page-side preview or saved snippet execution.',
+            reviewed,
           ),
         );
       }

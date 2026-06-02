@@ -43,6 +43,7 @@ export type BlueprintFlowDraftNode = {
   code?: string;
   label?: string;
   pick: BlueprintElementPick;
+  reviewed?: boolean;
   value?: string;
   variableName?: string;
 };
@@ -146,6 +147,7 @@ function buildBlueprintFlowRecipe(
               '// element is the selected page element.',
               '// values stores extracted Blueprint values.',
             ].join('\n'),
+          reviewed: node.reviewed ?? false,
         };
       default:
         return base;

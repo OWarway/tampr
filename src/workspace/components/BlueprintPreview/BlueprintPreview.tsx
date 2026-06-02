@@ -1022,7 +1022,16 @@ export function BlueprintPreview({
               editNode(selectedNode.id, { enabled }, { regeneratesCode: true })
             }
             onCodeChange={(code) =>
-              editNode(selectedNode.id, { code }, { regeneratesCode: true })
+              editNode(
+                selectedNode.id,
+                {
+                  code,
+                  ...(selectedNode.type === 'custom-code'
+                    ? { reviewed: false }
+                    : {}),
+                },
+                { regeneratesCode: true },
+              )
             }
             onLabelChange={(label) =>
               editNode(selectedNode.id, { label }, { regeneratesCode: true })
@@ -1045,6 +1054,9 @@ export function BlueprintPreview({
                 { requireVisible },
                 { regeneratesCode: true },
               )
+            }
+            onReviewedChange={(reviewed) =>
+              editNode(selectedNode.id, { reviewed }, { regeneratesCode: true })
             }
             onTimeoutChange={(timeoutMs) =>
               editNode(
@@ -1662,6 +1674,7 @@ type BlueprintNodeInspectorProps = {
   onPickSelector?: (() => void) | undefined;
   onRequireVisibleChange(requireVisible: boolean): void;
   onRemove(): void;
+  onReviewedChange(reviewed: boolean): void;
   onRunAutomationNode?: (() => void) | undefined;
   onRunConfirmationChange(confirmed: boolean): void;
   onTestSelector?: (() => void) | undefined;
@@ -1699,6 +1712,7 @@ function BlueprintNodeInspector({
   onPickSelector,
   onRequireVisibleChange,
   onRemove,
+  onReviewedChange,
   onRunAutomationNode,
   onRunConfirmationChange,
   onTestSelector,
@@ -1799,6 +1813,7 @@ function BlueprintNodeInspector({
             onFilenameChange={onFilenameChange}
             onPauseBeforeRunChange={onPauseBeforeRunChange}
             onRequireVisibleChange={onRequireVisibleChange}
+            onReviewedChange={onReviewedChange}
             onTimeoutChange={onTimeoutChange}
             onValueChange={onValueChange}
             onValueFromChange={onValueFromChange}
@@ -2073,6 +2088,7 @@ type BlueprintAutomationSettingsProps = {
   onFilenameChange(filename: string): void;
   onPauseBeforeRunChange(pauseBeforeRun: boolean): void;
   onRequireVisibleChange(requireVisible: boolean): void;
+  onReviewedChange(reviewed: boolean): void;
   onTimeoutChange(timeoutMs: number): void;
   onValueChange(value: string): void;
   onValueFromChange(valueFrom: string | null): void;
@@ -2086,6 +2102,7 @@ function BlueprintAutomationSettings({
   onFilenameChange,
   onPauseBeforeRunChange,
   onRequireVisibleChange,
+  onReviewedChange,
   onTimeoutChange,
   onValueChange,
   onValueFromChange,
@@ -2204,16 +2221,30 @@ function BlueprintAutomationSettings({
       ) : null}
 
       {node.type === 'custom-code' ? (
-        <label className={styles.inspectorField}>
-          <span>Code</span>
-          <textarea
-            aria-label="Automation custom code"
-            disabled={!generatedCodeInSync}
-            rows={6}
-            value={node.code}
-            onChange={(event) => onCodeChange(event.currentTarget.value)}
-          />
-        </label>
+        <>
+          <label className={styles.inspectorField}>
+            <span>Code</span>
+            <textarea
+              aria-label="Automation custom code"
+              disabled={!generatedCodeInSync}
+              rows={6}
+              value={node.code}
+              onChange={(event) => onCodeChange(event.currentTarget.value)}
+            />
+          </label>
+          <label className={styles.enabledField}>
+            <input
+              aria-label="Mark custom code as reviewed"
+              checked={node.reviewed}
+              disabled={!generatedCodeInSync}
+              type="checkbox"
+              onChange={(event) =>
+                onReviewedChange(event.currentTarget.checked)
+              }
+            />
+            <span>Reviewed custom code</span>
+          </label>
+        </>
       ) : null}
     </div>
   );

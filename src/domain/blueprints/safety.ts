@@ -34,6 +34,23 @@ const SENSITIVE_FIELD_WORDS = [
   'payment',
 ] as const;
 
+const CUSTOM_CODE_DYNAMIC_PATTERNS = [
+  /\beval\s*\(/i,
+  /\bnew\s+Function\s*\(/i,
+  /\bimport\s*\(/i,
+] as const;
+
+const CUSTOM_CODE_NETWORK_PATTERNS = [
+  /\bfetch\s*\(/i,
+  /\bXMLHttpRequest\b/i,
+] as const;
+
+const CUSTOM_CODE_STORAGE_PATTERNS = [
+  /\bdocument\.cookie\b/i,
+  /\blocalStorage\b/i,
+  /\bsessionStorage\b/i,
+] as const;
+
 export function assessBlueprintNodeSafety(
   node: BlueprintNode,
 ): BlueprintSafetyIssue[] {
@@ -111,11 +128,23 @@ export function assessBlueprintNodeSafety(
       break;
     case 'custom-code':
       addTimeoutIssues(node, issues);
+
+      if (!node.reviewed) {
+        issues.push({
+          code: 'custom-code-unreviewed',
+          level: 'danger',
+          message:
+            'Custom code must be reviewed before generated snippets run it.',
+        });
+      }
+
       issues.push({
         code: 'custom-code-review',
         level: 'info',
         message: 'Custom code is user-authored and should be reviewed.',
       });
+
+      addCustomCodeIssues(node.code, issues);
       break;
     case 'download-json':
       if (!node.filename.toLowerCase().endsWith('.json')) {
@@ -129,6 +158,35 @@ export function assessBlueprintNodeSafety(
   }
 
   return issues;
+}
+
+function addCustomCodeIssues(
+  code: string,
+  issues: BlueprintSafetyIssue[],
+): void {
+  if (CUSTOM_CODE_DYNAMIC_PATTERNS.some((pattern) => pattern.test(code))) {
+    issues.push({
+      code: 'custom-code-dynamic-execution',
+      level: 'danger',
+      message: 'Custom code contains dynamic code execution.',
+    });
+  }
+
+  if (CUSTOM_CODE_NETWORK_PATTERNS.some((pattern) => pattern.test(code))) {
+    issues.push({
+      code: 'custom-code-network',
+      level: 'warning',
+      message: 'Custom code can make network requests.',
+    });
+  }
+
+  if (CUSTOM_CODE_STORAGE_PATTERNS.some((pattern) => pattern.test(code))) {
+    issues.push({
+      code: 'custom-code-storage',
+      level: 'warning',
+      message: 'Custom code can read or write browser page storage.',
+    });
+  }
 }
 
 export function highestBlueprintSafetyLevel(

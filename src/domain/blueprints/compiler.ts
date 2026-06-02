@@ -72,6 +72,7 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
 
       if (step.type === 'custom-code') {
         const element = await waitForElement(step);
+        assertCustomCodeReviewed(step);
         await runCustomCode(step, element);
       }
     }
@@ -274,6 +275,12 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
     await run(element, values, step);
   }
 
+  function assertCustomCodeReviewed(step) {
+    if (!step.reviewed) {
+      throw new Error(\`Step "\${step.label}" contains custom code that has not been reviewed.\`);
+    }
+  }
+
   function sleep(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
@@ -382,6 +389,7 @@ function automationStepDefinition(node: BlueprintAutomationNode) {
         ...base,
         code: node.code,
         requireVisible: node.requireVisible,
+        reviewed: node.reviewed,
         timeoutMs: node.timeoutMs,
       };
   }
