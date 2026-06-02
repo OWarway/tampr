@@ -17,17 +17,25 @@ export type BlueprintPickerResponse =
       pick: BlueprintElementPick;
     }
   | {
+      draft: BlueprintDraftFlow;
+      message: string;
+      ok: false;
+      reason: 'navigating';
+    }
+  | {
       message: string;
       ok: false;
       reason: 'busy' | 'cancelled' | 'unavailable';
     };
 
 type BlueprintPickerOptions = {
+  draft?: BlueprintDraftFlow;
   mode?: 'create' | 'selector';
 };
 
 // Chrome serializes only this function for injection, so the picker helpers stay nested.
 export async function runTamprBlueprintPicker({
+  draft,
   mode = 'create',
 }: BlueprintPickerOptions = {}): Promise<BlueprintPickerResponse> {
   type PickerWindow = Window & {
@@ -56,7 +64,7 @@ export async function runTamprBlueprintPicker({
 
   return await new Promise<BlueprintPickerResponse>((resolve) => {
     let hoverTarget: Element | undefined;
-    let selectedDraftIndex = -1;
+    let selectedDraftIndex = draft?.nodes.length ? draft.nodes.length - 1 : -1;
     let selectedPick: BlueprintElementPick | undefined;
     let selectedTarget: Element | undefined;
     let previewStyle: HTMLStyleElement | undefined;
@@ -64,7 +72,10 @@ export async function runTamprBlueprintPicker({
 
     type DraftNode = BlueprintFlowDraftNode;
 
-    const draftNodes: DraftNode[] = [];
+    const draftNodes: DraftNode[] = (draft?.nodes ?? []).map((node) => ({
+      ...node,
+      pick: { ...node.pick, selectorMeta: { ...node.pick.selectorMeta } },
+    }));
 
     const root = document.createElement('div');
     const highlight = document.createElement('div');
@@ -659,8 +670,15 @@ export async function runTamprBlueprintPicker({
             }
 
             const target = resolveClickTarget(element);
+            const navigationUrl = navigationUrlForClickTarget(target);
 
             assertSafeClickTarget(target);
+
+            if (navigationUrl) {
+              continueAfterNavigation(target);
+              return;
+            }
+
             synthesizeClick(target);
             continue;
           }
@@ -902,6 +920,8 @@ export async function runTamprBlueprintPicker({
       return field;
     }
 
+    updateFlowBar();
+
     function editorControlStyle(extra: string[] = []): string {
       return [
         'appearance: none',
@@ -1048,6 +1068,63 @@ export async function runTamprBlueprintPicker({
       );
 
       return interactive instanceof HTMLElement ? interactive : element;
+    }
+
+    function navigationUrlForClickTarget(
+      element: HTMLElement,
+    ): string | undefined {
+      const anchor = element.closest('a[href]');
+
+      if (!(anchor instanceof HTMLAnchorElement)) {
+        return undefined;
+      }
+
+      if (anchor.hasAttribute('download')) {
+        return undefined;
+      }
+
+      const target = anchor.target.trim().toLowerCase();
+
+      if (target && target !== '_self') {
+        return undefined;
+      }
+
+      const url = new URL(anchor.href, document.baseURI);
+
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return undefined;
+      }
+
+      const currentUrl = new URL(window.location.href);
+      const onlyHashChanged =
+        url.origin === currentUrl.origin &&
+        url.pathname === currentUrl.pathname &&
+        url.search === currentUrl.search &&
+        url.hash !== currentUrl.hash;
+
+      return onlyHashChanged ? undefined : url.href;
+    }
+
+    function continueAfterNavigation(target: HTMLElement): void {
+      const nextDraft = snapshotDraft();
+
+      cleanup();
+      window.setTimeout(() => synthesizeClick(target), 0);
+      resolve({
+        ok: false,
+        reason: 'navigating',
+        message: 'Blueprint editor will continue after navigation.',
+        draft: nextDraft,
+      });
+    }
+
+    function snapshotDraft(): BlueprintDraftFlow {
+      return {
+        nodes: draftNodes.map((node) => ({
+          ...node,
+          pick: { ...node.pick, selectorMeta: { ...node.pick.selectorMeta } },
+        })),
+      };
     }
 
     function synthesizeClick(element: HTMLElement): void {

@@ -194,6 +194,92 @@ describe('BlueprintController', () => {
     expect(create).toHaveBeenCalled();
   });
 
+  it('reinjects an active Blueprint draft after navigation completes', async () => {
+    const snippets = new MemorySnippetStore();
+    const runtimeSync = vi.fn(async () => readyRuntime());
+    const create = vi.fn().mockResolvedValue(undefined);
+    const draft = {
+      nodes: [
+        {
+          action: 'click' as const,
+          pick: {
+            label: 'Next',
+            selector: 'a.next',
+            selectorMeta: selectorMeta(),
+            tagName: 'a',
+          },
+        },
+      ],
+    };
+    const executeScript = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          result: {
+            ok: false,
+            reason: 'navigating',
+            message: 'Blueprint editor will continue after navigation.',
+            draft,
+          },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          result: {
+            ok: true,
+            pick: draft.nodes[0]?.pick,
+            draft,
+          },
+        },
+      ]);
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync,
+      scripting: {
+        executeScript,
+      },
+      snippets,
+      tabs: {
+        create,
+        query: vi.fn().mockResolvedValue([
+          {
+            id: 42,
+            url: 'https://docs.example.com/start',
+          },
+        ]),
+        update: vi.fn(),
+      },
+    });
+
+    await expect(controller.startCreator()).resolves.toEqual({
+      ok: true,
+      status: 'continued',
+    });
+
+    await controller.handleTabUpdated(
+      42,
+      { status: 'complete' },
+      { url: 'https://docs.example.com/next' },
+    );
+
+    expect(executeScript).toHaveBeenNthCalledWith(2, {
+      target: { tabId: 42 },
+      func: expect.any(Function),
+      args: [{ draft }],
+    });
+    expect(snippets.values[0]).toMatchObject({
+      folder: 'Blueprints',
+      matches: ['https://docs.example.com/next*'],
+      name: 'Click Next',
+    });
+    expect(runtimeSync).toHaveBeenCalledWith(snippets.values);
+    expect(create).toHaveBeenCalledWith({
+      url: 'chrome-extension://tampr/workspace.html?sourcePage=https%3A%2F%2Fdocs.example.com%2Fnext&snippet=blueprint-snippet&sourceTab=42',
+    });
+  });
+
   it('rejects unsupported active pages', async () => {
     const controller = new BlueprintController({
       createId: () => 'blueprint-snippet',

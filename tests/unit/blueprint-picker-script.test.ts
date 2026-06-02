@@ -400,6 +400,126 @@ describe('runTamprBlueprintPicker', () => {
     });
   });
 
+  it('returns a draft session before click navigation tears down the page', async () => {
+    document.body.innerHTML = `
+      <main>
+        <a href="https://docs.example.com/next"><span class="label">Next</span></a>
+      </main>
+    `;
+    const anchor = document.querySelector('a') as HTMLAnchorElement;
+    const label = document.querySelector('span.label') as HTMLSpanElement;
+    const observed: string[] = [];
+
+    for (const type of [
+      'pointerdown',
+      'mousedown',
+      'pointerup',
+      'mouseup',
+      'click',
+    ]) {
+      anchor.addEventListener(type, (event) => {
+        observed.push(event.type);
+        event.preventDefault();
+      });
+    }
+    stubElementFromPoint(label);
+    stubRect(anchor);
+    stubRect(label);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Click');
+    clickButton('Run');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: false,
+      reason: 'navigating',
+      draft: {
+        nodes: [
+          {
+            action: 'click',
+            pick: {
+              selector: 'span.label',
+            },
+          },
+        ],
+      },
+    });
+    await flushPromises();
+
+    expect(observed).toEqual([
+      'pointerdown',
+      'mousedown',
+      'pointerup',
+      'mouseup',
+      'click',
+    ]);
+    expect(document.querySelector('[data-tampr-blueprint-picker]')).toBeNull();
+  });
+
+  it('reopens an existing draft when resumed after navigation', async () => {
+    document.body.innerHTML = `
+      <main>
+        <h1 data-testid="headline">Next page</h1>
+      </main>
+    `;
+    const resultPromise = runTamprBlueprintPicker({
+      draft: {
+        nodes: [
+          {
+            action: 'click',
+            label: 'Click Next',
+            pick: {
+              label: 'Next',
+              selector: 'a > span.label',
+              selectorMeta: {
+                matchCount: 1,
+                segmentCount: 2,
+                strategy: 'path',
+                usesNthOfType: false,
+              },
+              tagName: 'span',
+              text: 'Next',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(document.body.textContent).toContain('1. Click');
+    expect(document.body.textContent).toContain('event.isTrusted === false');
+
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'click',
+            label: 'Click Next',
+          },
+        ],
+      },
+    });
+  });
+
   it('edits page-side draft step settings before saving', async () => {
     document.body.innerHTML = `
       <main>

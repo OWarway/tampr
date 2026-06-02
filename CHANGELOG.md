@@ -55,6 +55,8 @@ group changes under the headings below.
   ancestor and dispatch pointer/mouse/click event sequences for SPA controls.
 - Page-side Blueprint draft builder for chaining selected-element actions before
   saving, including run preview and custom-code steps.
+- Page-side Blueprint drafts can resume after same-tab link navigation so the
+  editor stays available on the next page.
 - Page-side Blueprint draft step selection with move up, move down, and remove
   controls before saving.
 - Page-side Blueprint draft step settings for editing set-value, extract, and

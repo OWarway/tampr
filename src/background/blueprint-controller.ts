@@ -55,6 +55,12 @@ type ActiveBlueprintTab = {
   pageUrl: string;
 };
 
+type BlueprintNavigationSession = {
+  draft: {
+    nodes: BlueprintFlowDraftNode[];
+  };
+};
+
 type BlueprintInjectionResult = {
   result?: {
     action?: BlueprintAction;
@@ -116,6 +122,11 @@ function buildSingleActionDraft(
 }
 
 export class BlueprintController {
+  private readonly navigationSessions = new Map<
+    number,
+    BlueprintNavigationSession
+  >();
+
   constructor(private readonly dependencies: BlueprintControllerDependencies) {}
 
   async startCreator(): Promise<StartBlueprintCreatorResponse> {
@@ -184,15 +195,53 @@ export class BlueprintController {
     }
   }
 
+  async handleTabUpdated(
+    tabId: number,
+    changeInfo: { status?: string | undefined },
+    tab: { url?: string | undefined },
+  ): Promise<void> {
+    const session = this.navigationSessions.get(tabId);
+
+    if (!session || changeInfo.status !== 'complete') {
+      return;
+    }
+
+    const pageUrl = tab.url ? sanitizeWebPageUrl(tab.url) : undefined;
+
+    if (!pageUrl) {
+      this.navigationSessions.delete(tabId);
+      return;
+    }
+
+    try {
+      await this.injectCreatorIntoTab({ id: tabId, pageUrl }, session.draft);
+    } catch (error) {
+      this.navigationSessions.delete(tabId);
+      throw error;
+    }
+  }
+
   private async createFromActiveTab(): Promise<StartBlueprintCreatorResponse> {
     if (!this.dependencies.scripting) {
       throw new Error('Blueprint creator needs Chrome scripting support.');
     }
 
     const tab = await this.getActiveBlueprintTab();
+    return await this.injectCreatorIntoTab(tab);
+  }
+
+  private async injectCreatorIntoTab(
+    tab: ActiveBlueprintTab,
+    draft?: { nodes: BlueprintFlowDraftNode[] } | undefined,
+  ): Promise<StartBlueprintCreatorResponse> {
+    if (!this.dependencies.scripting) {
+      throw new Error('Blueprint creator needs Chrome scripting support.');
+    }
+
     const [injectionResult] = (await this.dependencies.scripting.executeScript({
       target: { tabId: tab.id },
       func: runTamprBlueprintPicker,
+      ...(draft ? { args: [{ draft }] } : {}),
     })) as BlueprintInjectionResult[];
     const pickerResponse = injectionResult?.result;
 
@@ -201,11 +250,22 @@ export class BlueprintController {
     }
 
     if (!pickerResponse.ok) {
+      if (pickerResponse.reason === 'navigating' && pickerResponse.draft) {
+        this.navigationSessions.set(tab.id, {
+          draft: pickerResponse.draft,
+        });
+
+        return { ok: true, status: 'continued' };
+      }
+
+      this.navigationSessions.delete(tab.id);
       return { ok: true, status: 'cancelled' };
     }
 
+    this.navigationSessions.delete(tab.id);
+
     const snippetId = this.dependencies.createId();
-    const draft = pickerResponse.draft
+    const snippetDraft = pickerResponse.draft
       ? buildBlueprintFlowSnippetDraft({
           nodes: pickerResponse.draft.nodes,
           pageUrl: tab.pageUrl,
@@ -214,7 +274,7 @@ export class BlueprintController {
     const snippet = buildSnippet({
       id: snippetId,
       now: this.dependencies.now(),
-      draft,
+      draft: snippetDraft,
     });
     const snippets = await this.dependencies.snippets.save(snippet);
 

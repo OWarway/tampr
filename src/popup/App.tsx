@@ -28,9 +28,14 @@ export function App() {
         return;
       }
 
+      if (response.status === 'created') {
+        setBlueprintNotice('Blueprint created in the workspace.');
+        return;
+      }
+
       setBlueprintNotice(
-        response.status === 'created'
-          ? 'Blueprint created in the workspace.'
+        response.status === 'continued'
+          ? 'Blueprint editor will continue after navigation.'
           : 'Blueprint cancelled.',
       );
     } catch (error: unknown) {

@@ -100,7 +100,7 @@ export type StartBlueprintCreatorResponse =
   | {
       ok: true;
       snippetId?: string;
-      status: 'cancelled' | 'created';
+      status: 'cancelled' | 'continued' | 'created';
     }
   | {
       error: string;

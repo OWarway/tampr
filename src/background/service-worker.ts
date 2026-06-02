@@ -38,6 +38,12 @@ if (import.meta.env.MODE === 'development') {
 
 actionBadge.installTabListeners(chrome.tabs);
 
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  void blueprints
+    .handleTabUpdated(tabId, changeInfo, tab)
+    .catch(() => undefined);
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   void actionBadge.clearAll();
   void workspace.syncStoredSnippets();

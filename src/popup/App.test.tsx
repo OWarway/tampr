@@ -118,6 +118,37 @@ describe('Popup App', () => {
     ).toBeTruthy();
   });
 
+  it('shows when the blueprint creator continues after navigation', async () => {
+    const sendMessage = vi
+      .fn()
+      .mockResolvedValueOnce(readyPageResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 'continued',
+      });
+
+    vi.stubGlobal('chrome', {
+      runtime: { sendMessage },
+      tabs: {
+        query: vi.fn().mockResolvedValue([
+          {
+            url: 'https://docs.example.com/snippets/new',
+          },
+        ]),
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Blueprint' }));
+
+    expect(
+      await screen.findByText(
+        'Blueprint editor will continue after navigation.',
+      ),
+    ).toBeTruthy();
+  });
+
   it('falls back to the options page outside web pages', async () => {
     const openOptionsPage = vi.fn().mockResolvedValue(undefined);
 
