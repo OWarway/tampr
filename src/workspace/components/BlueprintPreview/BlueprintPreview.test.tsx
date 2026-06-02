@@ -783,6 +783,11 @@ describe('BlueprintPreview', () => {
       ),
     ).toBeTruthy();
     expect(
+      screen.getByText(
+        'Blueprint clicks are synthetic: event.isTrusted === false.',
+      ),
+    ).toBeTruthy();
+    expect(
       screen.getByText('Click steps should require a visible target.'),
     ).toBeTruthy();
   });
@@ -904,6 +909,11 @@ describe('BlueprintPreview', () => {
     expect(
       screen.getByText('Element clicked on the source page.'),
     ).toBeTruthy();
+    expect(
+      screen.getAllByText(
+        'Blueprint clicks are synthetic: event.isTrusted === false.',
+      ),
+    ).toHaveLength(2);
   });
 
   it('edits automation values and regenerates JavaScript', () => {

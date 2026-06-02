@@ -478,7 +478,12 @@ export function BlueprintPreview({
       }
 
       return {
-        details: [result.message],
+        details: [
+          result.message,
+          ...(result.action === 'click'
+            ? ['Blueprint clicks are synthetic: event.isTrusted === false.']
+            : []),
+        ],
         id: node.id,
         label,
         ...(result.value || result.preview
@@ -1712,6 +1717,11 @@ function BlueprintAutomationRunPanel({
             {result.visibleCount} visible
           </span>
           <span>{result.message}</span>
+          {result.action === 'click' ? (
+            <span>
+              Blueprint clicks are synthetic: event.isTrusted === false.
+            </span>
+          ) : null}
           {result.value ? <p>{result.value}</p> : null}
           {!result.value && result.preview ? <p>{result.preview}</p> : null}
         </div>

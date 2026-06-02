@@ -72,6 +72,7 @@ export async function runTamprBlueprintPicker({
     const flowBar = document.createElement('div');
     const flowTitle = document.createElement('strong');
     const flowSteps = document.createElement('div');
+    const flowTrust = document.createElement('span');
     const flowActions = document.createElement('div');
     const stepEditor = document.createElement('div');
     const stepEditorTitle = document.createElement('strong');
@@ -167,6 +168,18 @@ export async function runTamprBlueprintPicker({
       'overflow: hidden',
     ].join(';');
 
+    flowTrust.style.cssText = [
+      'background: rgba(255, 255, 255, 0.12)',
+      'border: 1px solid rgba(255, 255, 255, 0.2)',
+      'border-radius: 999px',
+      'color: #f7fbf8',
+      'display: none',
+      'font: 900 11px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+      'padding: 6px 8px',
+      'white-space: nowrap',
+    ].join(';');
+    flowTrust.textContent = 'event.isTrusted === false';
+
     flowActions.style.cssText = [
       'display: flex',
       'flex: 0 0 auto',
@@ -261,7 +274,7 @@ export async function runTamprBlueprintPicker({
       saveButton,
       cancelButton,
     );
-    flowBar.append(flowTitle, flowSteps, flowActions);
+    flowBar.append(flowTitle, flowSteps, flowTrust, flowActions);
 
     palette.style.cssText = [
       'background: #f7fbf8',
@@ -806,6 +819,11 @@ export async function runTamprBlueprintPicker({
 
       flowBar.style.display = hasDraft ? 'flex' : 'none';
       banner.style.display = hasDraft ? 'none' : '';
+      flowTrust.style.display = draftNodes.some(
+        (node) => node.action === 'click',
+      )
+        ? ''
+        : 'none';
       flowTitle.textContent = `Tampr Blueprint`;
       if (!hasDraft) {
         selectedDraftIndex = -1;

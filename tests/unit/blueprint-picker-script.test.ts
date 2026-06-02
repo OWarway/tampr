@@ -370,6 +370,7 @@ describe('runTamprBlueprintPicker', () => {
     );
 
     clickButton('Click');
+    expect(document.body.textContent).toContain('event.isTrusted === false');
     clickButton('Run');
     await flushPromises();
 

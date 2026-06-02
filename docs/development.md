@@ -177,8 +177,9 @@ receive the click. Page-side draft runs, manual workspace runs, and compiled
 Blueprint snippets use the same pointerdown, mousedown, pointerup, mouseup, and
 click sequence. The page-side picker must ignore its own hit-testing listener
 while a draft run is active so it does not intercept the click it just
-dispatched. These synthetic events are still not trusted browser events, so
-sites that require `isTrusted === true` may ignore them.
+dispatched. Blueprint click UIs surface this boundary as
+`event.isTrusted === false`. These synthetic events are still not trusted browser
+events, so sites that require `isTrusted === true` may ignore them.
 
 ## Script Download API
 

@@ -56,6 +56,11 @@ export function assessBlueprintNodeSafety(
         level: 'warning',
         message: 'Click steps should be tested on a safe page before saving.',
       });
+      issues.push({
+        code: 'click-trust-boundary',
+        level: 'info',
+        message: 'Blueprint clicks are synthetic: event.isTrusted === false.',
+      });
 
       if (!node.requireVisible) {
         issues.push({

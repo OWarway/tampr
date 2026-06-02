@@ -28,6 +28,7 @@ describe('blueprint safety', () => {
 
     expect(issues.map((issue) => issue.code)).toEqual([
       'click-review',
+      'click-trust-boundary',
       'click-hidden',
       'risky-click-copy',
     ]);
