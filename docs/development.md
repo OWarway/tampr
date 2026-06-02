@@ -137,8 +137,16 @@ for every enabled node. CSS nodes use selector tests; automation nodes use
 automation node tests. This preview is intentionally non-mutating: it must not
 click, type into fields, submit forms, execute custom code, or start downloads.
 Preview results are shown in the report panel and reflected back onto the flow
-canvas node cards. Keep full flow execution separate from this preview until
-step-by-step confirmation and cancellation are explicit.
+canvas node cards.
+
+Full workspace flow runs are a separate guarded action. They reuse the manual
+automation node runner, skip CSS nodes because generated CSS already applies
+them, run wait-for-element and extract-text steps, and run click steps only after
+an explicit flow-level confirmation. Set-value, download-json, and custom-code
+steps remain blocked in full-flow runs until their confirmation, cancellation,
+and result-reporting UX is explicit. Flow runs stop on the first blocked or
+failed step and reflect pending, running, complete, blocked, failed, and skipped
+states back onto the canvas node cards.
 
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,

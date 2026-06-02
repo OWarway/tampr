@@ -95,6 +95,17 @@
   }
 }
 
+.flowPanelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: end;
+}
+
+.flowRunConfirm {
+  grid-column: 1 / -1;
+}
+
 .flowTestResults {
   display: grid;
   gap: 8px;
@@ -438,6 +449,25 @@
   color: #7d4a16;
 }
 
+.flowRunning {
+  background: #e8f0f6;
+  border-color: #92a9bc;
+  color: #294963;
+}
+
+.flowComplete {
+  background: #e2f1e7;
+  border-color: #79a78f;
+  color: #14594d;
+}
+
+.flowFailed,
+.flowBlocked {
+  background: #fbe7e2;
+  border-color: #d44d3a;
+  color: #8e2b20;
+}
+
 .flowSkipped {
   background: #eef3f1;
   border-color: #c7d2cc;
@@ -457,6 +487,22 @@
 .statusCard.flowReview {
   background: #fffaf1;
   border-color: #d8ad72;
+}
+
+.statusCard.flowRunning {
+  background: #f4f8fb;
+  border-color: #92a9bc;
+}
+
+.statusCard.flowComplete {
+  background: #fbfffc;
+  border-color: #79a78f;
+}
+
+.statusCard.flowFailed,
+.statusCard.flowBlocked {
+  background: #fff7f4;
+  border-color: #d44d3a;
 }
 
 .statusCard.flowSkipped {

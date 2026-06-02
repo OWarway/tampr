@@ -455,6 +455,112 @@ describe('BlueprintPreview', () => {
     expect(screen.getByText('Deal')).toBeTruthy();
   });
 
+  it('runs supported flow steps with explicit click confirmation', async () => {
+    const onRunAutomationNode = vi
+      .fn()
+      .mockResolvedValueOnce({
+        action: 'wait-for-element',
+        durationMs: 8,
+        firstTagName: 'section',
+        matchCount: 1,
+        message: 'Element is ready on the source page.',
+        preview: 'Deal',
+        visibleCount: 1,
+      })
+      .mockResolvedValueOnce({
+        action: 'extract-text',
+        durationMs: 10,
+        firstTagName: 'h2',
+        matchCount: 1,
+        message: 'Text extracted from the source page.',
+        value: 'Deal title',
+        variableName: 'dealTitle',
+        visibleCount: 1,
+      })
+      .mockResolvedValueOnce({
+        action: 'click',
+        durationMs: 12,
+        firstTagName: 'button',
+        matchCount: 1,
+        message: 'Element clicked on the source page.',
+        preview: 'Open deal',
+        visibleCount: 1,
+      });
+    const blueprint = flowRunRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    const runButton = screen.getByRole('button', { name: 'Run flow' });
+
+    expect((runButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(
+      screen.getByLabelText('Confirm flow click steps on source page'),
+    );
+    fireEvent.click(runButton);
+
+    await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(3));
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(1, {
+      label: 'Wait for deal',
+      selector: '[data-testid="deal"]',
+      type: 'wait-for-element',
+      requireVisible: true,
+      timeoutMs: 5000,
+    });
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(2, {
+      label: 'Extract title',
+      selector: '[data-testid="deal-title"]',
+      type: 'extract-text',
+      requireVisible: true,
+      timeoutMs: 5000,
+      variableName: 'dealTitle',
+    });
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(3, {
+      label: 'Open deal',
+      selector: 'button[data-testid="open"]',
+      type: 'click',
+      confirmAction: true,
+      requireVisible: true,
+      timeoutMs: 5000,
+    });
+    expect(
+      await screen.findByText('3 complete, 0 need review, 1 skipped'),
+    ).toBeTruthy();
+    expect(screen.getByText('Skipped CSS')).toBeTruthy();
+    expect(screen.getByText('Deal title')).toBeTruthy();
+    expect(screen.getAllByText('Complete')).toHaveLength(3);
+    expect(screen.getAllByText('Skipped')).toHaveLength(1);
+  });
+
+  it('blocks unsupported flow run steps before touching the page', async () => {
+    const onRunAutomationNode = vi.fn();
+    const blueprint = setValueRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run flow' }));
+
+    expect(await screen.findByText('0 complete, 1 need review')).toBeTruthy();
+    expect(
+      screen.getByText('Set value is not available in guarded flow runs yet.'),
+    ).toBeTruthy();
+    expect(screen.getAllByText('Blocked')).toHaveLength(2);
+    expect(onRunAutomationNode).not.toHaveBeenCalled();
+  });
+
   it('applies selector repair suggestions from the source page test', async () => {
     const onChange = vi.fn();
     const onTestSelector = vi.fn().mockResolvedValue({
@@ -950,6 +1056,82 @@ function flowPreviewRecipe(): BlueprintRecipe {
       layout: {
         'hide-signup': { x: 0, y: 0 },
         'wait-for-deal': { x: 220, y: 0 },
+      },
+    },
+  });
+}
+
+function flowRunRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Run flow',
+    graph: {
+      nodes: [
+        {
+          id: 'hide-signup',
+          enabled: true,
+          label: 'Hide signup',
+          selector: 'aside.signup',
+          selectorMeta: selectorMeta('class'),
+          type: 'hide',
+        },
+        {
+          id: 'wait-for-deal',
+          enabled: true,
+          label: 'Wait for deal',
+          requireVisible: true,
+          selector: '[data-testid="deal"]',
+          selectorMeta: selectorMeta('attribute'),
+          timeoutMs: 5000,
+          type: 'wait-for-element',
+        },
+        {
+          id: 'extract-title',
+          enabled: true,
+          label: 'Extract title',
+          requireVisible: true,
+          selector: '[data-testid="deal-title"]',
+          selectorMeta: selectorMeta('attribute'),
+          timeoutMs: 5000,
+          type: 'extract-text',
+          variableName: 'dealTitle',
+        },
+        {
+          id: 'open-deal',
+          enabled: true,
+          label: 'Open deal',
+          requireVisible: true,
+          selector: 'button[data-testid="open"]',
+          selectorMeta: selectorMeta('attribute'),
+          timeoutMs: 5000,
+          type: 'click',
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-wait-for-deal',
+          fromNodeId: 'hide-signup',
+          fromPort: 'success',
+          toNodeId: 'wait-for-deal',
+        },
+        {
+          id: 'edge-extract-title',
+          fromNodeId: 'wait-for-deal',
+          fromPort: 'success',
+          toNodeId: 'extract-title',
+        },
+        {
+          id: 'edge-open-deal',
+          fromNodeId: 'extract-title',
+          fromPort: 'success',
+          toNodeId: 'open-deal',
+        },
+      ],
+      layout: {
+        'hide-signup': { x: 0, y: 0 },
+        'wait-for-deal': { x: 220, y: 0 },
+        'extract-title': { x: 440, y: 0 },
+        'open-deal': { x: 660, y: 0 },
       },
     },
   });
