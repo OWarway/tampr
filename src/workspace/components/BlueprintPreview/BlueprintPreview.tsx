@@ -3,9 +3,7 @@ import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
 import {
-  BLUEPRINT_AUTOMATION_ACTIONS,
   BLUEPRINT_CSS_ACTIONS,
-  blueprintActionDescription,
   blueprintActionLabel,
   blueprintNodeDescription,
   blueprintNodeLabel,
@@ -1031,6 +1029,28 @@ type BlueprintNodeLibraryProps = {
   onAdd(type: BlueprintNodeType): void;
 };
 
+const BLUEPRINT_NODE_LIBRARY_GROUPS: ReadonlyArray<{
+  actions: readonly BlueprintNodeType[];
+  label: string;
+}> = [
+  {
+    label: 'Visual',
+    actions: BLUEPRINT_CSS_ACTIONS,
+  },
+  {
+    label: 'Actions',
+    actions: ['wait-for-element', 'click', 'set-value'],
+  },
+  {
+    label: 'Data',
+    actions: ['extract-text', 'download-json'],
+  },
+  {
+    label: 'Advanced',
+    actions: ['custom-code'],
+  },
+];
+
 type BlueprintFlowTestPanelProps = {
   generatedCodeInSync: boolean;
   runConfirmed: boolean;
@@ -1269,37 +1289,25 @@ function BlueprintNodeLibrary({
         <strong>Blueprint nodes</strong>
       </header>
 
-      <span className={styles.libraryGroup}>CSS</span>
-      <div className={styles.libraryActions}>
-        {BLUEPRINT_CSS_ACTIONS.map((action) => (
-          <button
-            aria-label={`Add ${blueprintActionLabel(action)} node`}
-            disabled={!generatedCodeInSync}
-            key={action}
-            title={blueprintActionDescription(action)}
-            type="button"
-            onClick={() => onAdd(action)}
-          >
-            {blueprintActionLabel(action)}
-          </button>
-        ))}
-      </div>
-
-      <span className={styles.libraryGroup}>Automation</span>
-      <div className={styles.libraryActions}>
-        {BLUEPRINT_AUTOMATION_ACTIONS.map((action) => (
-          <button
-            aria-label={`Add ${blueprintNodeLabel(action)} node`}
-            disabled={!generatedCodeInSync}
-            key={action}
-            title={blueprintNodeDescription(action)}
-            type="button"
-            onClick={() => onAdd(action)}
-          >
-            {blueprintNodeLabel(action)}
-          </button>
-        ))}
-      </div>
+      {BLUEPRINT_NODE_LIBRARY_GROUPS.map((group) => (
+        <div className={styles.librarySection} key={group.label}>
+          <span className={styles.libraryGroup}>{group.label}</span>
+          <div className={styles.libraryActions}>
+            {group.actions.map((action) => (
+              <button
+                aria-label={`Add ${blueprintNodeLabel(action)} node`}
+                disabled={!generatedCodeInSync}
+                key={action}
+                title={blueprintNodeDescription(action)}
+                type="button"
+                onClick={() => onAdd(action)}
+              >
+                {blueprintNodeLabel(action)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </aside>
   );
 }

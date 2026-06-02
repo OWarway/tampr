@@ -81,14 +81,17 @@ The popup Blueprint action uses `activeTab` plus `scripting` to run a temporary
 element picker on the current http or https page. The picker returns only the
 chosen action, selector metadata, and optional draft flow to the service worker.
 The page-side builder can append several selected-element actions before saving,
-select draft steps, move them up or down, remove them, run a temporary preview
-against the current page, edit set-value, extract, and custom-code step
-settings, and return a draft Blueprint flow. When a draft click targets a
-same-tab http/https link navigation, the picker returns a suspended draft to the
-service worker before dispatching the click; the service worker re-injects the
-draft editor after the next completed page load in that tab. The service worker
-creates a normal local snippet in the Blueprints folder, syncs runtime
-registrations, and opens the new snippet in the workspace.
+choose the current element or nearby parent/child targets for a selector, select
+draft steps from a visible flow strip, move them up or down, remove them, run a
+temporary preview against the current page, edit set-value, extract, and
+custom-code step settings, and return a draft Blueprint flow. Picker actions are
+grouped into visual, action, data, advanced, and flow sections so new automation
+steps are not presented as one flat menu. When a draft click targets a same-tab
+http/https link navigation, the picker returns a suspended draft to the service
+worker before dispatching the click; the service worker re-injects the draft
+editor after the next completed page load in that tab. The service worker creates
+a normal local snippet in the Blueprints folder, syncs runtime registrations, and
+opens the new snippet in the workspace.
 
 Navigation resume is an authoring continuity feature, not full saved cross-page
 automation. Saved Blueprints still run as normal snippets on matching pages; a

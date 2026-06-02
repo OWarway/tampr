@@ -219,6 +219,11 @@ describe('BlueprintPreview', () => {
       />,
     );
 
+    expect(screen.getByText('Visual')).toBeTruthy();
+    expect(screen.getByText('Actions')).toBeTruthy();
+    expect(screen.getByText('Data')).toBeTruthy();
+    expect(screen.getByText('Advanced')).toBeTruthy();
+
     fireEvent.click(
       screen.getByRole('button', { name: 'Add Print cleanup node' }),
     );

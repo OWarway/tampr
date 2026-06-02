@@ -65,6 +65,8 @@ group changes under the headings below.
   controls before saving.
 - Page-side Blueprint draft step settings for editing set-value, extract, and
   custom-code nodes before preview or save.
+- Page-side Blueprint selector target choices for nearby parent and child
+  elements, with grouped action palettes for faster flow building.
 - Source-page selector re-picking for Blueprint nodes opened from a page.
 - Source-page selector testing for Blueprint nodes, including match and visible
   counts from the original tab.

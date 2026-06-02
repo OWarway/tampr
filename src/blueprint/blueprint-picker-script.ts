@@ -66,11 +66,22 @@ export async function runTamprBlueprintPicker({
     let hoverTarget: Element | undefined;
     let selectedDraftIndex = draft?.nodes.length ? draft.nodes.length - 1 : -1;
     let selectedPick: BlueprintElementPick | undefined;
+    let selectedSelectorChoiceId = 'current';
     let selectedTarget: Element | undefined;
+    let selectorChoices: SelectorChoice[] = [];
     let previewStyle: HTMLStyleElement | undefined;
     let runningDraft = false;
 
     type DraftNode = BlueprintFlowDraftNode;
+    type SelectorChoiceRelation = 'child' | 'current' | 'parent';
+    type SelectorChoice = {
+      detail: string;
+      id: string;
+      label: string;
+      pick: BlueprintElementPick;
+      relation: SelectorChoiceRelation;
+      target: Element;
+    };
 
     const draftNodes: DraftNode[] = (draft?.nodes ?? []).map((node) => ({
       ...node,
@@ -99,6 +110,7 @@ export async function runTamprBlueprintPicker({
     const paletteTitle = document.createElement('strong');
     const paletteSelector = document.createElement('code');
     const paletteDetail = document.createElement('span');
+    const paletteSelectorChoices = document.createElement('div');
     const paletteActions = document.createElement('div');
 
     root.setAttribute('data-tampr-blueprint-picker', 'true');
@@ -294,7 +306,9 @@ export async function runTamprBlueprintPicker({
       'box-shadow: 0 18px 46px rgba(20, 32, 27, 0.24)',
       'display: none',
       'gap: 8px',
-      'max-width: min(420px, calc(100vw - 24px))',
+      'max-height: calc(100vh - 28px)',
+      'max-width: min(460px, calc(100vw - 24px))',
+      'overflow: auto',
       'padding: 8px',
       'pointer-events: auto',
       'position: fixed',
@@ -334,53 +348,70 @@ export async function runTamprBlueprintPicker({
     ].join(';');
     paletteInfo.append(paletteTitle, paletteSelector, paletteDetail);
 
-    paletteActions.style.cssText = [
-      'display: flex',
-      'flex-wrap: wrap',
-      'gap: 8px',
+    paletteSelectorChoices.style.cssText = [
+      'background: #fff',
+      'border: 1px solid #dbe3de',
+      'border-radius: 7px',
+      'display: none',
+      'gap: 7px',
+      'padding: 8px',
     ].join(';');
+
+    paletteActions.style.cssText = ['display: grid', 'gap: 10px'].join(';');
     if (mode === 'selector') {
       paletteActions.append(
-        createPaletteButton('Use selector', '#14594d', () => finish()),
-        createPaletteButton('Cancel', '#53645b', cancel),
+        createPaletteGroup('Selector', [
+          createPaletteButton('Use selector', '#14594d', () => finish()),
+          createPaletteButton('Cancel', '#53645b', cancel),
+        ]),
       );
     } else {
       paletteActions.append(
-        createPaletteButton('Hide', '#14594d', () => appendAction('hide')),
-        createPaletteButton('Highlight', '#d44d3a', () =>
-          appendAction('highlight'),
-        ),
-        createPaletteButton('Remove overlay', '#7d4a16', () =>
-          appendAction('remove-overlay'),
-        ),
-        createPaletteButton('Make sticky', '#2d7d56', () =>
-          appendAction('sticky'),
-        ),
-        createPaletteButton('Widen', '#29463d', () => appendAction('widen')),
-        createPaletteButton('Print cleanup', '#53645b', () =>
-          appendAction('print-cleanup'),
-        ),
-        createPaletteButton('Wait', '#14594d', () =>
-          appendAction('wait-for-element'),
-        ),
-        createPaletteButton('Click', '#29463d', () => appendAction('click')),
-        createPaletteButton('Set value', '#7d4a16', () =>
-          appendAction('set-value'),
-        ),
-        createPaletteButton('Extract', '#2d7d56', () =>
-          appendAction('extract-text'),
-        ),
-        createPaletteButton('Download JSON', '#29463d', () =>
-          appendAction('download-json'),
-        ),
-        createPaletteButton('Custom code', '#53645b', () =>
-          appendAction('custom-code'),
-        ),
-        createPaletteButton('Pick next', '#14594d', pickNext),
-        createPaletteButton('Cancel', '#53645b', cancel),
+        createPaletteGroup('Visual', [
+          createPaletteButton('Hide', '#14594d', () => appendAction('hide')),
+          createPaletteButton('Highlight', '#d44d3a', () =>
+            appendAction('highlight'),
+          ),
+          createPaletteButton('Remove overlay', '#7d4a16', () =>
+            appendAction('remove-overlay'),
+          ),
+          createPaletteButton('Make sticky', '#2d7d56', () =>
+            appendAction('sticky'),
+          ),
+          createPaletteButton('Widen', '#29463d', () => appendAction('widen')),
+          createPaletteButton('Print cleanup', '#53645b', () =>
+            appendAction('print-cleanup'),
+          ),
+        ]),
+        createPaletteGroup('Actions', [
+          createPaletteButton('Wait', '#14594d', () =>
+            appendAction('wait-for-element'),
+          ),
+          createPaletteButton('Click', '#29463d', () => appendAction('click')),
+          createPaletteButton('Set value', '#7d4a16', () =>
+            appendAction('set-value'),
+          ),
+        ]),
+        createPaletteGroup('Data', [
+          createPaletteButton('Extract', '#2d7d56', () =>
+            appendAction('extract-text'),
+          ),
+          createPaletteButton('Download JSON', '#29463d', () =>
+            appendAction('download-json'),
+          ),
+        ]),
+        createPaletteGroup('Advanced', [
+          createPaletteButton('Custom code', '#53645b', () =>
+            appendAction('custom-code'),
+          ),
+        ]),
+        createPaletteGroup('Flow', [
+          createPaletteButton('Pick next', '#14594d', pickNext),
+          createPaletteButton('Cancel', '#53645b', cancel),
+        ]),
       );
     }
-    palette.append(paletteInfo, paletteActions);
+    palette.append(paletteInfo, paletteSelectorChoices, paletteActions);
 
     root.append(highlight, banner, flowBar, stepEditor, palette);
     document.body.append(root);
@@ -415,6 +446,64 @@ export async function runTamprBlueprintPicker({
         event.stopPropagation();
         onClick();
       });
+      return button;
+    }
+
+    function createPaletteGroup(
+      label: string,
+      buttons: HTMLButtonElement[],
+    ): HTMLDivElement {
+      const group = document.createElement('div');
+      const title = document.createElement('span');
+      const row = document.createElement('div');
+
+      group.style.cssText = ['display: grid', 'gap: 6px'].join(';');
+      title.textContent = label;
+      title.style.cssText = [
+        'color: #53645b',
+        'font: 900 11px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+        'letter-spacing: 0',
+        'text-transform: uppercase',
+      ].join(';');
+      row.style.cssText = ['display: flex', 'flex-wrap: wrap', 'gap: 8px'].join(
+        ';',
+      );
+      row.append(...buttons);
+      group.append(title, row);
+
+      return group;
+    }
+
+    function createSelectorChoiceButton(
+      choice: SelectorChoice,
+    ): HTMLButtonElement {
+      const button = document.createElement('button');
+      const selected = choice.id === selectedSelectorChoiceId;
+
+      button.type = 'button';
+      button.textContent = choice.label;
+      button.title = `${choice.detail} ${choice.pick.selector}`;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      button.style.cssText = [
+        'appearance: none',
+        `background: ${selected ? '#e2f1e7' : '#fff'}`,
+        `border: 1px solid ${selected ? '#79a78f' : '#c7d2cc'}`,
+        'border-radius: 999px',
+        `color: ${selected ? '#14594d' : '#29463d'}`,
+        'cursor: pointer',
+        'font: 900 11px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+        'min-height: 28px',
+        'overflow: hidden',
+        'padding: 0 9px',
+        'text-overflow: ellipsis',
+        'white-space: nowrap',
+      ].join(';');
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        chooseSelectorTarget(choice);
+      });
+
       return button;
     }
 
@@ -466,11 +555,8 @@ export async function runTamprBlueprintPicker({
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      selectedTarget = target;
-      selectedPick = describePick(target);
-      drawHighlight(target);
-      updatePaletteInfo(selectedPick);
-      showPalette(target);
+      selectorChoices = buildSelectorChoices(target);
+      chooseSelectorTarget(selectorChoices[0] ?? selectorChoice(target));
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
@@ -529,7 +615,7 @@ export async function runTamprBlueprintPicker({
     function showPalette(target: Element): void {
       const rect = target.getBoundingClientRect();
       const maxTop = Math.max(12, window.innerHeight - 56);
-      const maxLeft = Math.max(12, window.innerWidth - 432);
+      const maxLeft = Math.max(12, window.innerWidth - 472);
       const top = Math.min(maxTop, Math.max(12, rect.bottom + 8));
       const left = Math.min(maxLeft, Math.max(12, rect.left));
 
@@ -537,6 +623,123 @@ export async function runTamprBlueprintPicker({
       palette.style.flexDirection = 'column';
       palette.style.left = `${left}px`;
       palette.style.top = `${top}px`;
+    }
+
+    function chooseSelectorTarget(choice: SelectorChoice): void {
+      selectedSelectorChoiceId = choice.id;
+      selectedTarget = choice.target;
+      selectedPick = choice.pick;
+      drawHighlight(choice.target);
+      updatePaletteInfo(choice.pick);
+      updateSelectorChoices();
+      showPalette(choice.target);
+    }
+
+    function updateSelectorChoices(): void {
+      if (selectorChoices.length <= 1) {
+        paletteSelectorChoices.style.display = 'none';
+        paletteSelectorChoices.replaceChildren();
+        return;
+      }
+
+      const title = document.createElement('span');
+      const row = document.createElement('div');
+
+      title.textContent = 'Selector target';
+      title.style.cssText = [
+        'color: #53645b',
+        'font: 900 11px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+        'letter-spacing: 0',
+        'text-transform: uppercase',
+      ].join(';');
+      row.style.cssText = ['display: flex', 'flex-wrap: wrap', 'gap: 6px'].join(
+        ';',
+      );
+      row.append(...selectorChoices.map(createSelectorChoiceButton));
+      paletteSelectorChoices.style.display = 'grid';
+      paletteSelectorChoices.replaceChildren(title, row);
+    }
+
+    function buildSelectorChoices(target: Element): SelectorChoice[] {
+      const choices: SelectorChoice[] = [];
+      const seenTargets = new Set<Element>();
+
+      function addChoice(
+        relation: SelectorChoiceRelation,
+        choiceTarget: Element | null | undefined,
+        label: string,
+      ): void {
+        if (
+          !choiceTarget ||
+          seenTargets.has(choiceTarget) ||
+          !isPickableSelectorAlternative(choiceTarget)
+        ) {
+          return;
+        }
+
+        seenTargets.add(choiceTarget);
+        choices.push(selectorChoice(choiceTarget, relation, label));
+      }
+
+      addChoice('current', target, 'Current');
+
+      const interactive = target.closest(
+        'button, a[href], [role="button"], [role="link"], summary, label, input[type="button"], input[type="submit"], input[type="reset"]',
+      );
+
+      if (interactive && interactive !== target) {
+        addChoice(
+          'parent',
+          interactive,
+          `Parent: ${elementChoiceName(interactive)}`,
+        );
+      }
+
+      let parent = target.parentElement;
+      let parentCount = 0;
+
+      while (parent && parentCount < 2) {
+        addChoice('parent', parent, `Parent: ${elementChoiceName(parent)}`);
+        parent = parent.parentElement;
+        parentCount += 1;
+      }
+
+      for (const child of Array.from(target.children).slice(0, 4)) {
+        addChoice('child', child, `Child: ${elementChoiceName(child)}`);
+      }
+
+      return choices;
+    }
+
+    function selectorChoice(
+      target: Element,
+      relation: SelectorChoiceRelation = 'current',
+      label = 'Current',
+    ): SelectorChoice {
+      const pick = describePick(target);
+
+      return {
+        detail: `${capitalize(relation)} target ${pick.label}.`,
+        id: `${relation}-${pick.selector}`,
+        label,
+        pick,
+        relation,
+        target,
+      };
+    }
+
+    function isPickableSelectorAlternative(element: Element): boolean {
+      if (root.contains(element)) {
+        return false;
+      }
+
+      const tagName = element.localName.toLowerCase();
+
+      return tagName !== 'html' && tagName !== 'body';
+    }
+
+    function elementChoiceName(element: Element): string {
+      return element.localName.toLowerCase();
     }
 
     function appendAction(action: BlueprintNodeAction): void {
@@ -571,9 +774,12 @@ export async function runTamprBlueprintPicker({
 
     function pickNext(): void {
       selectedPick = undefined;
+      selectedSelectorChoiceId = 'current';
       selectedTarget = undefined;
+      selectorChoices = [];
       hoverTarget = undefined;
       palette.style.display = 'none';
+      paletteSelectorChoices.style.display = 'none';
       highlight.style.display = 'none';
       banner.style.display = draftNodes.length > 0 ? 'none' : '';
     }
@@ -847,11 +1053,13 @@ export async function runTamprBlueprintPicker({
         selectedDraftIndex = -1;
       }
       flowSteps.replaceChildren(
-        ...draftNodes.map((node, index) => {
+        ...draftNodes.flatMap((node, index) => {
           const step = document.createElement('button');
+          const pieces: HTMLElement[] = [step];
 
           step.type = 'button';
           step.textContent = `${index + 1}. ${nodeLabel(node.action)}`;
+          step.title = `${node.label ?? step.textContent}: ${node.pick.selector}`;
           step.style.cssText = [
             'appearance: none',
             `background: ${
@@ -881,7 +1089,22 @@ export async function runTamprBlueprintPicker({
             updateFlowBar();
           });
 
-          return step;
+          if (index < draftNodes.length - 1) {
+            const arrow = document.createElement('span');
+
+            arrow.textContent = '->';
+            arrow.setAttribute('aria-hidden', 'true');
+            arrow.style.cssText = [
+              'align-items: center',
+              'color: rgba(255, 255, 255, 0.62)',
+              'display: inline-flex',
+              'font: 900 12px/1 Inter, ui-sans-serif, system-ui, sans-serif',
+              'padding: 0 1px',
+            ].join(';');
+            pieces.push(arrow);
+          }
+
+          return pieces;
         }),
       );
       moveUpButton.disabled = !hasDraft || selectedDraftIndex <= 0;

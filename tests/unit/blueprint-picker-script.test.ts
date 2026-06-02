@@ -42,6 +42,10 @@ describe('runTamprBlueprintPicker', () => {
     expect(document.body.textContent).toContain('Good selector');
     expect(document.body.textContent).toContain('Unique class-based target.');
     expect(document.body.textContent).toContain('aside.subscribe.panel');
+    expect(document.body.textContent).toContain('Visual');
+    expect(document.body.textContent).toContain('Actions');
+    expect(document.body.textContent).toContain('Data');
+    expect(document.body.textContent).toContain('Advanced');
     expect(document.body.textContent).toContain('Remove overlay');
     expect(document.body.textContent).toContain('Make sticky');
     expect(document.body.textContent).toContain('Widen');
@@ -116,6 +120,68 @@ describe('runTamprBlueprintPicker', () => {
     });
     expect(document.querySelector('[data-tampr-blueprint-picker]')).toBeNull();
     expect(document.querySelector('[data-tampr-blueprint-preview]')).toBeNull();
+  });
+
+  it('offers parent and child selector targets before adding actions', async () => {
+    document.body.innerHTML = `
+      <main>
+        <article data-testid="card">
+          <button data-testid="open"><span data-testid="label">Open</span></button>
+        </article>
+      </main>
+    `;
+    const button = document.querySelector('button') as HTMLButtonElement;
+    const label = document.querySelector('span') as HTMLSpanElement;
+
+    stubElementFromPoint(button);
+    stubRect(button);
+    stubRect(label);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    expect(document.body.textContent).toContain('Selector target');
+    expect(document.body.textContent).toContain('Current');
+    expect(document.body.textContent).toContain('Parent: article');
+    expect(document.body.textContent).toContain('Child: span');
+
+    clickButton('Child: span');
+    expect(document.body.textContent).toContain('span[data-testid="label"]');
+
+    clickButton('Extract');
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'extract-text',
+            pick: {
+              selector: 'span[data-testid="label"]',
+            },
+          },
+        ],
+      },
+      pick: {
+        selector: 'span[data-testid="label"]',
+      },
+    });
   });
 
   it('returns new CSS action choices from the palette', async () => {

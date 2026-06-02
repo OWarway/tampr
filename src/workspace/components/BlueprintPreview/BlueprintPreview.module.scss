@@ -245,6 +245,12 @@
   }
 }
 
+.librarySection {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
 .libraryGroup {
   color: #53645b;
   font-size: 11px;
