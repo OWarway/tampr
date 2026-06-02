@@ -60,6 +60,7 @@ export async function runTamprBlueprintPicker({
     let selectedPick: BlueprintElementPick | undefined;
     let selectedTarget: Element | undefined;
     let previewStyle: HTMLStyleElement | undefined;
+    let runningDraft = false;
 
     type DraftNode = BlueprintFlowDraftNode;
 
@@ -423,6 +424,10 @@ export async function runTamprBlueprintPicker({
     }
 
     function handleClick(event: MouseEvent): void {
+      if (runningDraft) {
+        return;
+      }
+
       const targetNode = event.target;
 
       if (targetNode instanceof Node && root.contains(targetNode)) {
@@ -617,6 +622,7 @@ export async function runTamprBlueprintPicker({
       }
 
       flowTitle.textContent = 'Running Blueprint';
+      runningDraft = true;
 
       try {
         for (const node of draftNodes) {
@@ -635,8 +641,14 @@ export async function runTamprBlueprintPicker({
           }
 
           if (node.action === 'click') {
-            assertSafeClickTarget(element);
-            (element as HTMLElement).click();
+            if (!(element instanceof HTMLElement)) {
+              throw new Error('Click target is not an HTML element.');
+            }
+
+            const target = resolveClickTarget(element);
+
+            assertSafeClickTarget(target);
+            synthesizeClick(target);
             continue;
           }
 
@@ -666,6 +678,8 @@ export async function runTamprBlueprintPicker({
       } catch (error: unknown) {
         flowTitle.textContent =
           error instanceof Error ? error.message : 'Run failed';
+      } finally {
+        runningDraft = false;
       }
     }
 
@@ -1010,7 +1024,59 @@ export async function runTamprBlueprintPicker({
       );
     }
 
-    function assertSafeClickTarget(element: Element): void {
+    function resolveClickTarget(element: HTMLElement): HTMLElement {
+      const interactive = element.closest(
+        'button, a[href], [role="button"], [role="link"], summary, label, input[type="button"], input[type="submit"], input[type="reset"]',
+      );
+
+      return interactive instanceof HTMLElement ? interactive : element;
+    }
+
+    function synthesizeClick(element: HTMLElement): void {
+      const init: MouseEventInit = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      };
+      const pointerInit: PointerEventInit = {
+        ...init,
+        pointerType: 'mouse',
+        isPrimary: true,
+      };
+      const pointerSequence: Array<
+        ['pointerdown' | 'pointerup', 'mousedown' | 'mouseup']
+      > = [
+        ['pointerdown', 'mousedown'],
+        ['pointerup', 'mouseup'],
+      ];
+
+      for (const [pointerType, mouseType] of pointerSequence) {
+        if (typeof PointerEvent === 'function') {
+          const pointerEvent = createPointerEvent(pointerType, pointerInit);
+
+          if (pointerEvent) {
+            element.dispatchEvent(pointerEvent);
+          }
+        }
+
+        element.dispatchEvent(new MouseEvent(mouseType, init));
+      }
+
+      element.click();
+    }
+
+    function createPointerEvent(
+      type: 'pointerdown' | 'pointerup',
+      init: PointerEventInit,
+    ): PointerEvent | undefined {
+      try {
+        return new PointerEvent(type, init);
+      } catch {
+        return undefined;
+      }
+    }
+
+    function assertSafeClickTarget(element: HTMLElement): void {
       const copy = [
         element.getAttribute('aria-label'),
         element.getAttribute('title'),
@@ -1031,10 +1097,6 @@ export async function runTamprBlueprintPicker({
         'send',
         'submit',
       ];
-
-      if (!(element instanceof HTMLElement)) {
-        throw new Error('Click target is not an HTML element.');
-      }
 
       if (riskyWords.some((word) => copy.includes(word))) {
         throw new Error('Click target needs manual review.');

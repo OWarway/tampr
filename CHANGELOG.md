@@ -79,6 +79,12 @@ group changes under the headings below.
 - README screenshots and release-readiness documentation.
 - Privacy, development, trust-check, and release documentation.
 
+### Fixed
+
+- Page-side Blueprint draft click runs now resolve child selections to
+  interactive ancestors and avoid the picker intercepting their synthetic click
+  events.
+
 ### Deferred
 
 - Automatic backups.

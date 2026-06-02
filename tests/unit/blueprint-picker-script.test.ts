@@ -326,6 +326,79 @@ describe('runTamprBlueprintPicker', () => {
     });
   });
 
+  it('runs page-side click drafts through the interactive ancestor', async () => {
+    document.body.innerHTML = `
+      <main>
+        <button data-testid="open"><span class="label">Open panel</span></button>
+      </main>
+    `;
+    const button = document.querySelector('button') as HTMLButtonElement;
+    const label = document.querySelector('span.label') as HTMLSpanElement;
+    const observed: string[] = [];
+
+    for (const type of [
+      'pointerdown',
+      'mousedown',
+      'pointerup',
+      'mouseup',
+      'click',
+    ]) {
+      button.addEventListener(type, (event) => {
+        observed.push(event.type);
+      });
+    }
+    stubElementFromPoint(label);
+    stubRect(button);
+    stubRect(label);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Click');
+    clickButton('Run');
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Run complete');
+    expect(observed).toEqual([
+      'pointerdown',
+      'mousedown',
+      'pointerup',
+      'mouseup',
+      'click',
+    ]);
+
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'click',
+            pick: {
+              selector: 'span.label',
+            },
+          },
+        ],
+      },
+    });
+  });
+
   it('edits page-side draft step settings before saving', async () => {
     document.body.innerHTML = `
       <main>
@@ -597,6 +670,10 @@ function setDraftField(label: string, value: string): void {
     field.value = value;
     field.dispatchEvent(new Event('input', { bubbles: true }));
   }
+}
+
+async function flushPromises(): Promise<void> {
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
 }
 
 function stubRect(element: HTMLElement): void {

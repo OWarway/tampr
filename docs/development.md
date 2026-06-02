@@ -170,13 +170,15 @@ looks like submit, buy, send, delete, publish, or payment behavior. Set-value an
 download-json steps must remain refused by the manual runner until their
 confirmation, blocking, and result-reporting UX is explicit.
 
-Click execution resolves the selected element to the closest interactive ancestor
-before safety checks and dispatch. This keeps child selections inside buttons or
-links usable while still reviewing the actual control that will receive the
-click. Both manual click runs and compiled Blueprint snippets use the same
-pointerdown, mousedown, pointerup, mouseup, and click sequence. These synthetic
-events are still not trusted browser events, so sites that require
-`isTrusted === true` may ignore them.
+Click execution resolves the selected element to the closest interactive
+ancestor before safety checks and dispatch. This keeps child selections inside
+buttons or links usable while still reviewing the actual control that will
+receive the click. Page-side draft runs, manual workspace runs, and compiled
+Blueprint snippets use the same pointerdown, mousedown, pointerup, mouseup, and
+click sequence. The page-side picker must ignore its own hit-testing listener
+while a draft run is active so it does not intercept the click it just
+dispatched. These synthetic events are still not trusted browser events, so
+sites that require `isTrusted === true` may ignore them.
 
 ## Script Download API
 
