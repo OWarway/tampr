@@ -509,9 +509,7 @@ describe('BlueprintPreview', () => {
     const runButton = screen.getByRole('button', { name: 'Run flow' });
 
     expect((runButton as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(
-      screen.getByLabelText('Confirm flow actions on source page'),
-    );
+    fireEvent.click(screen.getByLabelText('Confirm flow actions'));
     fireEvent.click(runButton);
 
     await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(3));
@@ -739,9 +737,7 @@ describe('BlueprintPreview', () => {
     const runButton = screen.getByRole('button', { name: 'Run flow' });
 
     expect((runButton as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(
-      screen.getByLabelText('Confirm flow actions on source page'),
-    );
+    fireEvent.click(screen.getByLabelText('Confirm flow actions'));
     fireEvent.click(runButton);
 
     await waitFor(() =>
@@ -760,6 +756,83 @@ describe('BlueprintPreview', () => {
     expect(await screen.findByText('1 complete, 0 need review')).toBeTruthy();
     expect(screen.getByText('Value set on the source page.')).toBeTruthy();
     expect(screen.getByText('oliver@example.com')).toBeTruthy();
+  });
+
+  it('runs confirmed download-json flow steps with collected values', async () => {
+    const onRunAutomationNode = vi.fn().mockResolvedValue({
+      action: 'extract-text',
+      durationMs: 10,
+      firstTagName: 'h2',
+      matchCount: 1,
+      message: 'Text extracted from the source page.',
+      value: 'Deal title',
+      variableName: 'dealTitle',
+      visibleCount: 1,
+    });
+    const onDownloadJson = vi.fn().mockResolvedValue({ mode: 'browser-api' });
+    const blueprint = downloadFlowRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onDownloadJson={onDownloadJson}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    const runButton = screen.getByRole('button', { name: 'Run flow' });
+
+    expect((runButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('Confirm flow actions'));
+    fireEvent.click(runButton);
+
+    await waitFor(() =>
+      expect(onDownloadJson).toHaveBeenCalledWith({
+        filename: 'deal-title.json',
+        value: 'Deal title',
+      }),
+    );
+    expect(onRunAutomationNode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'extract-text',
+        variableName: 'dealTitle',
+      }),
+    );
+    expect(await screen.findByText('2 complete, 0 need review')).toBeTruthy();
+    expect(screen.getByText('Download JSON: file ready')).toBeTruthy();
+    expect(
+      screen.getByText('JSON downloaded with browser downloads.'),
+    ).toBeTruthy();
+  });
+
+  it('blocks download-json flow steps when the selected value is missing', async () => {
+    const onRunAutomationNode = vi.fn();
+    const onDownloadJson = vi.fn();
+    const blueprint = downloadOnlyRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onDownloadJson={onDownloadJson}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Confirm flow actions'));
+    fireEvent.click(screen.getByRole('button', { name: 'Run flow' }));
+
+    expect(await screen.findByText('0 complete, 1 need review')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'No flow value named "dealTitle" has been captured yet.',
+      ),
+    ).toBeTruthy();
+    expect(onRunAutomationNode).not.toHaveBeenCalled();
+    expect(onDownloadJson).not.toHaveBeenCalled();
   });
 
   it('blocks unsupported flow run steps before touching the page', async () => {
@@ -1442,6 +1515,75 @@ function flowRunRecipe(): BlueprintRecipe {
         'wait-for-deal': { x: 220, y: 0 },
         'extract-title': { x: 440, y: 0 },
         'open-deal': { x: 660, y: 0 },
+      },
+    },
+  });
+}
+
+function downloadFlowRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Download deal',
+    graph: {
+      nodes: [
+        {
+          id: 'extract-title',
+          enabled: true,
+          label: 'Extract title',
+          requireVisible: true,
+          selector: '[data-testid="deal-title"]',
+          selectorMeta: selectorMeta('attribute'),
+          timeoutMs: 5000,
+          type: 'extract-text',
+          variableName: 'dealTitle',
+        },
+        {
+          id: 'download-title',
+          enabled: true,
+          filename: 'deal-title.json',
+          label: 'Download title',
+          selector: 'body',
+          selectorMeta: selectorMeta('attribute'),
+          type: 'download-json',
+          valueFrom: 'dealTitle',
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-download-title',
+          fromNodeId: 'extract-title',
+          fromPort: 'success',
+          toNodeId: 'download-title',
+        },
+      ],
+      layout: {
+        'extract-title': { x: 0, y: 0 },
+        'download-title': { x: 220, y: 0 },
+      },
+    },
+  });
+}
+
+function downloadOnlyRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Download missing deal',
+    graph: {
+      nodes: [
+        {
+          id: 'download-title',
+          enabled: true,
+          filename: 'deal-title.json',
+          label: 'Download title',
+          selector: 'body',
+          selectorMeta: selectorMeta('attribute'),
+          type: 'download-json',
+          valueFrom: 'dealTitle',
+        },
+      ],
+      edges: [],
+      layout: {
+        'download-title': { x: 0, y: 0 },
       },
     },
   });

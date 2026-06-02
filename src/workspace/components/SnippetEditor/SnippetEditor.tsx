@@ -50,6 +50,11 @@ type SnippetEditorProps = {
   pageRulePresets?: readonly PageRulePreset[] | undefined;
   workspace: WorkspaceState | undefined;
   onDelete(): void;
+  onDownloadBlueprintJson?:
+    | ((input: { filename: string; value: unknown }) => Promise<{
+        mode: 'anchor' | 'browser-api';
+      }>)
+    | undefined;
   onDuplicate(): void;
   onFolderChange(folder: string): void;
   onPickBlueprintSelector?:
@@ -83,6 +88,7 @@ export function SnippetEditor({
   pageRulePresets = [],
   workspace,
   onDelete,
+  onDownloadBlueprintJson,
   onDuplicate,
   onFolderChange,
   onPickBlueprintSelector,
@@ -240,6 +246,7 @@ export function SnippetEditor({
           blueprint={editor.blueprint}
           css={editor.css}
           js={editor.js}
+          onDownloadJson={onDownloadBlueprintJson}
           onPickSelector={onPickBlueprintSelector}
           onRunAutomationNode={onRunBlueprintAutomationNode}
           onCancelAutomationRun={onCancelBlueprintAutomationRun}

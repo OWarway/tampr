@@ -55,6 +55,11 @@ type BlueprintPreviewProps = {
   blueprint: BlueprintRecipe | undefined;
   css?: string;
   js?: string;
+  onDownloadJson?:
+    | ((
+        input: BlueprintJsonDownloadInput,
+      ) => Promise<BlueprintJsonDownloadResult>)
+    | undefined;
   onPickSelector?:
     | (() => Promise<BlueprintElementPick | undefined>)
     | undefined;
@@ -73,6 +78,15 @@ type BlueprintPreviewProps = {
     | ((selector: string) => Promise<BlueprintSelectorTestResult | undefined>)
     | undefined;
   onChange?(blueprint: BlueprintRecipe, css: string, js?: string): void;
+};
+
+type BlueprintJsonDownloadInput = {
+  filename: string;
+  value: unknown;
+};
+
+type BlueprintJsonDownloadResult = {
+  mode: 'anchor' | 'browser-api';
 };
 
 type BlueprintFlowTestStep = {
@@ -106,10 +120,15 @@ type BlueprintFlowNodeStatus =
   | BlueprintFlowTestStep['status']
   | 'pending';
 
+type BlueprintFlowRunContext = {
+  values: Record<string, unknown>;
+};
+
 export function BlueprintPreview({
   blueprint,
   css,
   js,
+  onDownloadJson,
   onPickSelector,
   onRunAutomationNode,
   onCancelAutomationRun,
@@ -334,7 +353,7 @@ export function BlueprintPreview({
   async function runAutomationNode(
     node: BlueprintAutomationNode,
   ): Promise<void> {
-    if (!onRunAutomationNode || !canRunAutomationNode(node)) {
+    if (!onRunAutomationNode || !canRunManualAutomationNode(node)) {
       return;
     }
 
@@ -414,6 +433,7 @@ export function BlueprintPreview({
     setFlowRunResults([]);
 
     const results: BlueprintFlowRunStep[] = [];
+    const runContext: BlueprintFlowRunContext = { values: {} };
 
     try {
       for (const node of nodesToRun) {
@@ -446,7 +466,12 @@ export function BlueprintPreview({
           setFlowRunResults([...results]);
         }
 
-        const result = await runFlowNode(node, runId, () => control.cancelled);
+        const result = await runFlowNode(
+          node,
+          runId,
+          () => control.cancelled,
+          runContext,
+        );
 
         results[results.length - 1] = result;
         setFlowRunResults([...results]);
@@ -471,6 +496,7 @@ export function BlueprintPreview({
     node: BlueprintNode,
     runId: string,
     isFlowCancelled: () => boolean,
+    runContext: BlueprintFlowRunContext,
   ): Promise<BlueprintFlowRunStep> {
     const label = node.label ?? actionLabel(node.type);
 
@@ -496,7 +522,7 @@ export function BlueprintPreview({
       };
     }
 
-    if (!canRunAutomationNode(node)) {
+    if (!canRunFlowAutomationNode(node)) {
       return {
         details: [
           `${actionLabel(
@@ -512,12 +538,18 @@ export function BlueprintPreview({
 
     if (requiresRunConfirmation(node) && !flowRunConfirmed) {
       return {
-        details: ['Click steps need explicit confirmation before they run.'],
+        details: [
+          `${actionLabel(node.type)} steps need explicit confirmation before they run.`,
+        ],
         id: node.id,
         label,
         status: 'blocked',
         summary: 'Confirmation needed',
       };
+    }
+
+    if (node.type === 'download-json') {
+      return await runDownloadJsonNode(node, runContext);
     }
 
     if (!onRunAutomationNode) {
@@ -553,6 +585,10 @@ export function BlueprintPreview({
         };
       }
 
+      if (result.action === 'extract-text' && result.variableName) {
+        runContext.values[result.variableName] = result.value ?? '';
+      }
+
       return {
         details: [
           result.message,
@@ -577,6 +613,67 @@ export function BlueprintPreview({
         label,
         status: 'failed',
         summary: 'Run failed',
+      };
+    }
+  }
+
+  async function runDownloadJsonNode(
+    node: Extract<BlueprintAutomationNode, { type: 'download-json' }>,
+    runContext: BlueprintFlowRunContext,
+  ): Promise<BlueprintFlowRunStep> {
+    const label = node.label ?? actionLabel(node.type);
+
+    if (!onDownloadJson) {
+      return {
+        details: ['JSON downloading is unavailable for this workspace.'],
+        id: node.id,
+        label,
+        status: 'failed',
+        summary: 'Download unavailable',
+      };
+    }
+
+    if (node.valueFrom && !(node.valueFrom in runContext.values)) {
+      return {
+        details: [
+          `No flow value named "${node.valueFrom}" has been captured yet.`,
+        ],
+        id: node.id,
+        label,
+        status: 'failed',
+        summary: 'Missing value',
+      };
+    }
+
+    const value = node.valueFrom
+      ? runContext.values[node.valueFrom]
+      : runContext.values;
+
+    try {
+      const result = await onDownloadJson({
+        filename: node.filename,
+        value,
+      });
+
+      return {
+        details: [
+          result.mode === 'browser-api'
+            ? 'JSON downloaded with browser downloads.'
+            : 'JSON downloaded from the workspace.',
+        ],
+        id: node.id,
+        label,
+        preview: downloadPreview(value),
+        status: 'complete',
+        summary: 'Download JSON: file ready',
+      };
+    } catch (error) {
+      return {
+        details: [errorMessage(error)],
+        id: node.id,
+        label,
+        status: 'failed',
+        summary: 'Download failed',
       };
     }
   }
@@ -988,7 +1085,7 @@ export function BlueprintPreview({
             onRunAutomationNode={
               onRunAutomationNode &&
               isAutomationNode(selectedNode) &&
-              canRunAutomationNode(selectedNode)
+              canRunManualAutomationNode(selectedNode)
                 ? () => void runAutomationNode(selectedNode)
                 : undefined
             }
@@ -1197,7 +1294,7 @@ function BlueprintFlowTestPanel({
       (runRequiresConfirmation || runToSelectedRequiresConfirmation) ? (
         <label className={`${styles.runConfirmation} ${styles.flowRunConfirm}`}>
           <input
-            aria-label="Confirm flow actions on source page"
+            aria-label="Confirm flow actions"
             checked={runConfirmed}
             type="checkbox"
             onChange={(event) =>
@@ -1205,8 +1302,8 @@ function BlueprintFlowTestPanel({
             }
           />
           <span>
-            Confirm click and set-value steps before running them on the source
-            page
+            Confirm click, set-value, and download steps before running this
+            flow
           </span>
         </label>
       ) : null}
@@ -2295,13 +2392,17 @@ function automationNodeRunInput(
   };
 }
 
-function canRunAutomationNode(node: BlueprintAutomationNode): boolean {
+function canRunManualAutomationNode(node: BlueprintAutomationNode): boolean {
   return (
     node.type === 'wait-for-element' ||
     node.type === 'extract-text' ||
     node.type === 'set-value' ||
     node.type === 'click'
   );
+}
+
+function canRunFlowAutomationNode(node: BlueprintAutomationNode): boolean {
+  return canRunManualAutomationNode(node) || node.type === 'download-json';
 }
 
 function flowNodesUntil(
@@ -2331,7 +2432,21 @@ function shouldPauseBeforeRun(node: BlueprintNode): boolean {
 }
 
 function requiresRunConfirmation(node: BlueprintAutomationNode): boolean {
-  return node.type === 'click' || node.type === 'set-value';
+  return (
+    node.type === 'click' ||
+    node.type === 'download-json' ||
+    node.type === 'set-value'
+  );
+}
+
+function downloadPreview(value: unknown): string {
+  const json = JSON.stringify(value, null, 2);
+
+  if (!json) {
+    return 'null';
+  }
+
+  return json.length <= 160 ? json : json.slice(0, 159).trimEnd();
 }
 
 function createBlueprintRunId(): string {

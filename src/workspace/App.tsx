@@ -58,6 +58,9 @@ export function App() {
           pageRulePresets={pageRulePresets}
           workspace={state.workspace}
           onDelete={() => void state.deleteEditor()}
+          onDownloadBlueprintJson={(input) =>
+            state.downloadBlueprintJson(input)
+          }
           onDuplicate={state.duplicateCurrentEditor}
           onFolderChange={state.updateEditorFolder}
           onPickBlueprintSelector={() => state.pickBlueprintSelector()}

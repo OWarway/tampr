@@ -153,15 +153,16 @@ canvas node cards.
 Full workspace flow runs are a separate guarded action. They reuse the manual
 automation node runner, skip CSS nodes because generated CSS already applies
 them, run wait-for-element and extract-text steps, run set-value steps after
-explicit confirmation, and run click steps only after explicit confirmation. The
-same runner can stop at the selected node for debugger-style verification, and
-confirmation is scoped to the steps that will actually run. Set-value runs still
-refuse unsupported, protected, password, payment, and one-time-code style fields.
-Flow runs can be stopped from the workspace; the stop request is also sent to
-the source page runner so long waits can exit before their timeout. Automation
-nodes may opt into `pauseBeforeRun`, which pauses the workspace flow until the
-user continues or stops it; generated snippets include the same flag as a
-readable `window.confirm` pause. Download-json and custom-code steps remain
+explicit confirmation, run click steps only after explicit confirmation, and run
+download-json steps after explicit confirmation using values collected earlier in
+the same flow. The same runner can stop at the selected node for debugger-style
+verification, and confirmation is scoped to the steps that will actually run.
+Set-value runs still refuse unsupported, protected, password, payment, and
+one-time-code style fields. Flow runs can be stopped from the workspace; the stop
+request is also sent to the source page runner so long waits can exit before
+their timeout. Automation nodes may opt into `pauseBeforeRun`, which pauses the
+workspace flow until the user continues or stops it; generated snippets include
+the same flag as a readable `window.confirm` pause. Custom-code steps remain
 blocked in full-flow runs until their confirmation and result-reporting UX is
 explicit. Flow runs stop on the first blocked, failed, or cancelled step and
 reflect pending, paused, running, complete, blocked, failed, stopped, and skipped

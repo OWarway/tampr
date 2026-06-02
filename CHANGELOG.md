@@ -36,6 +36,8 @@ group changes under the headings below.
   confirmation scoped to only the steps that will actually run.
 - Workspace Blueprint flow runs can be stopped while running, and automation
   nodes can pause for review before they run.
+- Workspace Blueprint flow runs can now download JSON from values collected
+  earlier in the same guarded run.
 - Blueprint click UIs now surface that synthetic clicks run with
   `event.isTrusted === false`.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles

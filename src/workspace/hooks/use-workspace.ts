@@ -54,6 +54,10 @@ export type UseWorkspaceResult = {
   workspace: WorkspaceState | undefined;
   clearEditor(): void;
   deleteEditor(): Promise<void>;
+  downloadBlueprintJson(input: {
+    filename: string;
+    value: unknown;
+  }): Promise<{ mode: 'anchor' | 'browser-api' }>;
   duplicateCurrentEditor(): void;
   deleteFolder(folder: string): Promise<void>;
   exportWorkspace(): Promise<void>;
@@ -396,6 +400,27 @@ export function useWorkspace(): UseWorkspaceResult {
     }
   }
 
+  async function downloadBlueprintJson({
+    filename,
+    value,
+  }: {
+    filename: string;
+    value: unknown;
+  }): Promise<{ mode: 'anchor' | 'browser-api' }> {
+    const result = await downloadJson({
+      filename,
+      value,
+    });
+
+    setNotice(
+      result.mode === 'browser-api'
+        ? 'Blueprint JSON downloaded with browser downloads.'
+        : 'Blueprint JSON downloaded.',
+    );
+
+    return result;
+  }
+
   async function importWorkspaceFile(file: File): Promise<void> {
     setBusy(true);
 
@@ -585,6 +610,7 @@ export function useWorkspace(): UseWorkspaceResult {
     cancelBlueprintAutomationRun,
     deleteEditor,
     deleteFolder,
+    downloadBlueprintJson,
     duplicateCurrentEditor,
     exportWorkspace,
     importWorkspaceFile,
