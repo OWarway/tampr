@@ -7,7 +7,10 @@ import {
 } from '../domain/blueprint-snippets';
 import { buildSnippet, type Snippet } from '../domain/snippets';
 import type { RuntimeStatus } from '../runtime/runtime-status';
-import { runTamprBlueprintAutomationNode } from '../blueprint/blueprint-automation-run-script';
+import {
+  cancelTamprBlueprintAutomationRun,
+  runTamprBlueprintAutomationNode,
+} from '../blueprint/blueprint-automation-run-script';
 import { runTamprBlueprintAutomationNodeTest } from '../blueprint/blueprint-automation-test-script';
 import { runTamprBlueprintPicker } from '../blueprint/blueprint-picker-script';
 import { runTamprBlueprintSelectorTest } from '../blueprint/blueprint-selector-test-script';
@@ -21,6 +24,7 @@ import type {
   BlueprintAutomationNodeTestInput,
   BlueprintAutomationNodeTestResult,
   BlueprintSelectorTestResult,
+  CancelBlueprintAutomationRunResponse,
   PickBlueprintSelectorResponse,
   RunBlueprintAutomationNodeResponse,
   StartBlueprintCreatorResponse,
@@ -98,6 +102,12 @@ type BlueprintAutomationNodeRunInjectionResult = {
     ok: boolean;
     reason?: string;
     result?: BlueprintAutomationNodeRunResult;
+  };
+};
+
+type BlueprintAutomationRunCancelInjectionResult = {
+  result?: {
+    ok: boolean;
   };
 };
 
@@ -187,6 +197,20 @@ export class BlueprintController {
   ): Promise<RunBlueprintAutomationNodeResponse> {
     try {
       return await this.runAutomationNodeOnTab(sourceTabId, node);
+    } catch (error: unknown) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async cancelAutomationRun(
+    sourceTabId: number,
+    runId: string,
+  ): Promise<CancelBlueprintAutomationRunResponse> {
+    try {
+      return await this.cancelAutomationRunOnTab(sourceTabId, runId);
     } catch (error: unknown) {
       return {
         ok: false,
@@ -475,6 +499,39 @@ export class BlueprintController {
     return {
       ok: true,
       result: runResponse.result,
+    };
+  }
+
+  private async cancelAutomationRunOnTab(
+    sourceTabId: number,
+    runId: string,
+  ): Promise<CancelBlueprintAutomationRunResponse> {
+    if (!this.dependencies.scripting) {
+      throw new Error(
+        'Blueprint automation run cancellation needs Chrome scripting support.',
+      );
+    }
+
+    if (!Number.isInteger(sourceTabId) || sourceTabId <= 0) {
+      throw new Error(
+        'Blueprint automation run cancellation needs a source tab.',
+      );
+    }
+
+    const [injectionResult] = (await this.dependencies.scripting.executeScript({
+      target: { tabId: sourceTabId },
+      func: cancelTamprBlueprintAutomationRun,
+      args: [{ runId }],
+    })) as BlueprintAutomationRunCancelInjectionResult[];
+    const cancelResponse = injectionResult?.result;
+
+    if (!cancelResponse?.ok) {
+      throw new Error('Blueprint automation run could not be stopped.');
+    }
+
+    return {
+      ok: true,
+      status: 'cancelled',
     };
   }
 }

@@ -2,6 +2,7 @@ import { startDevReloadWatcher } from '../dev/reload-extension';
 import { handleTamprDownloadMessage } from '../runtime/tampr-download-api';
 import { syncChromeUserScripts } from '../runtime/user-script-runtime';
 import {
+  isCancelBlueprintAutomationRunMessage,
   isPickBlueprintSelectorMessage,
   isRunBlueprintAutomationNodeMessage,
   isStartBlueprintCreatorMessage,
@@ -102,6 +103,17 @@ chrome.runtime.onMessage.addListener(
     if (isRunBlueprintAutomationNodeMessage(message)) {
       void blueprints
         .runAutomationNode(message.sourceTabId, message.node)
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          sendResponse(toErrorResponse(error));
+        });
+
+      return true;
+    }
+
+    if (isCancelBlueprintAutomationRunMessage(message)) {
+      void blueprints
+        .cancelAutomationRun(message.sourceTabId, message.runId)
         .then(sendResponse)
         .catch((error: unknown) => {
           sendResponse(toErrorResponse(error));

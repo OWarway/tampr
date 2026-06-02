@@ -2,7 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { runTamprBlueprintAutomationNode } from '../../src/blueprint/blueprint-automation-run-script';
+import {
+  cancelTamprBlueprintAutomationRun,
+  runTamprBlueprintAutomationNode,
+} from '../../src/blueprint/blueprint-automation-run-script';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -308,6 +311,26 @@ describe('runTamprBlueprintAutomationNode', () => {
       message: 'Manual set-value run refused a protected field.',
     });
     expect(input.value).toBe('');
+  });
+
+  it('stops a running automation node before timeout', async () => {
+    const resultPromise = runTamprBlueprintAutomationNode({
+      type: 'wait-for-element',
+      selector: '[data-testid="late"]',
+      requireVisible: true,
+      runId: 'run-test',
+      timeoutMs: 1000,
+    });
+
+    window.setTimeout(() => {
+      cancelTamprBlueprintAutomationRun({ runId: 'run-test' });
+    }, 0);
+
+    await expect(resultPromise).resolves.toEqual({
+      ok: false,
+      reason: 'cancelled',
+      message: 'Automation node run was stopped.',
+    });
   });
 
   it('refuses unsupported mutating node types in the manual runner', async () => {

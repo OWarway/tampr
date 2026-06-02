@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
@@ -65,6 +65,7 @@ type BlueprintPreviewProps = {
         node: BlueprintAutomationNodeRunInput,
       ) => Promise<BlueprintAutomationNodeRunResult | undefined>)
     | undefined;
+  onCancelAutomationRun?: ((runId: string) => Promise<boolean>) | undefined;
   onTestAutomationNode?:
     | ((
         node: BlueprintAutomationNodeTestInput,
@@ -91,7 +92,14 @@ type BlueprintFlowRunStep = {
   id: string;
   label: string;
   preview?: string;
-  status: 'blocked' | 'complete' | 'failed' | 'running' | 'skipped';
+  status:
+    | 'blocked'
+    | 'cancelled'
+    | 'complete'
+    | 'failed'
+    | 'paused'
+    | 'running'
+    | 'skipped';
   summary: string;
 };
 
@@ -106,6 +114,7 @@ export function BlueprintPreview({
   js,
   onPickSelector,
   onRunAutomationNode,
+  onCancelAutomationRun,
   onTestAutomationNode,
   onTestSelector,
   onChange,
@@ -142,7 +151,18 @@ export function BlueprintPreview({
   >();
   const [runningFlow, setRunningFlow] = useState(false);
   const [activeFlowRunNodeIds, setActiveFlowRunNodeIds] = useState<string[]>();
+  const [pausedFlowRun, setPausedFlowRun] = useState<
+    { label: string; nodeId: string } | undefined
+  >();
   const [flowRunConfirmed, setFlowRunConfirmed] = useState(false);
+  const flowRunControlRef = useRef<
+    | {
+        cancelled: boolean;
+        resumePausedRun?: ((continued: boolean) => void) | undefined;
+        runId: string;
+      }
+    | undefined
+  >(undefined);
 
   if (!blueprint) {
     return null;
@@ -378,13 +398,20 @@ export function BlueprintPreview({
     const nodesToRun = flowNodesUntil(nodes, untilNodeId);
     const runRequiresConfirmation =
       flowRequiresRunConfirmationForNodes(nodesToRun);
+    const runId = createBlueprintRunId();
+    const control = {
+      cancelled: false,
+      runId,
+    };
 
     if (runRequiresConfirmation && !flowRunConfirmed) {
       return;
     }
 
+    flowRunControlRef.current = control;
     setRunningFlow(true);
     setActiveFlowRunNodeIds(nodesToRun.map((node) => node.id));
+    setPausedFlowRun(undefined);
     setFlowTestResults(undefined);
     setFlowRunResults([]);
 
@@ -392,26 +419,60 @@ export function BlueprintPreview({
 
     try {
       for (const node of nodesToRun) {
+        if (control.cancelled) {
+          break;
+        }
+
         results.push(runningFlowStep(node));
         setFlowRunResults([...results]);
 
-        const result = await runFlowNode(node);
+        if (shouldPauseBeforeRun(node)) {
+          results[results.length - 1] = pausedFlowStep(node);
+          setPausedFlowRun({
+            label: node.label ?? actionLabel(node.type),
+            nodeId: node.id,
+          });
+          setFlowRunResults([...results]);
+
+          const continued = await waitForPausedFlowRun(control);
+
+          setPausedFlowRun(undefined);
+
+          if (!continued || control.cancelled) {
+            results[results.length - 1] = cancelledFlowStep(node);
+            setFlowRunResults([...results]);
+            break;
+          }
+
+          results[results.length - 1] = runningFlowStep(node);
+          setFlowRunResults([...results]);
+        }
+
+        const result = await runFlowNode(node, runId, () => control.cancelled);
 
         results[results.length - 1] = result;
         setFlowRunResults([...results]);
 
-        if (result.status === 'blocked' || result.status === 'failed') {
+        if (
+          result.status === 'blocked' ||
+          result.status === 'cancelled' ||
+          result.status === 'failed'
+        ) {
           break;
         }
       }
     } finally {
       setRunningFlow(false);
       setActiveFlowRunNodeIds(undefined);
+      setPausedFlowRun(undefined);
+      flowRunControlRef.current = undefined;
     }
   }
 
   async function runFlowNode(
     node: BlueprintNode,
+    runId: string,
+    isFlowCancelled: () => boolean,
   ): Promise<BlueprintFlowRunStep> {
     const label = node.label ?? actionLabel(node.type);
 
@@ -476,10 +537,15 @@ export function BlueprintPreview({
         automationNodeRunInput(
           node,
           requiresRunConfirmation(node) && flowRunConfirmed,
+          runId,
         ),
       );
 
       if (!result) {
+        if (isFlowCancelled()) {
+          return cancelledFlowStep(node);
+        }
+
         return {
           details: ['The source page did not return an automation run result.'],
           id: node.id,
@@ -515,6 +581,38 @@ export function BlueprintPreview({
         summary: 'Run failed',
       };
     }
+  }
+
+  function requestFlowRunStop(): void {
+    const control = flowRunControlRef.current;
+
+    if (!control) {
+      return;
+    }
+
+    control.cancelled = true;
+    control.resumePausedRun?.(false);
+    setPausedFlowRun(undefined);
+
+    if (onCancelAutomationRun) {
+      void onCancelAutomationRun(control.runId);
+    }
+  }
+
+  function continuePausedFlowRun(): void {
+    flowRunControlRef.current?.resumePausedRun?.(true);
+  }
+
+  function waitForPausedFlowRun(control: {
+    cancelled: boolean;
+    resumePausedRun?: ((continued: boolean) => void) | undefined;
+  }): Promise<boolean> {
+    return new Promise((resolve) => {
+      control.resumePausedRun = (continued) => {
+        control.resumePausedRun = undefined;
+        resolve(continued);
+      };
+    });
   }
 
   async function testFlowNode(
@@ -769,6 +867,7 @@ export function BlueprintPreview({
         runToSelectedRequiresConfirmation={runToSelectedRequiresConfirmation}
         runResults={flowRunResults}
         running={runningFlow}
+        pausedRun={pausedFlowRun}
         selectedNodeLabel={
           selectedNode
             ? (selectedNode.label ?? actionLabel(selectedNode.type))
@@ -788,6 +887,8 @@ export function BlueprintPreview({
             ? () => void testFlow()
             : undefined
         }
+        onContinuePausedRun={continuePausedFlowRun}
+        onStopRun={requestFlowRunStop}
       />
 
       <div
@@ -833,6 +934,13 @@ export function BlueprintPreview({
             }
             onMoveDown={() => moveNode(selectedNode.id, 'down')}
             onMoveUp={() => moveNode(selectedNode.id, 'up')}
+            onPauseBeforeRunChange={(pauseBeforeRun) =>
+              editNode(
+                selectedNode.id,
+                { pauseBeforeRun },
+                { regeneratesCode: true },
+              )
+            }
             onFilenameChange={(filename) =>
               editNode(selectedNode.id, { filename }, { regeneratesCode: true })
             }
@@ -930,12 +1038,15 @@ type BlueprintFlowTestPanelProps = {
   runToSelectedRequiresConfirmation: boolean;
   runResults: BlueprintFlowRunStep[] | undefined;
   running: boolean;
+  pausedRun?: { label: string; nodeId: string } | undefined;
   selectedNodeLabel?: string | undefined;
   results: BlueprintFlowTestStep[] | undefined;
   testing: boolean;
   onRun?: (() => void) | undefined;
   onRunConfirmChange(confirmed: boolean): void;
   onRunToSelected?: (() => void) | undefined;
+  onContinuePausedRun(): void;
+  onStopRun(): void;
   onTest?: (() => void) | undefined;
 };
 
@@ -946,12 +1057,15 @@ function BlueprintFlowTestPanel({
   runToSelectedRequiresConfirmation,
   runResults,
   running,
+  pausedRun,
   selectedNodeLabel,
   results,
   testing,
   onRun,
   onRunConfirmChange,
   onRunToSelected,
+  onContinuePausedRun,
+  onStopRun,
   onTest,
 }: BlueprintFlowTestPanelProps) {
   if (!onTest && !onRun && !onRunToSelected) {
@@ -967,9 +1081,14 @@ function BlueprintFlowTestPanel({
     runResults?.filter((result) => result.status === 'complete').length ?? 0;
   const runningCount =
     runResults?.filter((result) => result.status === 'running').length ?? 0;
+  const pausedCount =
+    runResults?.filter((result) => result.status === 'paused').length ?? 0;
   const runReviewCount =
     runResults?.filter(
-      (result) => result.status === 'blocked' || result.status === 'failed',
+      (result) =>
+        result.status === 'blocked' ||
+        result.status === 'cancelled' ||
+        result.status === 'failed',
     ).length ?? 0;
   const runSkippedCount =
     runResults?.filter((result) => result.status === 'skipped').length ?? 0;
@@ -1029,7 +1148,31 @@ function BlueprintFlowTestPanel({
             {running ? 'Running...' : 'Run to selected'}
           </button>
         ) : null}
+        {running || pausedRun ? (
+          <button
+            className={styles.runAutomation}
+            type="button"
+            onClick={onStopRun}
+          >
+            Stop run
+          </button>
+        ) : null}
       </div>
+      {pausedRun ? (
+        <div className={styles.flowPausePanel} aria-live="polite">
+          <div>
+            <strong>Paused before {pausedRun.label}</strong>
+            <p>Review the source page, then continue or stop this run.</p>
+          </div>
+          <button
+            className={styles.runAutomation}
+            type="button"
+            onClick={onContinuePausedRun}
+          >
+            Continue
+          </button>
+        </div>
+      ) : null}
       {(onRun || onRunToSelected) &&
       (runRequiresConfirmation || runToSelectedRequiresConfirmation) ? (
         <label className={`${styles.runConfirmation} ${styles.flowRunConfirm}`}>
@@ -1085,6 +1228,7 @@ function BlueprintFlowTestPanel({
           <span>
             {completeCount} complete, {runReviewCount} need review
             {runningCount > 0 ? `, ${runningCount} running` : ''}
+            {pausedCount > 0 ? `, ${pausedCount} paused` : ''}
             {runSkippedCount > 0 ? `, ${runSkippedCount} skipped` : ''}
           </span>
           <ol>
@@ -1408,6 +1552,7 @@ type BlueprintNodeInspectorProps = {
   onLabelChange(label: string): void;
   onMoveDown(): void;
   onMoveUp(): void;
+  onPauseBeforeRunChange(pauseBeforeRun: boolean): void;
   onApplySelectorSuggestion(suggestion: BlueprintSelectorSuggestion): void;
   onPickSelector?: (() => void) | undefined;
   onRequireVisibleChange(requireVisible: boolean): void;
@@ -1444,6 +1589,7 @@ function BlueprintNodeInspector({
   onLabelChange,
   onMoveDown,
   onMoveUp,
+  onPauseBeforeRunChange,
   onApplySelectorSuggestion,
   onPickSelector,
   onRequireVisibleChange,
@@ -1546,6 +1692,7 @@ function BlueprintNodeInspector({
             node={node}
             onCodeChange={onCodeChange}
             onFilenameChange={onFilenameChange}
+            onPauseBeforeRunChange={onPauseBeforeRunChange}
             onRequireVisibleChange={onRequireVisibleChange}
             onTimeoutChange={onTimeoutChange}
             onValueChange={onValueChange}
@@ -1819,6 +1966,7 @@ type BlueprintAutomationSettingsProps = {
   node: BlueprintAutomationNode;
   onCodeChange(code: string): void;
   onFilenameChange(filename: string): void;
+  onPauseBeforeRunChange(pauseBeforeRun: boolean): void;
   onRequireVisibleChange(requireVisible: boolean): void;
   onTimeoutChange(timeoutMs: number): void;
   onValueChange(value: string): void;
@@ -1831,6 +1979,7 @@ function BlueprintAutomationSettings({
   node,
   onCodeChange,
   onFilenameChange,
+  onPauseBeforeRunChange,
   onRequireVisibleChange,
   onTimeoutChange,
   onValueChange,
@@ -1851,6 +2000,21 @@ function BlueprintAutomationSettings({
             }
           />
           <span>Require visible</span>
+        </label>
+      ) : null}
+
+      {'pauseBeforeRun' in node ? (
+        <label className={styles.enabledField}>
+          <input
+            aria-label="Pause before running this node"
+            checked={node.pauseBeforeRun}
+            disabled={!generatedCodeInSync}
+            type="checkbox"
+            onChange={(event) =>
+              onPauseBeforeRunChange(event.currentTarget.checked)
+            }
+          />
+          <span>Pause before run</span>
         </label>
       ) : null}
 
@@ -1991,13 +2155,35 @@ function runningFlowStep(node: BlueprintNode): BlueprintFlowRunStep {
   };
 }
 
+function pausedFlowStep(node: BlueprintNode): BlueprintFlowRunStep {
+  return {
+    details: ['Review the source page before continuing this step.'],
+    id: node.id,
+    label: node.label ?? actionLabel(node.type),
+    status: 'paused',
+    summary: 'Paused',
+  };
+}
+
+function cancelledFlowStep(node: BlueprintNode): BlueprintFlowRunStep {
+  return {
+    details: ['The flow run was stopped before this step completed.'],
+    id: node.id,
+    label: node.label ?? actionLabel(node.type),
+    status: 'cancelled',
+    summary: 'Stopped',
+  };
+}
+
 function flowRunStepClass(status: BlueprintFlowRunStep['status']): string {
   switch (status) {
     case 'blocked':
+    case 'cancelled':
     case 'failed':
       return styles.testReview ?? '';
     case 'complete':
       return styles.testReady ?? '';
+    case 'paused':
     case 'running':
     case 'skipped':
       return styles.testSkipped ?? '';
@@ -2007,6 +2193,7 @@ function flowRunStepClass(status: BlueprintFlowRunStep['status']): string {
 function flowNodeStatusClass(status: BlueprintFlowNodeStatus): string {
   switch (status) {
     case 'blocked':
+    case 'cancelled':
       return styles.flowBlocked ?? '';
     case 'complete':
       return styles.flowComplete ?? '';
@@ -2018,6 +2205,7 @@ function flowNodeStatusClass(status: BlueprintFlowNodeStatus): string {
       return styles.flowReady ?? '';
     case 'review':
       return styles.flowReview ?? '';
+    case 'paused':
     case 'running':
       return styles.flowRunning ?? '';
     case 'skipped':
@@ -2029,6 +2217,8 @@ function flowNodeStatusLabel(status: BlueprintFlowNodeStatus): string {
   switch (status) {
     case 'blocked':
       return 'Blocked';
+    case 'cancelled':
+      return 'Stopped';
     case 'complete':
       return 'Complete';
     case 'failed':
@@ -2039,6 +2229,8 @@ function flowNodeStatusLabel(status: BlueprintFlowNodeStatus): string {
       return 'Ready';
     case 'review':
       return 'Review';
+    case 'paused':
+      return 'Paused';
     case 'running':
       return 'Running';
     case 'skipped':
@@ -2084,10 +2276,12 @@ function automationNodeTestInput(
 function automationNodeRunInput(
   node: BlueprintAutomationNode,
   confirmed: boolean,
+  runId?: string,
 ): BlueprintAutomationNodeRunInput {
   return {
     ...automationNodeTestInput(node),
     ...(confirmed ? { confirmAction: true } : {}),
+    ...(runId ? { runId } : {}),
     ...('timeoutMs' in node ? { timeoutMs: node.timeoutMs } : {}),
     ...(node.label ? { label: node.label } : {}),
   };
@@ -2124,8 +2318,18 @@ function flowRequiresRunConfirmationForNodes(
   );
 }
 
+function shouldPauseBeforeRun(node: BlueprintNode): boolean {
+  return isAutomationNode(node) && node.pauseBeforeRun;
+}
+
 function requiresRunConfirmation(node: BlueprintAutomationNode): boolean {
   return node.type === 'click' || node.type === 'set-value';
+}
+
+function createBlueprintRunId(): string {
+  return `run-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
 }
 
 function errorMessage(error: unknown): string {

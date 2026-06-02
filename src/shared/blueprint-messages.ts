@@ -12,6 +12,8 @@ export const TEST_BLUEPRINT_AUTOMATION_NODE_MESSAGE =
   'blueprints/test-automation-node';
 export const RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE =
   'blueprints/run-automation-node';
+export const CANCEL_BLUEPRINT_AUTOMATION_RUN_MESSAGE =
+  'blueprints/cancel-automation-run';
 
 export type BlueprintSelectorTestResult = {
   firstTagName?: string;
@@ -54,6 +56,7 @@ export type BlueprintAutomationNodeRunInput =
   BlueprintAutomationNodeTestInput & {
     confirmAction?: boolean;
     label?: string;
+    runId?: string;
     timeoutMs?: number;
   };
 
@@ -94,6 +97,12 @@ export type RunBlueprintAutomationNodeMessage = {
   node: BlueprintAutomationNodeRunInput;
   sourceTabId: number;
   type: typeof RUN_BLUEPRINT_AUTOMATION_NODE_MESSAGE;
+};
+
+export type CancelBlueprintAutomationRunMessage = {
+  runId: string;
+  sourceTabId: number;
+  type: typeof CANCEL_BLUEPRINT_AUTOMATION_RUN_MESSAGE;
 };
 
 export type StartBlueprintCreatorResponse =
@@ -142,6 +151,16 @@ export type RunBlueprintAutomationNodeResponse =
   | {
       ok: true;
       result: BlueprintAutomationNodeRunResult;
+    }
+  | {
+      error: string;
+      ok: false;
+    };
+
+export type CancelBlueprintAutomationRunResponse =
+  | {
+      ok: true;
+      status: 'cancelled';
     }
   | {
       error: string;
@@ -227,6 +246,24 @@ export function isRunBlueprintAutomationNodeMessage(
   );
 }
 
+export function isCancelBlueprintAutomationRunMessage(
+  message: unknown,
+): message is CancelBlueprintAutomationRunMessage {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'type' in message &&
+    message.type === CANCEL_BLUEPRINT_AUTOMATION_RUN_MESSAGE &&
+    'sourceTabId' in message &&
+    typeof message.sourceTabId === 'number' &&
+    Number.isInteger(message.sourceTabId) &&
+    message.sourceTabId > 0 &&
+    'runId' in message &&
+    typeof message.runId === 'string' &&
+    isBlueprintRunId(message.runId)
+  );
+}
+
 function isAutomationNodeTestInput(
   value: unknown,
 ): value is BlueprintAutomationNodeTestInput {
@@ -276,6 +313,7 @@ function isAutomationNodeRunInput(
 
   const timeoutMs = (value as Record<string, unknown>)['timeoutMs'];
   const confirmAction = (value as Record<string, unknown>)['confirmAction'];
+  const runId = (value as Record<string, unknown>)['runId'];
 
   if (
     timeoutMs !== undefined &&
@@ -291,7 +329,20 @@ function isAutomationNodeRunInput(
     return false;
   }
 
+  if (runId !== undefined && !isBlueprintRunId(runId)) {
+    return false;
+  }
+
   return optionalString(value, 'label', 120);
+}
+
+function isBlueprintRunId(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 120 &&
+    /^[A-Za-z0-9_-]+$/.test(value)
+  );
 }
 
 function optionalString(

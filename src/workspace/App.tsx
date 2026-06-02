@@ -64,6 +64,9 @@ export function App() {
           onRunBlueprintAutomationNode={(node) =>
             state.runBlueprintAutomationNode(node)
           }
+          onCancelBlueprintAutomationRun={(runId) =>
+            state.cancelBlueprintAutomationRun(runId)
+          }
           onTestBlueprintAutomationNode={(node) =>
             state.testBlueprintAutomationNode(node)
           }

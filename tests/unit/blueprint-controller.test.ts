@@ -655,6 +655,43 @@ describe('BlueprintController', () => {
       ],
     });
   });
+
+  it('cancels an automation run on the source tab', async () => {
+    const executeScript = vi.fn().mockResolvedValue([
+      {
+        result: {
+          ok: true,
+        },
+      },
+    ]);
+    const controller = new BlueprintController({
+      createId: () => 'blueprint-snippet',
+      getExtensionUrl: (path) => `chrome-extension://tampr/${path}`,
+      now: () => 1_748_000_000_000,
+      runtimeSync: async () => readyRuntime(),
+      scripting: {
+        executeScript,
+      },
+      snippets: new MemorySnippetStore(),
+      tabs: {
+        create: vi.fn(),
+        query: vi.fn(),
+        update: vi.fn(),
+      },
+    });
+
+    await expect(
+      controller.cancelAutomationRun(42, 'run-test'),
+    ).resolves.toEqual({
+      ok: true,
+      status: 'cancelled',
+    });
+    expect(executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      func: expect.any(Function),
+      args: [{ runId: 'run-test' }],
+    });
+  });
 });
 
 class MemorySnippetStore {

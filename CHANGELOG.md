@@ -34,6 +34,8 @@ group changes under the headings below.
   blocking, and canvas run statuses.
 - Workspace Blueprint flow runs can stop at the selected node, with
   confirmation scoped to only the steps that will actually run.
+- Workspace Blueprint flow runs can be stopped while running, and automation
+  nodes can pause for review before they run.
 - Blueprint click UIs now surface that synthetic clicks run with
   `event.isTrusted === false`.
 - Editable Blueprint node labels, action types, and generated-CSS enable toggles

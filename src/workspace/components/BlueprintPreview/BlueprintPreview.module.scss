@@ -106,6 +106,29 @@
   grid-column: 1 / -1;
 }
 
+.flowPausePanel {
+  align-items: center;
+  background: #e8f0f6;
+  border: 1px solid #92a9bc;
+  border-radius: 6px;
+  color: #294963;
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  padding: 9px 10px;
+
+  div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  strong {
+    color: #294963;
+  }
+}
+
 .flowTestResults {
   display: grid;
   gap: 8px;

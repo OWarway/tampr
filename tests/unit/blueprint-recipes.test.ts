@@ -391,6 +391,18 @@ body {
     expect(js).toContain("['pointerup', 'mouseup']");
     expect(js).toContain('new MouseEvent(mouseType, init)');
     expect(js).toContain('globalThis.Tampr.download');
+    expect(js).toContain('pauseBeforeStep(step)');
+  });
+
+  it('compiles pause-before-run nodes into a confirmation step', () => {
+    const recipe = updateBlueprintNode(automationRecipe(), 'click-login', {
+      pauseBeforeRun: true,
+    });
+    const js = compileBlueprintJavaScript(recipe);
+
+    expect(js).toContain('"pauseBeforeRun": true');
+    expect(js).toContain('window.confirm');
+    expect(js).toContain('was cancelled before running');
   });
 
   it('compiles custom code nodes into visible JavaScript steps', () => {

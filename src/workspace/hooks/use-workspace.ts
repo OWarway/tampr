@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
+  cancelBlueprintAutomationRun as cancelBlueprintAutomationRunFromTab,
   pickBlueprintSelector as pickBlueprintSelectorFromTab,
   runBlueprintAutomationNode as runBlueprintAutomationNodeFromTab,
   testBlueprintAutomationNode as testBlueprintAutomationNodeFromTab,
@@ -70,6 +71,7 @@ export type UseWorkspaceResult = {
   runBlueprintAutomationNode(
     node: BlueprintAutomationNodeRunInput,
   ): Promise<BlueprintAutomationNodeRunResult | undefined>;
+  cancelBlueprintAutomationRun(runId: string): Promise<boolean>;
   updateEditor(editor: EditorState): void;
   updateEditorFolder(folder: string): void;
 };
@@ -293,6 +295,33 @@ export function useWorkspace(): UseWorkspaceResult {
       return undefined;
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function cancelBlueprintAutomationRun(runId: string): Promise<boolean> {
+    const sourceTabId = getWorkspaceSourceTabId(window.location.href);
+
+    if (!sourceTabId) {
+      setNotice('Open the workspace from a page before stopping automation.');
+      return false;
+    }
+
+    try {
+      const response = await cancelBlueprintAutomationRunFromTab(
+        sourceTabId,
+        runId,
+      );
+
+      if (!response.ok) {
+        setNotice(response.error);
+        return false;
+      }
+
+      setNotice('Automation run stop requested.');
+      return true;
+    } catch (error: unknown) {
+      setNotice(toErrorMessage(error));
+      return false;
     }
   }
 
@@ -553,6 +582,7 @@ export function useWorkspace(): UseWorkspaceResult {
     notice,
     workspace,
     clearEditor,
+    cancelBlueprintAutomationRun,
     deleteEditor,
     deleteFolder,
     duplicateCurrentEditor,

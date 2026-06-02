@@ -154,10 +154,15 @@ explicit confirmation, and run click steps only after explicit confirmation. The
 same runner can stop at the selected node for debugger-style verification, and
 confirmation is scoped to the steps that will actually run. Set-value runs still
 refuse unsupported, protected, password, payment, and one-time-code style fields.
-Download-json and custom-code steps remain blocked in full-flow runs until their
-confirmation, cancellation, and result-reporting UX is explicit. Flow runs stop
-on the first blocked or failed step and reflect pending, running, complete,
-blocked, failed, and skipped states back onto the canvas node cards.
+Flow runs can be stopped from the workspace; the stop request is also sent to
+the source page runner so long waits can exit before their timeout. Automation
+nodes may opt into `pauseBeforeRun`, which pauses the workspace flow until the
+user continues or stops it; generated snippets include the same flag as a
+readable `window.confirm` pause. Download-json and custom-code steps remain
+blocked in full-flow runs until their confirmation and result-reporting UX is
+explicit. Flow runs stop on the first blocked, failed, or cancelled step and
+reflect pending, paused, running, complete, blocked, failed, stopped, and skipped
+states back onto the canvas node cards.
 
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,

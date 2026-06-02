@@ -60,6 +60,9 @@ type SnippetEditorProps = {
         node: BlueprintAutomationNodeRunInput,
       ) => Promise<BlueprintAutomationNodeRunResult | undefined>)
     | undefined;
+  onCancelBlueprintAutomationRun?:
+    | ((runId: string) => Promise<boolean>)
+    | undefined;
   onSave(): void;
   onTestBlueprintAutomationNode?:
     | ((
@@ -84,6 +87,7 @@ export function SnippetEditor({
   onFolderChange,
   onPickBlueprintSelector,
   onRunBlueprintAutomationNode,
+  onCancelBlueprintAutomationRun,
   onSave,
   onTestBlueprintAutomationNode,
   onTestBlueprintSelector,
@@ -238,6 +242,7 @@ export function SnippetEditor({
           js={editor.js}
           onPickSelector={onPickBlueprintSelector}
           onRunAutomationNode={onRunBlueprintAutomationNode}
+          onCancelAutomationRun={onCancelBlueprintAutomationRun}
           onTestAutomationNode={onTestBlueprintAutomationNode}
           onTestSelector={onTestBlueprintSelector}
           onChange={(blueprint, css, js = editor.js) =>

@@ -13,6 +13,7 @@ export type BlueprintAutomationNodeRunResponse =
       ok: false;
       reason:
         | 'invalid-selector'
+        | 'cancelled'
         | 'requires-confirmation'
         | 'timeout'
         | 'unavailable'
@@ -24,6 +25,27 @@ type BlueprintAutomationNodeRunResultBase = Pick<
   BlueprintAutomationNodeRunResult,
   'action' | 'durationMs' | 'firstTagName' | 'matchCount' | 'visibleCount'
 >;
+
+type BlueprintAutomationCancelInput = {
+  runId: string;
+};
+
+type BlueprintAutomationWindow = Window & {
+  __tamprBlueprintAutomationCancelled?: Record<string, boolean> | undefined;
+};
+
+export function cancelTamprBlueprintAutomationRun({
+  runId,
+}: BlueprintAutomationCancelInput): { ok: true } {
+  const automationWindow = window as BlueprintAutomationWindow;
+
+  automationWindow.__tamprBlueprintAutomationCancelled = {
+    ...(automationWindow.__tamprBlueprintAutomationCancelled ?? {}),
+    [runId]: true,
+  };
+
+  return { ok: true };
+}
 
 // Chrome serializes only this function for injection, so helpers stay nested.
 export async function runTamprBlueprintAutomationNode(
@@ -74,6 +96,7 @@ export async function runTamprBlueprintAutomationNode(
   }
 
   const selector = node.selector.trim();
+  const runId = node.runId;
 
   if (!selector) {
     return {
@@ -87,8 +110,18 @@ export async function runTamprBlueprintAutomationNode(
   const timeoutMs = clampTimeout(node.timeoutMs);
 
   try {
+    clearCancellation(runId);
+
     const match = await waitForElement(selector, node, timeoutMs);
     const durationMs = Date.now() - startedAt;
+
+    if (match.cancelled) {
+      return {
+        ok: false,
+        reason: 'cancelled',
+        message: 'Automation node run was stopped.',
+      };
+    }
 
     if (!match.element) {
       return {
@@ -108,6 +141,14 @@ export async function runTamprBlueprintAutomationNode(
       node,
       durationMs,
     );
+
+    if (isCancelled(runId)) {
+      return {
+        ok: false,
+        reason: 'cancelled',
+        message: 'Automation node run was stopped.',
+      };
+    }
 
     if (node.type === 'extract-text') {
       const value = normalizeText(element.textContent ?? '');
@@ -214,12 +255,21 @@ export async function runTamprBlueprintAutomationNode(
     waitMs: number,
   ): Promise<{
     element?: Element;
+    cancelled?: boolean;
     matches: Element[];
     visibleMatches: Element[];
   }> {
     const waitStartedAt = Date.now();
 
     while (Date.now() - waitStartedAt <= waitMs) {
+      if (isCancelled(runNode.runId)) {
+        return {
+          cancelled: true,
+          matches: [],
+          visibleMatches: [],
+        };
+      }
+
       const matches = Array.from(document.querySelectorAll(selectorValue));
       const visibleMatches = matches.filter(isVisibleElement);
       const element =
@@ -243,6 +293,30 @@ export async function runTamprBlueprintAutomationNode(
       matches,
       visibleMatches,
     };
+  }
+
+  function clearCancellation(runIdValue: string | undefined): void {
+    if (!runIdValue) {
+      return;
+    }
+
+    const automationWindow = window as BlueprintAutomationWindow;
+
+    if (automationWindow.__tamprBlueprintAutomationCancelled) {
+      delete automationWindow.__tamprBlueprintAutomationCancelled[runIdValue];
+    }
+  }
+
+  function isCancelled(runIdValue: string | undefined): boolean {
+    if (!runIdValue) {
+      return false;
+    }
+
+    const automationWindow = window as BlueprintAutomationWindow;
+
+    return Boolean(
+      automationWindow.__tamprBlueprintAutomationCancelled?.[runIdValue],
+    );
   }
 
   function runResultBase(

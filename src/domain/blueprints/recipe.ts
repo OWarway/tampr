@@ -63,12 +63,14 @@ export const BlueprintCssNodeSchema = BlueprintElementNodeBaseSchema.extend({
 export const BlueprintWaitForElementNodeSchema =
   BlueprintElementNodeBaseSchema.extend({
     type: z.literal('wait-for-element'),
+    pauseBeforeRun: z.boolean().default(false),
     requireVisible: z.boolean().default(true),
     timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
   });
 
 export const BlueprintClickNodeSchema = BlueprintElementNodeBaseSchema.extend({
   type: z.literal('click'),
+  pauseBeforeRun: z.boolean().default(false),
   requireVisible: z.boolean().default(true),
   timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
 });
@@ -76,6 +78,7 @@ export const BlueprintClickNodeSchema = BlueprintElementNodeBaseSchema.extend({
 export const BlueprintSetValueNodeSchema =
   BlueprintElementNodeBaseSchema.extend({
     type: z.literal('set-value'),
+    pauseBeforeRun: z.boolean().default(false),
     requireVisible: z.boolean().default(true),
     timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
     value: z.string().max(10_000).default(''),
@@ -84,6 +87,7 @@ export const BlueprintSetValueNodeSchema =
 export const BlueprintExtractTextNodeSchema =
   BlueprintElementNodeBaseSchema.extend({
     type: z.literal('extract-text'),
+    pauseBeforeRun: z.boolean().default(false),
     requireVisible: z.boolean().default(true),
     timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
     variableName: BlueprintVariableNameSchema.default('text'),
@@ -93,6 +97,7 @@ export const BlueprintDownloadJsonNodeSchema =
   BlueprintElementNodeBaseSchema.extend({
     type: z.literal('download-json'),
     filename: z.string().trim().min(1).max(160).default('tampr-blueprint.json'),
+    pauseBeforeRun: z.boolean().default(false),
     valueFrom: BlueprintVariableNameSchema.optional(),
   });
 
@@ -108,6 +113,7 @@ export const BlueprintCustomCodeNodeSchema =
           '// values stores extracted Blueprint values.',
         ].join('\n'),
       ),
+    pauseBeforeRun: z.boolean().default(false),
     requireVisible: z.boolean().default(true),
     timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
   });
@@ -291,6 +297,7 @@ export type BlueprintNodeUpdate = {
   selectorMeta?: BlueprintNode['selectorMeta'];
   filename?: string;
   code?: string;
+  pauseBeforeRun?: boolean;
   requireVisible?: boolean;
   timeoutMs?: number;
   type?: BlueprintNodeType;
@@ -374,6 +381,9 @@ export function updateBlueprintNode(
         : {}),
       ...(update.filename !== undefined ? { filename: update.filename } : {}),
       ...(update.code !== undefined ? { code: update.code } : {}),
+      ...(update.pauseBeforeRun !== undefined
+        ? { pauseBeforeRun: update.pauseBeforeRun }
+        : {}),
       ...(update.requireVisible !== undefined
         ? { requireVisible: update.requireVisible }
         : {}),

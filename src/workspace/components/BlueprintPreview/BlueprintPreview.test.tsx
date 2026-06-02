@@ -19,6 +19,10 @@ import {
   buildCssBlueprintRecipe,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
+import type {
+  BlueprintAutomationNodeRunInput,
+  BlueprintAutomationNodeRunResult,
+} from '../../../shared/blueprint-messages';
 import { BlueprintPreview } from './BlueprintPreview';
 
 afterEach(cleanup);
@@ -506,29 +510,41 @@ describe('BlueprintPreview', () => {
     fireEvent.click(runButton);
 
     await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(3));
-    expect(onRunAutomationNode).toHaveBeenNthCalledWith(1, {
-      label: 'Wait for deal',
-      selector: '[data-testid="deal"]',
-      type: 'wait-for-element',
-      requireVisible: true,
-      timeoutMs: 5000,
-    });
-    expect(onRunAutomationNode).toHaveBeenNthCalledWith(2, {
-      label: 'Extract title',
-      selector: '[data-testid="deal-title"]',
-      type: 'extract-text',
-      requireVisible: true,
-      timeoutMs: 5000,
-      variableName: 'dealTitle',
-    });
-    expect(onRunAutomationNode).toHaveBeenNthCalledWith(3, {
-      label: 'Open deal',
-      selector: 'button[data-testid="open"]',
-      type: 'click',
-      confirmAction: true,
-      requireVisible: true,
-      timeoutMs: 5000,
-    });
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        label: 'Wait for deal',
+        selector: '[data-testid="deal"]',
+        type: 'wait-for-element',
+        requireVisible: true,
+        timeoutMs: 5000,
+        runId: expect.stringMatching(/^run-/),
+      }),
+    );
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        label: 'Extract title',
+        selector: '[data-testid="deal-title"]',
+        type: 'extract-text',
+        requireVisible: true,
+        timeoutMs: 5000,
+        variableName: 'dealTitle',
+        runId: expect.stringMatching(/^run-/),
+      }),
+    );
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        label: 'Open deal',
+        selector: 'button[data-testid="open"]',
+        type: 'click',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+        runId: expect.stringMatching(/^run-/),
+      }),
+    );
     expect(
       await screen.findByText('3 complete, 0 need review, 1 skipped'),
     ).toBeTruthy();
@@ -536,6 +552,85 @@ describe('BlueprintPreview', () => {
     expect(screen.getByText('Deal title')).toBeTruthy();
     expect(screen.getAllByText('Complete')).toHaveLength(3);
     expect(screen.getAllByText('Skipped')).toHaveLength(1);
+  });
+
+  it('stops a running flow and cancels the source page run', async () => {
+    let resolveRun:
+      | ((result: BlueprintAutomationNodeRunResult | undefined) => void)
+      | undefined;
+    const onRunAutomationNode = vi.fn(
+      (node: BlueprintAutomationNodeRunInput) => {
+        void node;
+        return new Promise<BlueprintAutomationNodeRunResult | undefined>(
+          (resolve) => {
+            resolveRun = resolve;
+          },
+        );
+      },
+    );
+    const onCancelAutomationRun = vi.fn().mockResolvedValue(true);
+    const blueprint = automationRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onCancelAutomationRun={onCancelAutomationRun}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run flow' }));
+
+    await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(1));
+    const runInput = onRunAutomationNode.mock.calls[0]?.[0];
+
+    expect(runInput?.runId).toEqual(expect.stringMatching(/^run-/));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop run' }));
+
+    await waitFor(() =>
+      expect(onCancelAutomationRun).toHaveBeenCalledWith(runInput?.runId),
+    );
+
+    resolveRun?.(undefined);
+
+    expect(await screen.findByText('0 complete, 1 need review')).toBeTruthy();
+    expect(screen.getAllByText('Stopped').length).toBeGreaterThan(0);
+  });
+
+  it('pauses a flow before a marked node and continues on request', async () => {
+    const onRunAutomationNode = vi.fn().mockResolvedValue({
+      action: 'wait-for-element',
+      durationMs: 8,
+      firstTagName: 'section',
+      matchCount: 1,
+      message: 'Element is ready on the source page.',
+      preview: 'Deal',
+      visibleCount: 1,
+    });
+    const blueprint = automationRecipe({ pauseBeforeRun: true });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run flow' }));
+
+    expect(
+      await screen.findByText('Paused before Wait for element'),
+    ).toBeTruthy();
+    expect(onRunAutomationNode).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('1 complete, 0 need review')).toBeTruthy();
   });
 
   it('runs the flow only through the selected node', async () => {
@@ -585,21 +680,27 @@ describe('BlueprintPreview', () => {
     fireEvent.click(runToSelectedButton);
 
     await waitFor(() => expect(onRunAutomationNode).toHaveBeenCalledTimes(2));
-    expect(onRunAutomationNode).toHaveBeenNthCalledWith(1, {
-      label: 'Wait for deal',
-      selector: '[data-testid="deal"]',
-      type: 'wait-for-element',
-      requireVisible: true,
-      timeoutMs: 5000,
-    });
-    expect(onRunAutomationNode).toHaveBeenNthCalledWith(2, {
-      label: 'Extract title',
-      selector: '[data-testid="deal-title"]',
-      type: 'extract-text',
-      requireVisible: true,
-      timeoutMs: 5000,
-      variableName: 'dealTitle',
-    });
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        label: 'Wait for deal',
+        selector: '[data-testid="deal"]',
+        type: 'wait-for-element',
+        requireVisible: true,
+        timeoutMs: 5000,
+      }),
+    );
+    expect(onRunAutomationNode).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        label: 'Extract title',
+        selector: '[data-testid="deal-title"]',
+        type: 'extract-text',
+        requireVisible: true,
+        timeoutMs: 5000,
+        variableName: 'dealTitle',
+      }),
+    );
     expect(
       await screen.findByText('2 complete, 0 need review, 1 skipped'),
     ).toBeTruthy();
@@ -639,14 +740,17 @@ describe('BlueprintPreview', () => {
     fireEvent.click(runButton);
 
     await waitFor(() =>
-      expect(onRunAutomationNode).toHaveBeenCalledWith({
-        selector: 'input[name="email"]',
-        type: 'set-value',
-        confirmAction: true,
-        requireVisible: true,
-        timeoutMs: 5000,
-        value: 'oliver@example.com',
-      }),
+      expect(onRunAutomationNode).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selector: 'input[name="email"]',
+          type: 'set-value',
+          confirmAction: true,
+          requireVisible: true,
+          timeoutMs: 5000,
+          value: 'oliver@example.com',
+          runId: expect.stringMatching(/^run-/),
+        }),
+      ),
     );
     expect(await screen.findByText('1 complete, 0 need review')).toBeTruthy();
     expect(screen.getByText('Value set on the source page.')).toBeTruthy();
@@ -1109,6 +1213,37 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('edits pause-before-run and regenerates JavaScript', () => {
+    const onChange = vi.fn();
+    const blueprint = automationRecipe();
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Pause before running this node'));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              pauseBeforeRun: true,
+              type: 'wait-for-element',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"pauseBeforeRun": true'),
+    );
+  });
+
   it('edits custom code nodes and regenerates JavaScript', () => {
     const onChange = vi.fn();
     const blueprint = customCodeRecipe();
@@ -1307,7 +1442,9 @@ function flowRunRecipe(): BlueprintRecipe {
   });
 }
 
-function automationRecipe(): BlueprintRecipe {
+function automationRecipe(
+  options: { pauseBeforeRun?: boolean } = {},
+): BlueprintRecipe {
   return BlueprintRecipeSchema.parse({
     version: BLUEPRINT_RECIPE_VERSION,
     name: 'Wait for deal',
@@ -1316,6 +1453,7 @@ function automationRecipe(): BlueprintRecipe {
         {
           id: 'wait-for-deal',
           enabled: true,
+          pauseBeforeRun: options.pauseBeforeRun ?? false,
           selector: '[data-testid="deal"]',
           selectorMeta: selectorMeta('attribute'),
           type: 'wait-for-element',

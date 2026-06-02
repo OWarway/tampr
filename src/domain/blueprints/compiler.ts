@@ -38,6 +38,7 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
   async function runBlueprint() {
     for (const step of steps) {
       console.debug(PREFIX, 'Running step', step.label);
+      await pauseBeforeStep(step);
 
       if (step.type === 'wait-for-element') {
         await waitForElement(step);
@@ -73,6 +74,18 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
         const element = await waitForElement(step);
         await runCustomCode(step, element);
       }
+    }
+  }
+
+  async function pauseBeforeStep(step) {
+    if (!step.pauseBeforeRun) {
+      return;
+    }
+
+    const confirmed = window.confirm(\`\${PREFIX} Continue with "\${step.label}"?\`);
+
+    if (!confirmed) {
+      throw new Error(\`Step "\${step.label}" was cancelled before running.\`);
     }
   }
 
@@ -329,6 +342,7 @@ function automationStepDefinition(node: BlueprintAutomationNode) {
   const base = {
     id: node.id,
     label: node.label ?? node.type,
+    pauseBeforeRun: node.pauseBeforeRun,
     selector: node.selector,
     type: node.type,
   };
