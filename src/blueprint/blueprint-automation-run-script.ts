@@ -40,29 +40,36 @@ export async function runTamprBlueprintAutomationNode(
   if (
     node.type !== 'wait-for-element' &&
     node.type !== 'extract-text' &&
+    node.type !== 'set-value' &&
     node.type !== 'click'
   ) {
     return {
       ok: false,
       reason: 'unsupported',
       message:
-        'Manual node runs currently support wait, extract-text, and confirmed click steps.',
+        'Manual node runs currently support wait, extract-text, confirmed set-value, and confirmed click steps.',
     };
   }
 
-  if (node.type === 'click' && !node.confirmAction) {
+  if (
+    (node.type === 'click' || node.type === 'set-value') &&
+    !node.confirmAction
+  ) {
     return {
       ok: false,
       reason: 'requires-confirmation',
-      message: 'Manual click runs need explicit confirmation.',
+      message: `Manual ${node.type} runs need explicit confirmation.`,
     };
   }
 
-  if (node.type === 'click' && node.requireVisible !== true) {
+  if (
+    (node.type === 'click' || node.type === 'set-value') &&
+    node.requireVisible !== true
+  ) {
     return {
       ok: false,
       reason: 'unsupported',
-      message: 'Manual click runs require a visible target.',
+      message: `Manual ${node.type} runs require a visible target.`,
     };
   }
 
@@ -146,6 +153,30 @@ export async function runTamprBlueprintAutomationNode(
           ...base,
           message: 'Element clicked on the source page.',
           ...previewResult(target),
+        },
+      };
+    }
+
+    if (node.type === 'set-value') {
+      const unsafeMessage = unsafeFieldMessage(element);
+
+      if (unsafeMessage) {
+        return {
+          ok: false,
+          reason: 'unsafe-target',
+          message: unsafeMessage,
+        };
+      }
+
+      setFieldValue(element, node.value ?? '');
+
+      return {
+        ok: true,
+        result: {
+          ...base,
+          message: 'Value set on the source page.',
+          ...previewResult(element),
+          value: truncate(node.value ?? '', 2_000),
         },
       };
     }
@@ -321,6 +352,70 @@ export async function runTamprBlueprintAutomationNode(
     return riskyWords.some((word) => copy.includes(word))
       ? 'Manual click run refused a risky target.'
       : undefined;
+  }
+
+  function unsafeFieldMessage(element: Element): string | undefined {
+    if (
+      !(
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement ||
+        element instanceof HTMLSelectElement
+      )
+    ) {
+      return 'Manual set-value run needs a supported form field target.';
+    }
+
+    if (element instanceof HTMLInputElement) {
+      const blockedTypes = [
+        'button',
+        'checkbox',
+        'file',
+        'hidden',
+        'password',
+        'radio',
+        'submit',
+      ];
+
+      if (blockedTypes.includes(element.type)) {
+        return 'Manual set-value run refused a protected field.';
+      }
+    }
+
+    const copy = [
+      element.getAttribute('autocomplete'),
+      element.getAttribute('aria-label'),
+      element.getAttribute('id'),
+      element.getAttribute('name'),
+      element.getAttribute('placeholder'),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const protectedWords = [
+      'card',
+      'cvv',
+      'one-time',
+      'otp',
+      'passcode',
+      'password',
+      'payment',
+    ];
+
+    return protectedWords.some((word) => copy.includes(word))
+      ? 'Manual set-value run refused a sensitive field.'
+      : undefined;
+  }
+
+  function setFieldValue(element: Element, value: string): void {
+    const field = element as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement;
+
+    field.focus();
+    field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function normalizeText(value: string): string {

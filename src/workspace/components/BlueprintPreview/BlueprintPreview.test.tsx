@@ -501,7 +501,7 @@ describe('BlueprintPreview', () => {
 
     expect((runButton as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(
-      screen.getByLabelText('Confirm flow click steps on source page'),
+      screen.getByLabelText('Confirm flow actions on source page'),
     );
     fireEvent.click(runButton);
 
@@ -609,9 +609,53 @@ describe('BlueprintPreview', () => {
     ).toBeNull();
   });
 
+  it('runs confirmed set-value flow steps', async () => {
+    const onRunAutomationNode = vi.fn().mockResolvedValue({
+      action: 'set-value',
+      durationMs: 8,
+      firstTagName: 'input',
+      matchCount: 1,
+      message: 'Value set on the source page.',
+      value: 'oliver@example.com',
+      visibleCount: 1,
+    });
+    const blueprint = setValueRecipe('oliver@example.com');
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+      />,
+    );
+
+    const runButton = screen.getByRole('button', { name: 'Run flow' });
+
+    expect((runButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(
+      screen.getByLabelText('Confirm flow actions on source page'),
+    );
+    fireEvent.click(runButton);
+
+    await waitFor(() =>
+      expect(onRunAutomationNode).toHaveBeenCalledWith({
+        selector: 'input[name="email"]',
+        type: 'set-value',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+        value: 'oliver@example.com',
+      }),
+    );
+    expect(await screen.findByText('1 complete, 0 need review')).toBeTruthy();
+    expect(screen.getByText('Value set on the source page.')).toBeTruthy();
+    expect(screen.getByText('oliver@example.com')).toBeTruthy();
+  });
+
   it('blocks unsupported flow run steps before touching the page', async () => {
     const onRunAutomationNode = vi.fn();
-    const blueprint = setValueRecipe();
+    const blueprint = customCodeRecipe();
 
     render(
       <BlueprintPreview
@@ -626,7 +670,9 @@ describe('BlueprintPreview', () => {
 
     expect(await screen.findByText('0 complete, 1 need review')).toBeTruthy();
     expect(
-      screen.getByText('Set value is not available in guarded flow runs yet.'),
+      screen.getByText(
+        'Custom code is not available in guarded flow runs yet.',
+      ),
     ).toBeTruthy();
     expect(screen.getAllByText('Blocked')).toHaveLength(2);
     expect(onRunAutomationNode).not.toHaveBeenCalled();
@@ -964,7 +1010,7 @@ describe('BlueprintPreview', () => {
     const runButton = screen.getByRole('button', { name: 'Run node' });
 
     expect((runButton as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByLabelText('Confirm click on source page'));
+    fireEvent.click(screen.getByLabelText('Confirm action on source page'));
     fireEvent.click(runButton);
 
     await waitFor(() =>
@@ -985,6 +1031,49 @@ describe('BlueprintPreview', () => {
         'Blueprint clicks are synthetic: event.isTrusted === false.',
       ),
     ).toHaveLength(2);
+  });
+
+  it('requires explicit confirmation before running set-value nodes', async () => {
+    const onRunAutomationNode = vi.fn().mockResolvedValue({
+      action: 'set-value',
+      durationMs: 8,
+      firstTagName: 'input',
+      matchCount: 1,
+      message: 'Value set on the source page.',
+      value: 'oliver@example.com',
+      visibleCount: 1,
+    });
+    const blueprint = setValueRecipe('oliver@example.com');
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={compileBlueprintCss(blueprint)}
+        js={compileBlueprintJavaScript(blueprint)}
+        onRunAutomationNode={onRunAutomationNode}
+        onChange={() => undefined}
+      />,
+    );
+
+    const runButton = screen.getByRole('button', { name: 'Run node' });
+
+    expect((runButton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('Confirm action on source page'));
+    fireEvent.click(runButton);
+
+    await waitFor(() =>
+      expect(onRunAutomationNode).toHaveBeenCalledWith({
+        selector: 'input[name="email"]',
+        type: 'set-value',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+        value: 'oliver@example.com',
+      }),
+    );
+    expect(await screen.findByText('Ran on page')).toBeTruthy();
+    expect(screen.getByText('Value set on the source page.')).toBeTruthy();
+    expect(screen.getByText('oliver@example.com')).toBeTruthy();
   });
 
   it('edits automation values and regenerates JavaScript', () => {
@@ -1289,7 +1378,7 @@ function safeClickRecipe(): BlueprintRecipe {
   });
 }
 
-function setValueRecipe(): BlueprintRecipe {
+function setValueRecipe(value = ''): BlueprintRecipe {
   return BlueprintRecipeSchema.parse({
     version: BLUEPRINT_RECIPE_VERSION,
     name: 'Set email',
@@ -1301,7 +1390,7 @@ function setValueRecipe(): BlueprintRecipe {
           selector: 'input[name="email"]',
           selectorMeta: selectorMeta('attribute'),
           type: 'set-value',
-          value: '',
+          value,
         },
       ],
       edges: [],

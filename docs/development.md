@@ -149,14 +149,15 @@ canvas node cards.
 
 Full workspace flow runs are a separate guarded action. They reuse the manual
 automation node runner, skip CSS nodes because generated CSS already applies
-them, run wait-for-element and extract-text steps, and run click steps only after
-an explicit flow-level confirmation. The same runner can stop at the selected
-node for debugger-style verification, and click confirmation is scoped to the
-steps that will actually run. Set-value, download-json, and custom-code steps
-remain blocked in full-flow runs until their confirmation, cancellation, and
-result-reporting UX is explicit. Flow runs stop on the first blocked or failed
-step and reflect pending, running, complete, blocked, failed, and skipped states
-back onto the canvas node cards.
+them, run wait-for-element and extract-text steps, run set-value steps after
+explicit confirmation, and run click steps only after explicit confirmation. The
+same runner can stop at the selected node for debugger-style verification, and
+confirmation is scoped to the steps that will actually run. Set-value runs still
+refuse unsupported, protected, password, payment, and one-time-code style fields.
+Download-json and custom-code steps remain blocked in full-flow runs until their
+confirmation, cancellation, and result-reporting UX is explicit. Flow runs stop
+on the first blocked or failed step and reflect pending, running, complete,
+blocked, failed, and skipped states back onto the canvas node cards.
 
 Automation safety checks live in the Blueprint domain and are shown in the
 workspace inspector. Keep this signal conservative: warn on selectors that drift,
@@ -174,11 +175,12 @@ or recording path.
 
 Manual automation node runs also use temporary `scripting.executeScript` against
 the source tab. The first supported run actions are intentionally low-risk:
-wait-for-element and extract-text. Click runs require explicit inspector
-confirmation and are still refused inside the injected runner when the target
-looks like submit, buy, send, delete, publish, or payment behavior. Set-value and
-download-json steps must remain refused by the manual runner until their
-confirmation, blocking, and result-reporting UX is explicit.
+wait-for-element and extract-text. Set-value and click runs require explicit
+inspector confirmation. Set-value runs are refused for unsupported, protected,
+password, payment, or one-time-code style fields; click runs are refused when
+the target looks like submit, buy, send, delete, publish, or payment behavior.
+Download-json and custom-code steps must remain refused by the manual runner
+until their confirmation, blocking, and result-reporting UX is explicit.
 
 Click execution resolves the selected element to the closest interactive
 ancestor before safety checks and dispatch. This keeps child selections inside

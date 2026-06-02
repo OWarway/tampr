@@ -233,7 +233,41 @@ describe('runTamprBlueprintAutomationNode', () => {
     expect(click).not.toHaveBeenCalled();
   });
 
-  it('refuses unsupported mutating node types in the manual runner', async () => {
+  it('sets a confirmed form field value and dispatches field events', async () => {
+    document.body.innerHTML = '<input value="original">';
+    const input = document.querySelector('input') as HTMLInputElement;
+    const observed: string[] = [];
+
+    input.addEventListener('input', (event) => observed.push(event.type));
+    input.addEventListener('change', (event) => observed.push(event.type));
+    stubRect(input);
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'set-value',
+        selector: 'input',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+        value: 'changed',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        action: 'set-value',
+        durationMs: expect.any(Number),
+        firstTagName: 'input',
+        matchCount: 1,
+        message: 'Value set on the source page.',
+        value: 'changed',
+        visibleCount: 1,
+      },
+    });
+    expect(input.value).toBe('changed');
+    expect(observed).toEqual(['input', 'change']);
+  });
+
+  it('refuses unconfirmed set-value nodes', async () => {
     document.body.innerHTML = '<input value="original">';
     const input = document.querySelector('input') as HTMLInputElement;
     stubRect(input);
@@ -248,11 +282,47 @@ describe('runTamprBlueprintAutomationNode', () => {
       }),
     ).resolves.toEqual({
       ok: false,
-      reason: 'unsupported',
-      message:
-        'Manual node runs currently support wait, extract-text, and confirmed click steps.',
+      reason: 'requires-confirmation',
+      message: 'Manual set-value runs need explicit confirmation.',
     });
     expect(input.value).toBe('original');
+  });
+
+  it('refuses protected set-value fields', async () => {
+    document.body.innerHTML = '<input name="password" type="password">';
+    const input = document.querySelector('input') as HTMLInputElement;
+    stubRect(input);
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'set-value',
+        selector: 'input',
+        confirmAction: true,
+        requireVisible: true,
+        timeoutMs: 5000,
+        value: 'secret',
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'unsafe-target',
+      message: 'Manual set-value run refused a protected field.',
+    });
+    expect(input.value).toBe('');
+  });
+
+  it('refuses unsupported mutating node types in the manual runner', async () => {
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'download-json',
+        selector: 'main',
+        timeoutMs: 5000,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'unsupported',
+      message:
+        'Manual node runs currently support wait, extract-text, confirmed set-value, and confirmed click steps.',
+    });
   });
 
   it('returns an invalid selector error', async () => {

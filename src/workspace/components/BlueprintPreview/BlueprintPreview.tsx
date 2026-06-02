@@ -979,8 +979,8 @@ function BlueprintFlowTestPanel({
       <div>
         <strong>Flow preview</strong>
         <p>
-          Test safely, then run supported wait, extract, and confirmed click
-          steps on the source page.
+          Test safely, then run supported wait, extract, confirmed set-value,
+          and confirmed click steps on the source page.
         </p>
       </div>
       <div className={styles.flowPanelActions}>
@@ -1034,7 +1034,7 @@ function BlueprintFlowTestPanel({
       (runRequiresConfirmation || runToSelectedRequiresConfirmation) ? (
         <label className={`${styles.runConfirmation} ${styles.flowRunConfirm}`}>
           <input
-            aria-label="Confirm flow click steps on source page"
+            aria-label="Confirm flow actions on source page"
             checked={runConfirmed}
             type="checkbox"
             onChange={(event) =>
@@ -1042,7 +1042,8 @@ function BlueprintFlowTestPanel({
             }
           />
           <span>
-            Confirm click steps before running them on the source page
+            Confirm click and set-value steps before running them on the source
+            page
           </span>
         </label>
       ) : null}
@@ -1745,7 +1746,7 @@ function BlueprintAutomationRunPanel({
             type="checkbox"
             onChange={(event) => onConfirmChange(event.currentTarget.checked)}
           />
-          <span>Confirm click on source page</span>
+          <span>Confirm action on source page</span>
         </label>
       ) : null}
       <button
@@ -2096,6 +2097,7 @@ function canRunAutomationNode(node: BlueprintAutomationNode): boolean {
   return (
     node.type === 'wait-for-element' ||
     node.type === 'extract-text' ||
+    node.type === 'set-value' ||
     node.type === 'click'
   );
 }
@@ -2123,7 +2125,7 @@ function flowRequiresRunConfirmationForNodes(
 }
 
 function requiresRunConfirmation(node: BlueprintAutomationNode): boolean {
-  return node.type === 'click';
+  return node.type === 'click' || node.type === 'set-value';
 }
 
 function errorMessage(error: unknown): string {

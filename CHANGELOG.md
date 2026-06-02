@@ -29,10 +29,10 @@ group changes under the headings below.
 - Workspace Blueprint flow preview that checks every step on the source page
   without clicking, typing, or downloading.
 - Flow preview statuses are reflected directly on Blueprint canvas node cards.
-- Guarded workspace Blueprint flow runs for supported wait, extract, and
-  confirmed click steps, with CSS skips, unsupported-step blocking, and canvas
-  run statuses.
-- Workspace Blueprint flow runs can stop at the selected node, with click
+- Guarded workspace Blueprint flow runs for supported wait, extract, confirmed
+  set-value, and confirmed click steps, with CSS skips, unsupported-step
+  blocking, and canvas run statuses.
+- Workspace Blueprint flow runs can stop at the selected node, with
   confirmation scoped to only the steps that will actually run.
 - Blueprint click UIs now surface that synthetic clicks run with
   `event.isTrusted === false`.
