@@ -1056,7 +1056,12 @@ describe('BlueprintPreview', () => {
       screen.getByText('Pauses the flow until the selected element appears.'),
     ).toBeTruthy();
     expect(screen.getByLabelText('Require visible element')).toBeTruthy();
-    expect(screen.getByLabelText('Automation timeout')).toBeTruthy();
+    const timeoutField = screen.getByLabelText(
+      'Automation timeout',
+    ) as HTMLInputElement;
+
+    expect(timeoutField.type).toBe('text');
+    expect(timeoutField.inputMode).toBe('numeric');
     expect(screen.getByLabelText('Automation safety')).toBeTruthy();
     expect(screen.getByText('Normal')).toBeTruthy();
     expect(screen.getByText('No automation warnings.')).toBeTruthy();

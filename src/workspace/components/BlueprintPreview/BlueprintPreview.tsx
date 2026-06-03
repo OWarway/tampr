@@ -2146,13 +2146,17 @@ function BlueprintAutomationSettings({
           <input
             aria-label="Automation timeout"
             disabled={!generatedCodeInSync}
+            inputMode="numeric"
             max={60000}
             min={250}
-            step={250}
-            type="number"
+            pattern="[0-9]*"
+            type="text"
             value={node.timeoutMs}
             onChange={(event) => {
-              const value = event.currentTarget.valueAsNumber;
+              const value = Number.parseInt(
+                event.currentTarget.value.replace(/\D/g, ''),
+                10,
+              );
 
               if (Number.isFinite(value)) {
                 onTimeoutChange(clampAutomationTimeout(value));
