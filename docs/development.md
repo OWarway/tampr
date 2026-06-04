@@ -138,7 +138,9 @@ resolved relative to each matched list item. If no fields are configured,
 extract-list keeps the simpler `{ text }` fallback for each row. The page-side
 builder can append fields by clicking a child inside a matching row; heading
 targets become text fields, links become `@href` fields, images become `@src`
-fields, and row-level mappings use `:scope`.
+fields, and row-level mappings use `:scope`. The workspace inspector keeps the
+raw line editor visible but also summarizes parsed fields in a table with
+per-field remove controls.
 
 Custom-code nodes are an explicit escape hatch. They default to unreviewed, show
 danger-level safety copy until reviewed, and generated snippets refuse to execute

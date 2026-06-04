@@ -17,6 +17,7 @@ import {
   BLUEPRINT_RECIPE_VERSION,
   BlueprintRecipeSchema,
   buildCssBlueprintRecipe,
+  type BlueprintExtractListField,
   type BlueprintRecipe,
 } from '../../../domain/blueprints/recipe';
 import type {
@@ -409,6 +410,69 @@ describe('BlueprintPreview', () => {
       }),
       '',
       expect.stringContaining('"fields"'),
+    );
+  });
+
+  it('summarizes and removes mapped extract-list fields', () => {
+    const onChange = vi.fn();
+    const blueprint = extractListRecipe({
+      fields: [
+        {
+          name: 'title',
+          selector: 'h2',
+          source: 'text',
+        },
+        {
+          attribute: 'href',
+          name: 'url',
+          selector: 'a',
+          source: 'attribute',
+        },
+      ],
+    });
+    const js = compileBlueprintJavaScript(blueprint);
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css=""
+        js={js}
+        onChange={onChange}
+      />,
+    );
+
+    expect(
+      screen.getByRole('table', { name: 'Mapped list fields' }),
+    ).toBeTruthy();
+    expect(screen.getByText('2 fields')).toBeTruthy();
+    expect(screen.getByText('title')).toBeTruthy();
+    expect(screen.getByText('h2')).toBeTruthy();
+    expect(screen.getByText('Text')).toBeTruthy();
+    expect(screen.getByText('url')).toBeTruthy();
+    expect(screen.getByText('a')).toBeTruthy();
+    expect(screen.getByText('@href')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove url field' }));
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              fields: [
+                {
+                  name: 'title',
+                  selector: 'h2',
+                  source: 'text',
+                },
+              ],
+              type: 'extract-list',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.not.stringContaining('"name": "url"'),
     );
   });
 
@@ -1846,7 +1910,11 @@ function automationRecipe(
   });
 }
 
-function extractListRecipe(): BlueprintRecipe {
+function extractListRecipe(
+  options: {
+    fields?: BlueprintExtractListField[];
+  } = {},
+): BlueprintRecipe {
   return BlueprintRecipeSchema.parse({
     version: BLUEPRINT_RECIPE_VERSION,
     name: 'Extract deals',
@@ -1862,6 +1930,7 @@ function extractListRecipe(): BlueprintRecipe {
             ...selectorMeta('attribute'),
             matchCount: 3,
           },
+          fields: options.fields ?? [],
           timeoutMs: 5000,
           type: 'extract-list',
           variableName: 'deals',

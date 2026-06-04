@@ -46,6 +46,8 @@ group changes under the headings below.
   row, such as `title = h2` or `url = a @href`.
 - Page-side Extract list drafts can map fields by clicking children inside a
   selected row, creating relative text or URL/image/date attribute fields.
+- Workspace Extract list settings show mapped fields as a structured table with
+  per-field remove controls.
 - Custom-code Blueprint nodes now require explicit review before generated
   snippets or page-side previews execute them.
 - Blueprint click UIs now surface that synthetic clicks run with

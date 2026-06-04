@@ -2429,21 +2429,11 @@ function BlueprintAutomationSettings({
           </label>
           <label className={styles.inspectorField}>
             <span>Fields</span>
-            <textarea
-              aria-label="Automation list fields"
-              defaultValue={formatBlueprintExtractListFieldsInput(node.fields)}
+            <BlueprintExtractListFieldsEditor
               disabled={!generatedCodeInSync}
-              key={`${node.id}-fields`}
-              placeholder={['title = h2', 'url = a @href'].join('\n')}
-              rows={4}
-              spellCheck={false}
-              onChange={(event) =>
-                onFieldsChange(
-                  parseBlueprintExtractListFieldsInput(
-                    event.currentTarget.value,
-                  ),
-                )
-              }
+              fields={node.fields}
+              key={node.id}
+              onFieldsChange={onFieldsChange}
             />
           </label>
         </>
@@ -2507,6 +2497,102 @@ function BlueprintAutomationSettings({
           </label>
         </>
       ) : null}
+    </div>
+  );
+}
+
+type BlueprintExtractListFieldsEditorProps = {
+  disabled: boolean;
+  fields: readonly BlueprintExtractListField[];
+  onFieldsChange(fields: BlueprintExtractListField[]): void;
+};
+
+function BlueprintExtractListFieldsEditor({
+  disabled,
+  fields,
+  onFieldsChange,
+}: BlueprintExtractListFieldsEditorProps) {
+  const [fieldInput, setFieldInput] = useState(() =>
+    formatBlueprintExtractListFieldsInput(fields),
+  );
+
+  function updateFieldInput(value: string): void {
+    setFieldInput(value);
+    onFieldsChange(parseBlueprintExtractListFieldsInput(value));
+  }
+
+  function removeField(index: number): void {
+    const nextFields = fields.filter((_, fieldIndex) => fieldIndex !== index);
+
+    setFieldInput(formatBlueprintExtractListFieldsInput(nextFields));
+    onFieldsChange(nextFields);
+  }
+
+  return (
+    <div className={styles.extractListFieldsEditor}>
+      <textarea
+        aria-label="Automation list fields"
+        disabled={disabled}
+        placeholder={['title = h2', 'url = a @href'].join('\n')}
+        rows={4}
+        spellCheck={false}
+        value={fieldInput}
+        onChange={(event) => updateFieldInput(event.currentTarget.value)}
+      />
+
+      <div className={styles.fieldMap}>
+        <div className={styles.fieldMapHeader}>
+          <span>Mapped fields</span>
+          <strong>
+            {fields.length} {fields.length === 1 ? 'field' : 'fields'}
+          </strong>
+        </div>
+        {fields.length > 0 ? (
+          <table aria-label="Mapped list fields">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Selector</th>
+                <th>Value</th>
+                <th>
+                  <span className={styles.visuallyHidden}>Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {fields.map((field, index) => (
+                <tr key={`${field.name}-${field.selector}-${index}`}>
+                  <td>
+                    <code>{field.name}</code>
+                  </td>
+                  <td>
+                    <code>{field.selector}</code>
+                  </td>
+                  <td>
+                    <span className={styles.fieldKind}>
+                      {field.source === 'attribute' && field.attribute
+                        ? `@${field.attribute}`
+                        : 'Text'}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      aria-label={`Remove ${field.name} field`}
+                      disabled={disabled}
+                      type="button"
+                      onClick={() => removeField(index)}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p>Rows currently extract a single text value from each match.</p>
+        )}
+      </div>
     </div>
   );
 }
