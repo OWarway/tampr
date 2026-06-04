@@ -16,6 +16,7 @@ import {
   moveBlueprintNode,
   removeBlueprintNode,
   updateBlueprintNode,
+  updateBlueprintNodeLayout,
   type BlueprintNodeType,
   type BlueprintRecipe,
 } from '../../src/domain/blueprints/recipe';
@@ -287,6 +288,33 @@ body {
     expect(moveBlueprintNode(recipe, 'highlight-selection', 'down')).toBe(
       recipe,
     );
+  });
+
+  it('updates node layout without rewiring the graph', () => {
+    const recipe = twoNodeRecipe();
+    const updated = updateBlueprintNodeLayout(recipe, 'highlight-selection', {
+      x: 333.6,
+      y: -24.2,
+    });
+
+    expect(getLinearBlueprintNodes(updated).map((node) => node.id)).toEqual([
+      'hide-selection',
+      'highlight-selection',
+    ]);
+    expect(updated.graph.edges).toEqual(recipe.graph.edges);
+    expect(updated.graph.layout).toEqual({
+      ...recipe.graph.layout,
+      'highlight-selection': { x: 334, y: -24 },
+    });
+  });
+
+  it('rejects layout updates for unknown nodes', () => {
+    expect(() =>
+      updateBlueprintNodeLayout(twoNodeRecipe(), 'missing-node', {
+        x: 10,
+        y: 20,
+      }),
+    ).toThrow('Blueprint node missing-node does not exist.');
   });
 
   it('keeps at least one node in every recipe', () => {

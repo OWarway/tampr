@@ -26,6 +26,8 @@ group changes under the headings below.
   quality.
 - Workspace Blueprint flow diagram canvas with start marker, directional
   connectors, layout-aware node cards, and inspector selection.
+- Workspace Blueprint canvas nodes can be dragged or keyboard-nudged without
+  changing flow execution order or generated source.
 - Workspace Blueprint flow preview that checks every step on the source page
   without clicking, typing, or downloading.
 - Flow preview statuses are reflected directly on Blueprint canvas node cards.

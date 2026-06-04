@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
 
 import { assessBlueprintSelector } from '../../../domain/blueprint-selectors';
 import type { BlueprintElementPick } from '../../../domain/blueprint-snippets';
@@ -28,8 +35,10 @@ import {
   moveBlueprintNode,
   removeBlueprintNode,
   updateBlueprintNode,
+  updateBlueprintNodeLayout,
   type MoveBlueprintNodeDirection,
   type BlueprintAutomationNode,
+  type BlueprintLayoutPoint,
   type BlueprintNode,
   type BlueprintNodeType,
   type BlueprintRecipe,
@@ -50,6 +59,9 @@ const FLOW_NODE_WIDTH = 260;
 const FLOW_PADDING = 16;
 const FLOW_START_GAP = 34;
 const FLOW_START_WIDTH = 72;
+const FLOW_DRAG_THRESHOLD = 4;
+const FLOW_NODE_NUDGE = 24;
+const FLOW_NODE_FAST_NUDGE = 80;
 
 type BlueprintPreviewProps = {
   blueprint: BlueprintRecipe | undefined;
@@ -122,6 +134,16 @@ type BlueprintFlowNodeStatus =
 
 type BlueprintFlowRunContext = {
   values: Record<string, unknown>;
+};
+
+type BlueprintNodeDragState = {
+  currentPoint: BlueprintLayoutPoint;
+  moved: boolean;
+  nodeId: string;
+  originPoint: BlueprintLayoutPoint;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
 };
 
 export function BlueprintPreview({
@@ -857,6 +879,15 @@ export function BlueprintPreview({
     );
   }
 
+  function moveNodeLayout(nodeId: string, point: BlueprintLayoutPoint): void {
+    if (!onChange || css === undefined) {
+      return;
+    }
+
+    setSelectedNodeId(nodeId);
+    emitChange(updateBlueprintNodeLayout(recipe, nodeId, point), css, js);
+  }
+
   function emitGeneratedChange(nextBlueprint: BlueprintRecipe): void {
     setFlowTestResults(undefined);
     setFlowRunResults(undefined);
@@ -1006,6 +1037,7 @@ export function BlueprintPreview({
           pendingNodeIds={pendingFlowNodeIds}
           recipe={recipe}
           selectedNodeId={selectedNode?.id}
+          onMoveNodeLayout={moveNodeLayout}
           onSelectNode={setSelectedNodeId}
         />
 
@@ -1429,6 +1461,7 @@ type BlueprintFlowCanvasProps = {
   recipe: BlueprintRecipe;
   selectedNodeId?: string | undefined;
   testingFlow: boolean;
+  onMoveNodeLayout(nodeId: string, point: BlueprintLayoutPoint): void;
   onSelectNode(nodeId: string): void;
 };
 
@@ -1440,10 +1473,17 @@ function BlueprintFlowCanvas({
   recipe,
   selectedNodeId,
   testingFlow,
+  onMoveNodeLayout,
   onSelectNode,
 }: BlueprintFlowCanvasProps) {
-  const layoutPoints = nodes.map(
-    (node, index) => recipe.graph.layout[node.id] ?? { x: index * 220, y: 0 },
+  const [dragState, setDragState] = useState<
+    BlueprintNodeDragState | undefined
+  >();
+  const dragStateRef = useRef<BlueprintNodeDragState | undefined>(undefined);
+  const layoutPoints = nodes.map((node, index) =>
+    dragState?.nodeId === node.id
+      ? dragState.currentPoint
+      : layoutPointForNode(recipe, node.id, index),
   );
   const minX = Math.min(0, ...layoutPoints.map((point) => point.x));
   const minY = Math.min(0, ...layoutPoints.map((point) => point.y));
@@ -1474,6 +1514,109 @@ function BlueprintFlowCanvas({
   const firstNodeCenterY = firstNode
     ? firstNode.y + FLOW_NODE_HEIGHT / 2
     : startCenterY;
+
+  function startNodeDrag(
+    node: BlueprintNode,
+    index: number,
+    event: PointerEvent<HTMLButtonElement>,
+  ): void {
+    if (!editable || event.button !== 0) {
+      return;
+    }
+
+    capturePointer(event.currentTarget, event.pointerId);
+    onSelectNode(node.id);
+
+    const originPoint = layoutPointForNode(recipe, node.id, index);
+
+    setCurrentDragState({
+      currentPoint: originPoint,
+      moved: false,
+      nodeId: node.id,
+      originPoint,
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+    });
+  }
+
+  function moveNodeDrag(event: PointerEvent<HTMLButtonElement>): void {
+    const currentDragState = dragStateRef.current;
+
+    if (!currentDragState || currentDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - currentDragState.startClientX;
+    const deltaY = event.clientY - currentDragState.startClientY;
+
+    setCurrentDragState({
+      ...currentDragState,
+      currentPoint: {
+        x: currentDragState.originPoint.x + deltaX,
+        y: currentDragState.originPoint.y + deltaY,
+      },
+      moved:
+        currentDragState.moved ||
+        Math.abs(deltaX) >= FLOW_DRAG_THRESHOLD ||
+        Math.abs(deltaY) >= FLOW_DRAG_THRESHOLD,
+    });
+  }
+
+  function finishNodeDrag(event: PointerEvent<HTMLButtonElement>): void {
+    const currentDragState = dragStateRef.current;
+
+    if (!currentDragState || currentDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    releasePointer(event.currentTarget, event.pointerId);
+    setCurrentDragState(undefined);
+
+    if (currentDragState.moved) {
+      onMoveNodeLayout(currentDragState.nodeId, currentDragState.currentPoint);
+    }
+  }
+
+  function cancelNodeDrag(event: PointerEvent<HTMLButtonElement>): void {
+    const currentDragState = dragStateRef.current;
+
+    if (!currentDragState || currentDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    releasePointer(event.currentTarget, event.pointerId);
+    setCurrentDragState(undefined);
+  }
+
+  function nudgeNode(
+    node: BlueprintNode,
+    index: number,
+    event: KeyboardEvent<HTMLButtonElement>,
+  ): void {
+    const delta = keyboardNudgeDelta(event);
+
+    if (!editable || !delta) {
+      return;
+    }
+
+    const distance = event.shiftKey ? FLOW_NODE_FAST_NUDGE : FLOW_NODE_NUDGE;
+    const point = layoutPointForNode(recipe, node.id, index);
+
+    event.preventDefault();
+    onSelectNode(node.id);
+    onMoveNodeLayout(node.id, {
+      x: point.x + delta.x * distance,
+      y: point.y + delta.y * distance,
+    });
+  }
+
+  function setCurrentDragState(
+    nextDragState: BlueprintNodeDragState | undefined,
+  ): void {
+    dragStateRef.current = nextDragState;
+    setDragState(nextDragState);
+  }
 
   return (
     <div
@@ -1560,6 +1703,7 @@ function BlueprintFlowCanvas({
               editable={editable}
               index={index}
               key={position.node.id}
+              dragging={dragState?.nodeId === position.node.id}
               node={position.node}
               selected={position.node.id === selectedNodeId}
               status={
@@ -1575,7 +1719,14 @@ function BlueprintFlowCanvas({
                   width: `${FLOW_NODE_WIDTH}px`,
                 } satisfies CSSProperties
               }
+              onCancelDrag={cancelNodeDrag}
+              onFinishDrag={finishNodeDrag}
+              onMoveDrag={moveNodeDrag}
+              onNudge={(event) => nudgeNode(position.node, index, event)}
               onSelect={() => onSelectNode(position.node.id)}
+              onStartDrag={(event) =>
+                startNodeDrag(position.node, index, event)
+              }
             />
           ))}
         </ol>
@@ -1585,23 +1736,35 @@ function BlueprintFlowCanvas({
 }
 
 type BlueprintPreviewNodeProps = {
+  dragging: boolean;
   editable: boolean;
   index: number;
   node: BlueprintNode;
   selected: boolean;
   status?: BlueprintFlowNodeStatus | undefined;
   style: CSSProperties;
+  onCancelDrag(event: PointerEvent<HTMLButtonElement>): void;
+  onFinishDrag(event: PointerEvent<HTMLButtonElement>): void;
+  onMoveDrag(event: PointerEvent<HTMLButtonElement>): void;
+  onNudge(event: KeyboardEvent<HTMLButtonElement>): void;
   onSelect(): void;
+  onStartDrag(event: PointerEvent<HTMLButtonElement>): void;
 };
 
 function BlueprintPreviewNode({
+  dragging,
   editable,
   index,
   node,
   selected,
   status,
   style,
+  onCancelDrag,
+  onFinishDrag,
+  onMoveDrag,
+  onNudge,
   onSelect,
+  onStartDrag,
 }: BlueprintPreviewNodeProps) {
   const assessment = assessBlueprintSelector(node.selectorMeta);
   const label = node.label ?? actionLabel(node.type);
@@ -1632,12 +1795,19 @@ function BlueprintPreviewNode({
     <li className={styles.node} style={style}>
       {editable ? (
         <button
+          aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
           aria-pressed={selected}
           className={`${styles.nodeButton} ${selected ? styles.selected : ''} ${
             statusClass ? styles.statusCard : ''
-          } ${statusClass}`}
+          } ${statusClass} ${dragging ? styles.dragging : ''}`}
+          title="Drag to reposition. Use arrow keys to nudge."
           type="button"
+          onKeyDown={onNudge}
           onClick={onSelect}
+          onPointerCancel={onCancelDrag}
+          onPointerDown={onStartDrag}
+          onPointerMove={onMoveDrag}
+          onPointerUp={onFinishDrag}
         >
           {content}
         </button>
@@ -2460,6 +2630,55 @@ function flowRequiresRunConfirmationForNodes(
     (node) =>
       node.enabled && isAutomationNode(node) && requiresRunConfirmation(node),
   );
+}
+
+function layoutPointForNode(
+  recipe: BlueprintRecipe,
+  nodeId: string,
+  index: number,
+): BlueprintLayoutPoint {
+  return recipe.graph.layout[nodeId] ?? { x: index * 220, y: 0 };
+}
+
+function keyboardNudgeDelta(
+  event: KeyboardEvent<HTMLButtonElement>,
+): { x: -1 | 0 | 1; y: -1 | 0 | 1 } | undefined {
+  switch (event.key) {
+    case 'ArrowDown':
+      return { x: 0, y: 1 };
+    case 'ArrowLeft':
+      return { x: -1, y: 0 };
+    case 'ArrowRight':
+      return { x: 1, y: 0 };
+    case 'ArrowUp':
+      return { x: 0, y: -1 };
+    default:
+      return undefined;
+  }
+}
+
+function capturePointer(element: HTMLButtonElement, pointerId: number): void {
+  if (typeof element.setPointerCapture !== 'function') {
+    return;
+  }
+
+  try {
+    element.setPointerCapture(pointerId);
+  } catch {
+    // Some test and page contexts expose PointerEvent without capture support.
+  }
+}
+
+function releasePointer(element: HTMLButtonElement, pointerId: number): void {
+  if (typeof element.releasePointerCapture !== 'function') {
+    return;
+  }
+
+  try {
+    element.releasePointerCapture(pointerId);
+  } catch {
+    // The pointer may already have been released by the browser.
+  }
 }
 
 function shouldPauseBeforeRun(node: BlueprintNode): boolean {

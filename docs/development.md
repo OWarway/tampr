@@ -145,9 +145,10 @@ user reconciles the generated source.
 The saved Blueprint builder renders the recipe as a lightweight flow diagram
 using the graph layout stored in the recipe. The first canvas remains a
 straight-line success path with a start marker, directional connectors, selectable
-node cards, the existing node library, and the existing inspector. Keep the
-canvas custom and dependency-light until branching, drag positioning, or
-multi-port connections are proven necessary.
+node cards, the existing node library, and the existing inspector. Workspace
+nodes can be dragged on the canvas or nudged with arrow keys; these layout-only
+changes do not regenerate CSS or JavaScript. Keep the canvas custom and
+dependency-light until branching or multi-port connections are proven necessary.
 
 The workspace flow preview runs the existing safe source-page checks in order
 for every enabled node. CSS nodes use selector tests; automation nodes use

@@ -342,8 +342,11 @@
 
 .nodeButton {
   color: inherit;
+  cursor: grab;
   font: inherit;
   text-align: left;
+  touch-action: none;
+  user-select: none;
 
   &:hover,
   &.selected {
@@ -351,6 +354,17 @@
     border-color: #79a78f;
     box-shadow: 0 0 0 3px rgba(121, 167, 143, 0.16);
   }
+
+  &:active,
+  &.dragging {
+    cursor: grabbing;
+  }
+}
+
+.dragging {
+  background: #f7fbf8;
+  border-color: #14594d;
+  box-shadow: 0 0 0 3px rgba(20, 89, 77, 0.18);
 }
 
 .step {

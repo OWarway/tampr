@@ -289,6 +289,7 @@ export type BlueprintAutomationNode = Extract<
 >;
 export type BlueprintEdge = z.infer<typeof BlueprintEdgeSchema>;
 export type BlueprintGraph = z.infer<typeof BlueprintGraphSchema>;
+export type BlueprintLayoutPoint = z.infer<typeof BlueprintLayoutPointSchema>;
 export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
 
 export type BlueprintNodeUpdate = {
@@ -430,6 +431,27 @@ export function updateBlueprintNode(
     graph: {
       ...recipe.graph,
       nodes,
+    },
+  });
+}
+
+export function updateBlueprintNodeLayout(
+  recipe: BlueprintRecipe,
+  nodeId: string,
+  point: BlueprintLayoutPoint,
+): BlueprintRecipe {
+  if (!recipe.graph.nodes.some((node) => node.id === nodeId)) {
+    throw new Error(`Blueprint node ${nodeId} does not exist.`);
+  }
+
+  return BlueprintRecipeSchema.parse({
+    ...recipe,
+    graph: {
+      ...recipe.graph,
+      layout: {
+        ...recipe.graph.layout,
+        [nodeId]: normalizeBlueprintLayoutPoint(point),
+      },
     },
   });
 }
@@ -697,6 +719,23 @@ function reflowLinearLayout(
   });
 
   return layout;
+}
+
+function normalizeBlueprintLayoutPoint(
+  point: BlueprintLayoutPoint,
+): BlueprintLayoutPoint {
+  return {
+    x: normalizeBlueprintLayoutCoordinate(point.x),
+    y: normalizeBlueprintLayoutCoordinate(point.y),
+  };
+}
+
+function normalizeBlueprintLayoutCoordinate(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.min(100_000, Math.max(-100_000, Math.round(value)));
 }
 
 function uniqueIdentifier(base: string, existing: Set<string>): string {

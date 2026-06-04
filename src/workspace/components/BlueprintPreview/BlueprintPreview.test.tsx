@@ -338,6 +338,83 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('drags nodes on the flow canvas without changing generated CSS', () => {
+    const onChange = vi.fn();
+    const blueprint = twoNodeRecipe();
+    const css = compileBlueprintCss(blueprint);
+
+    render(
+      <BlueprintPreview blueprint={blueprint} css={css} onChange={onChange} />,
+    );
+
+    const node = screen.getByRole('button', { name: /Highlight checkout/ });
+
+    fireEvent.pointerDown(node, {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(node, {
+      clientX: 145,
+      clientY: 130,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(node, {
+      clientX: 145,
+      clientY: 130,
+      pointerId: 1,
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({ id: 'hide-signup' }),
+            expect.objectContaining({ id: 'highlight-checkout' }),
+          ],
+          layout: expect.objectContaining({
+            'hide-signup': { x: 0, y: 0 },
+            'highlight-checkout': { x: 265, y: 30 },
+          }),
+        }),
+      }),
+      css,
+    );
+  });
+
+  it('nudges focused canvas nodes with arrow keys', () => {
+    const onChange = vi.fn();
+    const blueprint = twoNodeRecipe();
+    const css = compileBlueprintCss(blueprint);
+
+    render(
+      <BlueprintPreview blueprint={blueprint} css={css} onChange={onChange} />,
+    );
+
+    fireEvent.keyDown(
+      screen.getByRole('button', { name: /Highlight checkout/ }),
+      {
+        key: 'ArrowDown',
+      },
+    );
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({ id: 'hide-signup' }),
+            expect.objectContaining({ id: 'highlight-checkout' }),
+          ],
+          layout: expect.objectContaining({
+            'highlight-checkout': { x: 220, y: 24 },
+          }),
+        }),
+      }),
+      css,
+    );
+  });
+
   it('updates a node selector from the page picker and regenerates CSS', async () => {
     const onChange = vi.fn();
     const onPickSelector = vi.fn().mockResolvedValue({
