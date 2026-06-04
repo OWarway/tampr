@@ -52,6 +52,7 @@ export type BlueprintAutomationNodeTestResult = {
   matchCount: number;
   preview?: string;
   ready: boolean;
+  sampleRows?: Array<Record<string, string>>;
   visibleCount: number;
 };
 

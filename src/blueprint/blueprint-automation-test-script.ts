@@ -74,7 +74,10 @@ export function runTamprBlueprintAutomationNodeTest(
           : {}),
         issues,
         matchCount: matches.length,
-        ...(preview ? { preview } : {}),
+        ...(preview.preview ? { preview: preview.preview } : {}),
+        ...(preview.sampleRows?.length
+          ? { sampleRows: preview.sampleRows }
+          : {}),
         ready: issues.length === 0,
         visibleCount: visibleMatches.length,
       },
@@ -180,13 +183,18 @@ export function runTamprBlueprintAutomationNodeTest(
   function previewFor(
     element: Element | undefined,
     testNode: BlueprintAutomationNodeTestInput,
-  ): string | undefined {
+  ): {
+    preview?: string;
+    sampleRows?: Array<Record<string, string>>;
+  } {
     if (!element) {
-      return undefined;
+      return {};
     }
 
     if (testNode.type === 'set-value') {
-      return fieldPreview(element);
+      const preview = fieldPreview(element);
+
+      return preview ? { preview } : {};
     }
 
     if (testNode.type === 'extract-list') {
@@ -201,13 +209,18 @@ export function runTamprBlueprintAutomationNodeTest(
         .map((match) => extractListItem(match, testNode.fields));
 
       return items.length > 0
-        ? `First rows: ${items.map(formatListPreviewItem).join(', ')}`
-        : undefined;
+        ? {
+            preview: `First rows: ${items
+              .map(formatListPreviewItem)
+              .join(', ')}`,
+            sampleRows: items,
+          }
+        : {};
     }
 
     const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
 
-    return text ? truncate(text, 120) : undefined;
+    return text ? { preview: truncate(text, 120) } : {};
   }
 
   function fieldPreview(element: Element): string | undefined {

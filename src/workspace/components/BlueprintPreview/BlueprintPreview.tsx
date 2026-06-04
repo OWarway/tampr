@@ -2163,6 +2163,7 @@ function BlueprintAutomationTestPanel({
             {result.visibleCount} visible
           </span>
           {result.preview ? <p>{result.preview}</p> : null}
+          <BlueprintExtractListSourcePreview rows={result.sampleRows} />
           {result.issues.length > 0 ? (
             <ul>
               {result.issues.map((issue) => (
@@ -2172,6 +2173,55 @@ function BlueprintAutomationTestPanel({
           ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function BlueprintExtractListSourcePreview({
+  rows,
+}: {
+  rows: Array<Record<string, string>> | undefined;
+}) {
+  if (!rows?.length) {
+    return null;
+  }
+
+  const columns = Array.from(
+    new Set(rows.flatMap((row) => Object.keys(row))),
+  ).slice(0, 8);
+
+  if (columns.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={styles.fieldMap}>
+      <div className={styles.fieldMapHeader}>
+        <span>Source preview</span>
+        <strong>
+          {rows.length} {rows.length === 1 ? 'row' : 'rows'}
+        </strong>
+      </div>
+      <table aria-label="Source list preview">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {columns.map((column) => (
+                <td key={column}>
+                  <code>{row[column] ?? ''}</code>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

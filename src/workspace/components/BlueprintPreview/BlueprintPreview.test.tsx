@@ -476,6 +476,87 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('renders source-page sample rows for extract-list node tests', async () => {
+    const onTestAutomationNode = vi.fn().mockResolvedValue({
+      action: 'extract-list',
+      firstTagName: 'article',
+      issues: [],
+      matchCount: 2,
+      preview:
+        'First rows: title: "First deal", url: "/first", title: "Second deal", url: "/second"',
+      ready: true,
+      sampleRows: [
+        {
+          title: 'First deal',
+          url: '/first',
+        },
+        {
+          title: 'Second deal',
+          url: '/second',
+        },
+      ],
+      visibleCount: 2,
+    });
+    const blueprint = extractListRecipe({
+      fields: [
+        {
+          name: 'title',
+          selector: 'h2',
+          source: 'text',
+        },
+        {
+          attribute: 'href',
+          name: 'url',
+          selector: 'a',
+          source: 'attribute',
+        },
+      ],
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css=""
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={() => undefined}
+        onTestAutomationNode={onTestAutomationNode}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test node' }));
+
+    await waitFor(() =>
+      expect(onTestAutomationNode).toHaveBeenCalledWith({
+        selector: '[data-testid="deal-card"]',
+        type: 'extract-list',
+        fields: [
+          {
+            name: 'title',
+            selector: 'h2',
+            source: 'text',
+          },
+          {
+            attribute: 'href',
+            name: 'url',
+            selector: 'a',
+            source: 'attribute',
+          },
+        ],
+        maxItems: 50,
+        requireVisible: true,
+        variableName: 'deals',
+      }),
+    );
+    expect(
+      await screen.findByRole('table', { name: 'Source list preview' }),
+    ).toBeTruthy();
+    expect(screen.getByText('2 rows')).toBeTruthy();
+    expect(screen.getByText('First deal')).toBeTruthy();
+    expect(screen.getByText('/first')).toBeTruthy();
+    expect(screen.getByText('Second deal')).toBeTruthy();
+    expect(screen.getByText('/second')).toBeTruthy();
+  });
+
   it('moves selected nodes and regenerates CSS in flow order', () => {
     const onChange = vi.fn();
     const blueprint = twoNodeRecipe();

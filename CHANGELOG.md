@@ -48,6 +48,8 @@ group changes under the headings below.
   selected row, creating relative text or URL/image/date attribute fields.
 - Workspace Extract list settings show mapped fields as a structured table with
   per-field remove controls.
+- Source-page Extract list node tests now return sample rows that the workspace
+  renders as a structured preview table.
 - Custom-code Blueprint nodes now require explicit review before generated
   snippets or page-side previews execute them.
 - Blueprint click UIs now surface that synthetic clicks run with

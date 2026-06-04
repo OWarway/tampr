@@ -153,6 +153,16 @@ describe('runTamprBlueprintAutomationNodeTest', () => {
         preview:
           'First rows: title: "First deal", url: "/first", title: "Second deal", url: "/second"',
         ready: false,
+        sampleRows: [
+          {
+            title: 'First deal',
+            url: '/first',
+          },
+          {
+            title: 'Second deal',
+            url: '/second',
+          },
+        ],
         visibleCount: 3,
       },
     });
