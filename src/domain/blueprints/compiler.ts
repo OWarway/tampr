@@ -135,7 +135,10 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
   }
 
   function extractListField(element, field) {
-    const target = element.querySelector(field.selector);
+    const target =
+      field.selector === ':scope'
+        ? element
+        : element.querySelector(field.selector);
 
     if (!target) {
       return '';

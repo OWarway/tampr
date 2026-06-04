@@ -395,7 +395,10 @@ export async function runTamprBlueprintAutomationNode(
     element: Element,
     field: NonNullable<BlueprintAutomationNodeRunInput['fields']>[number],
   ): string {
-    const target = element.querySelector(field.selector);
+    const target =
+      field.selector === ':scope'
+        ? element
+        : element.querySelector(field.selector);
 
     if (!target) {
       return '';

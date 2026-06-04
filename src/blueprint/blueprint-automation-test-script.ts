@@ -353,7 +353,10 @@ export function runTamprBlueprintAutomationNodeTest(
     element: Element,
     field: BlueprintExtractListField,
   ): string {
-    const target = element.querySelector(field.selector);
+    const target =
+      field.selector === ':scope'
+        ? element
+        : element.querySelector(field.selector);
 
     if (!target) {
       return '';

@@ -135,9 +135,10 @@ Extract-list fields use the same compact format in the page-side builder and
 workspace inspector: one line per field, with `name = selector` for text and
 `name = selector @attribute` for attributes such as `href`. Field selectors are
 resolved relative to each matched list item. If no fields are configured,
-extract-list keeps the simpler `{ text }` fallback for each row. Richer
-click-to-map table/card authoring should build on this stored field shape rather
-than replacing it.
+extract-list keeps the simpler `{ text }` fallback for each row. The page-side
+builder can append fields by clicking a child inside a matching row; heading
+targets become text fields, links become `@href` fields, images become `@src`
+fields, and row-level mappings use `:scope`.
 
 Custom-code nodes are an explicit escape hatch. They default to unreviewed, show
 danger-level safety copy until reviewed, and generated snippets refuse to execute

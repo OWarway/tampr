@@ -127,6 +127,41 @@ describe('runTamprBlueprintAutomationNode', () => {
     });
   });
 
+  it('extracts a mapped row field from the list item itself', async () => {
+    document.body.innerHTML = `
+      <article class="deal">First deal</article>
+      <article class="deal">Second deal</article>
+    `;
+    document.querySelectorAll('.deal').forEach((element) => stubRect(element));
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'extract-list',
+        selector: '.deal',
+        fields: [
+          {
+            name: 'rowText',
+            selector: ':scope',
+            source: 'text',
+          },
+        ],
+        maxItems: 2,
+        requireVisible: true,
+        timeoutMs: 5000,
+        variableName: 'deals',
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      result: {
+        value: JSON.stringify(
+          [{ rowText: 'First deal' }, { rowText: 'Second deal' }],
+          null,
+          2,
+        ),
+      },
+    });
+  });
+
   it('runs a confirmed click node against a safe visible element', async () => {
     document.body.innerHTML = '<button data-testid="open">Open panel</button>';
     const button = document.querySelector('button') as HTMLButtonElement;

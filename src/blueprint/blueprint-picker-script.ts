@@ -71,6 +71,7 @@ export async function runTamprBlueprintPicker({
     let selectorChoices: SelectorChoice[] = [];
     let previewStyle: HTMLStyleElement | undefined;
     let runningDraft = false;
+    let fieldMappingDraftIndex: number | undefined;
 
     type DraftNode = BlueprintFlowDraftNode;
     type SelectorChoiceRelation = 'child' | 'current' | 'parent';
@@ -525,7 +526,7 @@ export async function runTamprBlueprintPicker({
     }
 
     function handleMouseMove(event: MouseEvent): void {
-      if (selectedTarget) {
+      if (selectedTarget && fieldMappingDraftIndex === undefined) {
         return;
       }
 
@@ -558,6 +559,12 @@ export async function runTamprBlueprintPicker({
 
       event.preventDefault();
       event.stopImmediatePropagation();
+
+      if (fieldMappingDraftIndex !== undefined) {
+        mapExtractListField(fieldMappingDraftIndex, target);
+        return;
+      }
+
       selectorChoices = buildSelectorChoices(target);
       chooseSelectorTarget(selectorChoices[0] ?? selectorChoice(target));
     }
@@ -750,7 +757,10 @@ export async function runTamprBlueprintPicker({
         return;
       }
 
-      const pick = selectedPick ?? describePick(selectedTarget);
+      const pick =
+        action === 'extract-list'
+          ? describeListPick(selectedTarget)
+          : (selectedPick ?? describePick(selectedTarget));
       const node: DraftNode = {
         action,
         label: `${nodeLabel(action)} ${pick.label}`.slice(0, 120),
@@ -783,6 +793,7 @@ export async function runTamprBlueprintPicker({
     }
 
     function pickNext(): void {
+      fieldMappingDraftIndex = undefined;
       selectedPick = undefined;
       selectedSelectorChoiceId = 'current';
       selectedTarget = undefined;
@@ -1088,6 +1099,24 @@ export async function runTamprBlueprintPicker({
               fieldsTextarea,
             ),
           );
+
+          const pickFieldButton = document.createElement('button');
+          pickFieldButton.type = 'button';
+          pickFieldButton.textContent = 'Pick field';
+          pickFieldButton.setAttribute('aria-label', 'Pick list field');
+          pickFieldButton.style.cssText = flowButtonStyle('#14594d');
+          pickFieldButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            beginExtractListFieldPick(selectedDraftIndex);
+          });
+          stepEditorBody.append(
+            createEditorField(
+              'Click to map',
+              'Pick a child inside a matching row to append a relative field selector.',
+              pickFieldButton,
+            ),
+          );
         }
 
         return;
@@ -1287,6 +1316,76 @@ export async function runTamprBlueprintPicker({
       return normalized || fallback;
     }
 
+    function beginExtractListFieldPick(nodeIndex: number): void {
+      const node = draftNodes[nodeIndex];
+
+      if (!node || node.action !== 'extract-list') {
+        return;
+      }
+
+      fieldMappingDraftIndex = nodeIndex;
+      selectedPick = undefined;
+      selectedSelectorChoiceId = 'current';
+      selectedTarget = undefined;
+      selectorChoices = [];
+      hoverTarget = undefined;
+      palette.style.display = 'none';
+      paletteSelectorChoices.style.display = 'none';
+      stepEditor.style.display = 'none';
+      highlight.style.display = 'none';
+      banner.style.display = '';
+      banner.textContent =
+        'Tampr Blueprint: pick a field inside a matching list item.';
+      flowTitle.textContent = 'Pick list field';
+    }
+
+    function mapExtractListField(
+      nodeIndex: number,
+      fieldTarget: Element,
+    ): void {
+      const node = draftNodes[nodeIndex];
+
+      if (!node || node.action !== 'extract-list') {
+        fieldMappingDraftIndex = undefined;
+        updateFlowBar();
+        return;
+      }
+
+      if ((node.fields?.length ?? 0) >= 20) {
+        flowTitle.textContent = 'Field limit reached';
+        return;
+      }
+
+      const rowElement = listItemForFieldTarget(node, fieldTarget);
+
+      if (!rowElement) {
+        flowTitle.textContent = 'Pick inside a matching list item';
+        return;
+      }
+
+      const selector = relativeSelectorForListField(rowElement, fieldTarget);
+
+      if (!selector) {
+        flowTitle.textContent = 'Could not map field selector';
+        return;
+      }
+
+      const field = extractListFieldFromTarget(
+        fieldTarget,
+        selector,
+        node.fields,
+      );
+      node.fields = [...(node.fields ?? []), field].slice(0, 20);
+      selectedDraftIndex = nodeIndex;
+      selectedTarget = rowElement;
+      selectedPick = node.pick;
+      fieldMappingDraftIndex = undefined;
+      banner.textContent =
+        'Tampr Blueprint: pick an element, choose actions, then run or save the flow.';
+      drawHighlight(fieldTarget);
+      updateFlowBar();
+    }
+
     function defaultCustomCode(): string {
       return [
         '// element is the selected page element.',
@@ -1408,7 +1507,10 @@ export async function runTamprBlueprintPicker({
       element: Element,
       field: NonNullable<DraftNode['fields']>[number],
     ): string {
-      const target = element.querySelector(field.selector);
+      const target =
+        field.selector === ':scope'
+          ? element
+          : element.querySelector(field.selector);
 
       if (!target) {
         return '';
@@ -1419,6 +1521,191 @@ export async function runTamprBlueprintPicker({
       }
 
       return visibleText(target) ?? '';
+    }
+
+    function listItemForFieldTarget(
+      node: DraftNode,
+      fieldTarget: Element,
+    ): Element | undefined {
+      try {
+        const closest = fieldTarget.closest(node.pick.selector);
+
+        if (closest && isVisibleElement(closest)) {
+          return closest;
+        }
+      } catch {
+        return undefined;
+      }
+
+      return Array.from(document.querySelectorAll(node.pick.selector))
+        .filter(isVisibleElement)
+        .find((element) => element.contains(fieldTarget));
+    }
+
+    function relativeSelectorForListField(
+      rowElement: Element,
+      fieldTarget: Element,
+    ): string | undefined {
+      if (rowElement === fieldTarget) {
+        return ':scope';
+      }
+
+      const segments: string[] = [];
+      let current: Element | null = fieldTarget;
+
+      while (current && current !== rowElement && segments.length < 6) {
+        segments.unshift(selectorSegment(current).selector);
+
+        const selector = segments.join(' > ');
+
+        if (relativeSelectorMatchesOnly(rowElement, fieldTarget, selector)) {
+          return selector;
+        }
+
+        current = current.parentElement;
+      }
+
+      const fallback = selectorSegment(fieldTarget).selector;
+
+      return relativeSelectorMatchesOnly(rowElement, fieldTarget, fallback)
+        ? fallback
+        : segments.join(' > ') || undefined;
+    }
+
+    function relativeSelectorMatchesOnly(
+      rowElement: Element,
+      fieldTarget: Element,
+      selector: string,
+    ): boolean {
+      try {
+        const matches = Array.from(rowElement.querySelectorAll(selector));
+
+        return matches.length === 1 && matches[0] === fieldTarget;
+      } catch {
+        return false;
+      }
+    }
+
+    function extractListFieldFromTarget(
+      target: Element,
+      selector: string,
+      existingFields: DraftNode['fields'],
+    ): NonNullable<DraftNode['fields']>[number] {
+      const attribute = defaultExtractListFieldAttribute(target);
+      const name = uniqueExtractListFieldName(
+        extractListFieldNameBase(target, attribute),
+        existingFields,
+      );
+
+      return attribute
+        ? {
+            attribute,
+            name,
+            selector,
+            source: 'attribute',
+          }
+        : {
+            name,
+            selector,
+            source: 'text',
+          };
+    }
+
+    function defaultExtractListFieldAttribute(
+      target: Element,
+    ): string | undefined {
+      const tagName = target.localName.toLowerCase();
+
+      if (tagName === 'a' && target.hasAttribute('href')) {
+        return 'href';
+      }
+
+      if (
+        (tagName === 'img' || tagName === 'source') &&
+        target.hasAttribute('src')
+      ) {
+        return 'src';
+      }
+
+      if (tagName === 'time' && target.hasAttribute('datetime')) {
+        return 'datetime';
+      }
+
+      return undefined;
+    }
+
+    function extractListFieldNameBase(
+      target: Element,
+      attribute: string | undefined,
+    ): string {
+      if (attribute === 'href') {
+        return 'url';
+      }
+
+      if (attribute === 'src') {
+        return 'image';
+      }
+
+      if (attribute === 'datetime') {
+        return 'date';
+      }
+
+      const tagName = target.localName.toLowerCase();
+
+      if (/^h[1-6]$/.test(tagName)) {
+        return 'title';
+      }
+
+      return (
+        target.getAttribute('data-testid') ??
+        target.getAttribute('data-test') ??
+        target.getAttribute('aria-label') ??
+        Array.from(target.classList).find(stableToken) ??
+        visibleText(target) ??
+        tagName
+      );
+    }
+
+    function uniqueExtractListFieldName(
+      value: string,
+      existingFields: DraftNode['fields'],
+    ): string {
+      const names = new Set((existingFields ?? []).map((field) => field.name));
+      const base = variableNameFromText(value, 'field');
+      let candidate = base;
+      let index = 2;
+
+      while (names.has(candidate)) {
+        candidate = `${base}${index}`;
+        index += 1;
+      }
+
+      return candidate;
+    }
+
+    function variableNameFromText(value: string, fallback: string): string {
+      const words = value
+        .trim()
+        .match(/[A-Za-z0-9]+/g)
+        ?.slice(0, 4);
+
+      if (!words?.length) {
+        return fallback;
+      }
+
+      const candidate = words
+        .map((word, index) => {
+          const lower = word.toLowerCase();
+
+          return index === 0 ? lower : capitalize(lower);
+        })
+        .join('');
+
+      if (/^[A-Za-z_$]/.test(candidate)) {
+        return candidate.slice(0, 80);
+      }
+
+      return `field${capitalize(candidate)}`.slice(0, 80);
     }
 
     function clampExtractListMaxItems(value: number): number {
@@ -1723,6 +2010,21 @@ export async function runTamprBlueprintPicker({
       return pick;
     }
 
+    function describeListPick(target: Element): BlueprintElementPick {
+      const pick = describePick(target);
+      const selector = createRepeatedListSelector(target);
+
+      if (!selector) {
+        return pick;
+      }
+
+      return {
+        ...pick,
+        selector: selector.value,
+        selectorMeta: selector.meta,
+      };
+    }
+
     function visibleText(target: Element): string | undefined {
       const text = (target.textContent ?? '').replace(/\s+/g, ' ').trim();
 
@@ -1907,6 +2209,53 @@ export async function runTamprBlueprintPicker({
               ],
         value: fallbackSelector,
       });
+    }
+
+    function createRepeatedListSelector(
+      target: Element,
+    ): LocalSelectorResult | undefined {
+      const rootDocument = target.ownerDocument;
+      const tagName = target.localName.toLowerCase();
+      const attributeSelector = stableAttributeSelector(target);
+      const classSelector = stableClassSelector(target);
+      const candidates = [
+        attributeSelector
+          ? {
+              selector: `${tagName}${attributeSelector}`,
+              strategy: 'attribute' as const,
+            }
+          : undefined,
+        classSelector
+          ? {
+              selector: `${tagName}${classSelector}`,
+              strategy: 'class' as const,
+            }
+          : undefined,
+        {
+          selector: tagName,
+          strategy: 'path' as const,
+        },
+      ].filter((candidate) => candidate !== undefined);
+
+      for (const candidate of candidates) {
+        const matchCount = queryCount(rootDocument, candidate.selector);
+
+        if (matchCount > 1 && matchCount <= 500) {
+          return selectorResult({
+            matchCount,
+            segments: [
+              {
+                selector: candidate.selector,
+                strategy: candidate.strategy,
+                usesNthOfType: false,
+              },
+            ],
+            value: candidate.selector,
+          });
+        }
+      }
+
+      return undefined;
     }
 
     function selectorSegment(element: Element): LocalSelectorSegment {

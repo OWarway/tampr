@@ -508,6 +508,7 @@ body {
     expect(js).toContain('document.querySelectorAll(step.selector)');
     expect(js).toContain('slice(0, step.maxItems)');
     expect(js).toContain('extractListField(element, field)');
+    expect(js).toContain("field.selector === ':scope'");
   });
 
   it('compiles pause-before-run nodes into a confirmation step', () => {

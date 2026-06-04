@@ -709,6 +709,123 @@ describe('runTamprBlueprintPicker', () => {
     });
   });
 
+  it('maps extract-list fields by clicking children inside a selected row', async () => {
+    document.body.innerHTML = `
+      <main>
+        <article class="deal-card">
+          <h2>First deal</h2>
+          <a href="/first">View deal</a>
+        </article>
+        <article class="deal-card">
+          <h2>Second deal</h2>
+          <a href="/second">View deal</a>
+        </article>
+      </main>
+    `;
+    const card = document.querySelector('article') as HTMLElement;
+    const heading = document.querySelector('h2') as HTMLElement;
+    const link = document.querySelector('a') as HTMLAnchorElement;
+    let currentTarget = card;
+
+    stubElementFromPointGetter(() => currentTarget);
+    stubRect(card);
+    stubRect(heading);
+    stubRect(link);
+
+    const resultPromise = runTamprBlueprintPicker();
+
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Extract list');
+
+    clickButton('Pick field');
+    currentTarget = heading;
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    expect(
+      (
+        document.querySelector(
+          '[aria-label="Blueprint list fields"]',
+        ) as HTMLTextAreaElement
+      ).value,
+    ).toContain('title = h2');
+
+    clickButton('Pick field');
+    currentTarget = link;
+    document.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+      }),
+    );
+
+    clickButton('Save');
+
+    await expect(resultPromise).resolves.toMatchObject({
+      ok: true,
+      draft: {
+        nodes: [
+          {
+            action: 'extract-list',
+            fields: [
+              {
+                name: 'title',
+                selector: 'h2',
+                source: 'text',
+              },
+              {
+                attribute: 'href',
+                name: 'url',
+                selector: 'a',
+                source: 'attribute',
+              },
+            ],
+            pick: {
+              selector: 'article.deal-card',
+            },
+          },
+        ],
+      },
+    });
+  });
+
   it('refuses page-side custom code preview until the code is reviewed', async () => {
     document.body.innerHTML = `
       <main>
