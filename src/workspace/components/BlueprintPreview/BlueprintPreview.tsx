@@ -2477,7 +2477,7 @@ function BlueprintAutomationSettings({
               }}
             />
           </label>
-          <label className={styles.inspectorField}>
+          <div className={styles.inspectorField}>
             <span>Fields</span>
             <BlueprintExtractListFieldsEditor
               disabled={!generatedCodeInSync}
@@ -2485,7 +2485,7 @@ function BlueprintAutomationSettings({
               key={node.id}
               onFieldsChange={onFieldsChange}
             />
-          </label>
+          </div>
         </>
       ) : null}
 
@@ -2562,20 +2562,62 @@ function BlueprintExtractListFieldsEditor({
   fields,
   onFieldsChange,
 }: BlueprintExtractListFieldsEditorProps) {
+  const [draftFields, setDraftFields] = useState(() => [...fields]);
   const [fieldInput, setFieldInput] = useState(() =>
     formatBlueprintExtractListFieldsInput(fields),
   );
 
   function updateFieldInput(value: string): void {
+    const parsedFields = parseBlueprintExtractListFieldsInput(value);
+
     setFieldInput(value);
-    onFieldsChange(parseBlueprintExtractListFieldsInput(value));
+    setDraftFields(parsedFields);
+    onFieldsChange(parsedFields);
+  }
+
+  function emitFields(nextFields: BlueprintExtractListField[]): void {
+    const boundedFields = nextFields.slice(0, 20);
+
+    setDraftFields(boundedFields);
+    setFieldInput(formatBlueprintExtractListFieldsInput(boundedFields));
+    onFieldsChange(boundedFields);
+  }
+
+  function addField(): void {
+    emitFields([
+      ...draftFields,
+      {
+        name: uniqueExtractListFieldName('field', draftFields),
+        selector: ':scope',
+        source: 'text',
+      },
+    ]);
   }
 
   function removeField(index: number): void {
-    const nextFields = fields.filter((_, fieldIndex) => fieldIndex !== index);
+    emitFields(draftFields.filter((_, fieldIndex) => fieldIndex !== index));
+  }
 
-    setFieldInput(formatBlueprintExtractListFieldsInput(nextFields));
-    onFieldsChange(nextFields);
+  function updateField(
+    index: number,
+    update: Partial<BlueprintExtractListField>,
+  ): void {
+    const field = draftFields[index];
+
+    if (!field) {
+      return;
+    }
+
+    const nextField = normalizeExtractListField({
+      ...field,
+      ...update,
+    });
+
+    emitFields(
+      draftFields.map((currentField, fieldIndex) =>
+        fieldIndex === index ? nextField : currentField,
+      ),
+    );
   }
 
   return (
@@ -2594,10 +2636,10 @@ function BlueprintExtractListFieldsEditor({
         <div className={styles.fieldMapHeader}>
           <span>Mapped fields</span>
           <strong>
-            {fields.length} {fields.length === 1 ? 'field' : 'fields'}
+            {draftFields.length} {draftFields.length === 1 ? 'field' : 'fields'}
           </strong>
         </div>
-        {fields.length > 0 ? (
+        {draftFields.length > 0 ? (
           <table aria-label="Mapped list fields">
             <thead>
               <tr>
@@ -2610,20 +2652,73 @@ function BlueprintExtractListFieldsEditor({
               </tr>
             </thead>
             <tbody>
-              {fields.map((field, index) => (
+              {draftFields.map((field, index) => (
                 <tr key={`${field.name}-${field.selector}-${index}`}>
                   <td>
-                    <code>{field.name}</code>
+                    <input
+                      aria-label={`Field ${field.name} name`}
+                      disabled={disabled}
+                      value={field.name}
+                      onChange={(event) =>
+                        updateField(index, {
+                          name: normalizeExtractListFieldName(
+                            event.currentTarget.value,
+                            field.name,
+                          ),
+                        })
+                      }
+                    />
                   </td>
                   <td>
-                    <code>{field.selector}</code>
+                    <input
+                      aria-label={`Field ${field.name} selector`}
+                      disabled={disabled}
+                      value={field.selector}
+                      onChange={(event) =>
+                        updateField(index, {
+                          selector:
+                            event.currentTarget.value.trim() || field.selector,
+                        })
+                      }
+                    />
                   </td>
                   <td>
-                    <span className={styles.fieldKind}>
-                      {field.source === 'attribute' && field.attribute
-                        ? `@${field.attribute}`
-                        : 'Text'}
-                    </span>
+                    <div className={styles.fieldSourceControls}>
+                      <select
+                        aria-label={`Field ${field.name} source`}
+                        disabled={disabled}
+                        value={field.source}
+                        onChange={(event) =>
+                          updateField(index, {
+                            attribute:
+                              event.currentTarget.value === 'attribute'
+                                ? (field.attribute ?? 'href')
+                                : undefined,
+                            source: event.currentTarget
+                              .value as BlueprintExtractListField['source'],
+                          })
+                        }
+                      >
+                        <option value="text">Text</option>
+                        <option value="attribute">Attribute</option>
+                      </select>
+                      {field.source === 'attribute' ? (
+                        <input
+                          aria-label={`Field ${field.name} attribute`}
+                          disabled={disabled}
+                          value={field.attribute ?? 'href'}
+                          onChange={(event) =>
+                            updateField(index, {
+                              attribute: normalizeExtractListFieldAttribute(
+                                event.currentTarget.value,
+                                field.attribute ?? 'href',
+                              ),
+                              source: 'attribute',
+                            })
+                          }
+                        />
+                      ) : null}
+                    </div>
                   </td>
                   <td>
                     <button
@@ -2642,9 +2737,91 @@ function BlueprintExtractListFieldsEditor({
         ) : (
           <p>Rows currently extract a single text value from each match.</p>
         )}
+        <button
+          className={styles.addField}
+          disabled={disabled || draftFields.length >= 20}
+          type="button"
+          onClick={addField}
+        >
+          Add field
+        </button>
       </div>
     </div>
   );
+}
+
+function normalizeExtractListField(
+  field: BlueprintExtractListField,
+): BlueprintExtractListField {
+  const name = normalizeExtractListFieldName(field.name, 'field');
+  const selector = field.selector.trim() || ':scope';
+
+  if (field.source === 'attribute') {
+    return {
+      attribute: normalizeExtractListFieldAttribute(
+        field.attribute ?? 'href',
+        'href',
+      ),
+      name,
+      selector,
+      source: 'attribute',
+    };
+  }
+
+  return {
+    name,
+    selector,
+    source: 'text',
+  };
+}
+
+function normalizeExtractListFieldName(
+  value: string,
+  fallback: string,
+): string {
+  let normalized = value
+    .trim()
+    .replace(/[^A-Za-z0-9_$]/g, '_')
+    .slice(0, 80);
+
+  if (normalized && !/^[A-Za-z_$]/.test(normalized)) {
+    normalized = `field_${normalized}`.slice(0, 80);
+  }
+
+  return normalized || fallback;
+}
+
+function normalizeExtractListFieldAttribute(
+  value: string,
+  fallback: string,
+): string {
+  const normalized = value
+    .trim()
+    .replace(/[^A-Za-z0-9_:.-]/g, '')
+    .slice(0, 80);
+
+  if (/^[A-Za-z_:][A-Za-z0-9_:.-]*$/.test(normalized)) {
+    return normalized;
+  }
+
+  return fallback;
+}
+
+function uniqueExtractListFieldName(
+  value: string,
+  fields: readonly BlueprintExtractListField[],
+): string {
+  const names = new Set(fields.map((field) => field.name));
+  const base = normalizeExtractListFieldName(value, 'field');
+  let candidate = base;
+  let index = 2;
+
+  while (names.has(candidate)) {
+    candidate = `${base}${index}`;
+    index += 1;
+  }
+
+  return candidate;
 }
 
 function selectorTestSummary(result: BlueprintSelectorTestResult): string {

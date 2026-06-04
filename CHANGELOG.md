@@ -50,6 +50,8 @@ group changes under the headings below.
   per-field remove controls.
 - Source-page Extract list node tests now return sample rows that the workspace
   renders as a structured preview table.
+- Workspace Extract list fields can now be edited with structured row controls,
+  including add, remove, source type, selector, and attribute inputs.
 - Custom-code Blueprint nodes now require explicit review before generated
   snippets or page-side previews execute them.
 - Blueprint click UIs now surface that synthetic clicks run with

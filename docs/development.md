@@ -140,9 +140,10 @@ builder can append fields by clicking a child inside a matching row; heading
 targets become text fields, links become `@href` fields, images become `@src`
 fields, and row-level mappings use `:scope`. The workspace inspector keeps the
 raw line editor visible but also summarizes parsed fields in a table with
-per-field remove controls. Source-page node tests return up to three sample rows
-for extract-list nodes, and the workspace renders those rows as a preview table
-without running clicks, typing into fields, or downloading files.
+structured add, edit, source type, attribute, and remove controls. Source-page
+node tests return up to three sample rows for extract-list nodes, and the
+workspace renders those rows as a preview table without running clicks, typing
+into fields, or downloading files.
 
 Custom-code nodes are an explicit escape hatch. They default to unreviewed, show
 danger-level safety copy until reviewed, and generated snippets refuse to execute

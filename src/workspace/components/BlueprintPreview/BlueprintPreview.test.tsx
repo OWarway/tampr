@@ -445,12 +445,14 @@ describe('BlueprintPreview', () => {
       screen.getByRole('table', { name: 'Mapped list fields' }),
     ).toBeTruthy();
     expect(screen.getByText('2 fields')).toBeTruthy();
-    expect(screen.getByText('title')).toBeTruthy();
-    expect(screen.getByText('h2')).toBeTruthy();
-    expect(screen.getByText('Text')).toBeTruthy();
-    expect(screen.getByText('url')).toBeTruthy();
-    expect(screen.getByText('a')).toBeTruthy();
-    expect(screen.getByText('@href')).toBeTruthy();
+    expect(screen.getByDisplayValue('title')).toBeTruthy();
+    expect(screen.getByDisplayValue('h2')).toBeTruthy();
+    expect(
+      (screen.getByLabelText('Field title source') as HTMLSelectElement).value,
+    ).toBe('text');
+    expect(screen.getByDisplayValue('url')).toBeTruthy();
+    expect(screen.getByDisplayValue('a')).toBeTruthy();
+    expect(screen.getByDisplayValue('href')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove url field' }));
 
@@ -473,6 +475,114 @@ describe('BlueprintPreview', () => {
       }),
       '',
       expect.not.stringContaining('"name": "url"'),
+    );
+  });
+
+  it('edits mapped extract-list fields with structured controls', () => {
+    const onChange = vi.fn();
+    const blueprint = extractListRecipe({
+      fields: [
+        {
+          name: 'title',
+          selector: 'h2',
+          source: 'text',
+        },
+      ],
+    });
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css=""
+        js={compileBlueprintJavaScript(blueprint)}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Field title name'), {
+      target: { value: 'price' },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              fields: [
+                {
+                  name: 'price',
+                  selector: 'h2',
+                  source: 'text',
+                },
+              ],
+              type: 'extract-list',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"name": "price"'),
+    );
+
+    fireEvent.change(screen.getByLabelText('Field price selector'), {
+      target: { value: '.price' },
+    });
+    fireEvent.change(screen.getByLabelText('Field price source'), {
+      target: { value: 'attribute' },
+    });
+    fireEvent.change(screen.getByLabelText('Field price attribute'), {
+      target: { value: 'data-price' },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              fields: [
+                {
+                  attribute: 'data-price',
+                  name: 'price',
+                  selector: '.price',
+                  source: 'attribute',
+                },
+              ],
+              type: 'extract-list',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"attribute": "data-price"'),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add field' }));
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              fields: [
+                {
+                  attribute: 'data-price',
+                  name: 'price',
+                  selector: '.price',
+                  source: 'attribute',
+                },
+                {
+                  name: 'field',
+                  selector: ':scope',
+                  source: 'text',
+                },
+              ],
+              type: 'extract-list',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"selector": ":scope"'),
     );
   });
 
