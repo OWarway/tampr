@@ -1,7 +1,9 @@
 import type { BlueprintAutomationAction } from '../domain/blueprints/actions';
+import type { BlueprintExtractListField } from '../domain/blueprints/recipe';
 import type { BlueprintAutomationNodeTestResult } from '../shared/blueprint-messages';
 
 export type BlueprintAutomationNodeTestInput = {
+  fields?: BlueprintExtractListField[];
   filename?: string;
   maxItems?: number;
   requireVisible?: boolean;
@@ -196,11 +198,10 @@ export function runTamprBlueprintAutomationNodeTest(
           : matches.filter(isVisibleElement);
       const items = usableMatches
         .slice(0, Math.min(3, maxExtractListItems(testNode)))
-        .map((match) => normalizeText(match.textContent ?? ''))
-        .filter(Boolean);
+        .map((match) => extractListItem(match, testNode.fields));
 
       return items.length > 0
-        ? `First rows: ${items.map((item) => `"${truncate(item, 40)}"`).join(', ')}`
+        ? `First rows: ${items.map(formatListPreviewItem).join(', ')}`
         : undefined;
     }
 
@@ -331,6 +332,48 @@ export function runTamprBlueprintAutomationNodeTest(
     }
 
     return Math.min(500, Math.max(1, Math.trunc(maxItems)));
+  }
+
+  function extractListItem(
+    element: Element,
+    fields: readonly BlueprintExtractListField[] | undefined,
+  ): Record<string, string> {
+    if (!fields?.length) {
+      return {
+        text: normalizeText(element.textContent ?? ''),
+      };
+    }
+
+    return Object.fromEntries(
+      fields.map((field) => [field.name, extractListField(element, field)]),
+    );
+  }
+
+  function extractListField(
+    element: Element,
+    field: BlueprintExtractListField,
+  ): string {
+    const target = element.querySelector(field.selector);
+
+    if (!target) {
+      return '';
+    }
+
+    if (field.source === 'attribute') {
+      return target.getAttribute(field.attribute ?? '') ?? '';
+    }
+
+    return normalizeText(target.textContent ?? '');
+  }
+
+  function formatListPreviewItem(item: Record<string, string>): string {
+    if ('text' in item && Object.keys(item).length === 1) {
+      return `"${truncate(item.text ?? '', 40)}"`;
+    }
+
+    return Object.entries(item)
+      .map(([key, value]) => `${key}: "${truncate(value, 28)}"`)
+      .join(', ');
   }
 
   function normalizeText(value: string): string {

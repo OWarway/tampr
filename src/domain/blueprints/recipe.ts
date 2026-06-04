@@ -54,6 +54,28 @@ export const BlueprintExtractListMaxItemsSchema = z
   .min(1)
   .max(500);
 
+export const BlueprintExtractListFieldSchema = z
+  .object({
+    name: BlueprintVariableNameSchema,
+    selector: z.string().trim().min(1).max(1_000),
+    source: z.enum(['text', 'attribute']).default('text'),
+    attribute: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .regex(/^[A-Za-z_:][A-Za-z0-9_:.-]*$/)
+      .optional(),
+  })
+  .superRefine((field, context) => {
+    if (field.source === 'attribute' && !field.attribute) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Attribute extraction fields need an attribute name.',
+      });
+    }
+  });
+
 const BlueprintElementNodeBaseSchema = z.object({
   id: BlueprintNodeIdSchema,
   enabled: z.boolean().default(true),
@@ -102,6 +124,7 @@ export const BlueprintExtractTextNodeSchema =
 export const BlueprintExtractListNodeSchema =
   BlueprintElementNodeBaseSchema.extend({
     type: z.literal('extract-list'),
+    fields: z.array(BlueprintExtractListFieldSchema).max(20).default([]),
     maxItems: BlueprintExtractListMaxItemsSchema.default(50),
     pauseBeforeRun: z.boolean().default(false),
     requireVisible: z.boolean().default(true),
@@ -307,10 +330,14 @@ export type BlueprintAutomationNode = Extract<
 export type BlueprintEdge = z.infer<typeof BlueprintEdgeSchema>;
 export type BlueprintGraph = z.infer<typeof BlueprintGraphSchema>;
 export type BlueprintLayoutPoint = z.infer<typeof BlueprintLayoutPointSchema>;
+export type BlueprintExtractListField = z.infer<
+  typeof BlueprintExtractListFieldSchema
+>;
 export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
 
 export type BlueprintNodeUpdate = {
   enabled?: boolean;
+  fields?: BlueprintExtractListField[];
   label?: string;
   maxItems?: number;
   selector?: string;
@@ -396,6 +423,7 @@ export function updateBlueprintNode(
     const nextNode: Record<string, unknown> = {
       ...node,
       ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
+      ...(update.fields !== undefined ? { fields: update.fields } : {}),
       ...(update.maxItems !== undefined ? { maxItems: update.maxItems } : {}),
       ...(update.selector !== undefined ? { selector: update.selector } : {}),
       ...(update.selectorMeta !== undefined

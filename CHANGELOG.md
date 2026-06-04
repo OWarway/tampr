@@ -42,6 +42,8 @@ group changes under the headings below.
   earlier in the same guarded run.
 - Blueprint Extract list nodes collect repeated matching elements into bounded
   JSON arrays that can feed guarded downloads.
+- Extract list nodes can map named text and attribute fields inside each matched
+  row, such as `title = h2` or `url = a @href`.
 - Custom-code Blueprint nodes now require explicit review before generated
   snippets or page-side previews execute them.
 - Blueprint click UIs now surface that synthetic clicks run with

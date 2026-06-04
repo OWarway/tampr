@@ -766,6 +766,7 @@ export async function runTamprBlueprintPicker({
       }
 
       if (action === 'extract-list') {
+        node.fields = [];
         node.maxItems = 50;
         node.variableName = uniqueListVariableName(draftNodes.length + 1);
       }
@@ -1057,6 +1058,34 @@ export async function runTamprBlueprintPicker({
               'Max items',
               'Keeps repeated extraction bounded before preview, save, or download.',
               maxItemsInput,
+            ),
+          );
+
+          const fieldsTextarea = document.createElement('textarea');
+          fieldsTextarea.rows = 4;
+          fieldsTextarea.spellcheck = false;
+          fieldsTextarea.value = formatBlueprintExtractListFieldsInput(
+            node.fields,
+          );
+          fieldsTextarea.placeholder = ['title = h2', 'url = a @href'].join(
+            '\n',
+          );
+          fieldsTextarea.setAttribute('aria-label', 'Blueprint list fields');
+          fieldsTextarea.style.cssText = editorControlStyle([
+            'font: 700 11px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace',
+            'min-height: 86px',
+            'resize: vertical',
+          ]);
+          fieldsTextarea.addEventListener('input', () => {
+            node.fields = parseBlueprintExtractListFieldsInput(
+              fieldsTextarea.value,
+            );
+          });
+          stepEditorBody.append(
+            createEditorField(
+              'Fields',
+              'Optional per-row fields. Use `name = selector` or `name = selector @attribute`.',
+              fieldsTextarea,
             ),
           );
         }
@@ -1352,11 +1381,44 @@ export async function runTamprBlueprintPicker({
       throw new Error(`Step ${nodeLabel(node.action)} could not find target.`);
     }
 
-    function extractDraftList(node: DraftNode): Array<{ text: string }> {
+    function extractDraftList(node: DraftNode): Array<Record<string, string>> {
       return Array.from(document.querySelectorAll(node.pick.selector))
         .filter(isVisibleElement)
         .slice(0, clampExtractListMaxItems(node.maxItems ?? 50))
-        .map((element) => ({ text: visibleText(element) ?? '' }));
+        .map((element) => extractDraftListItem(element, node.fields));
+    }
+
+    function extractDraftListItem(
+      element: Element,
+      fields: DraftNode['fields'],
+    ): Record<string, string> {
+      if (!fields?.length) {
+        return { text: visibleText(element) ?? '' };
+      }
+
+      return Object.fromEntries(
+        fields.map((field) => [
+          field.name,
+          extractDraftListField(element, field),
+        ]),
+      );
+    }
+
+    function extractDraftListField(
+      element: Element,
+      field: NonNullable<DraftNode['fields']>[number],
+    ): string {
+      const target = element.querySelector(field.selector);
+
+      if (!target) {
+        return '';
+      }
+
+      if (field.source === 'attribute') {
+        return target.getAttribute(field.attribute ?? '') ?? '';
+      }
+
+      return visibleText(target) ?? '';
     }
 
     function clampExtractListMaxItems(value: number): number {
@@ -1365,6 +1427,61 @@ export async function runTamprBlueprintPicker({
       }
 
       return Math.min(500, Math.max(1, Math.trunc(value)));
+    }
+
+    function formatBlueprintExtractListFieldsInput(
+      fields: DraftNode['fields'],
+    ): string {
+      return (fields ?? [])
+        .map((field) =>
+          field.source === 'attribute' && field.attribute
+            ? `${field.name} = ${field.selector} @${field.attribute}`
+            : `${field.name} = ${field.selector}`,
+        )
+        .join('\n');
+    }
+
+    function parseBlueprintExtractListFieldsInput(
+      value: string,
+    ): NonNullable<DraftNode['fields']> {
+      return value
+        .split(/\r?\n/)
+        .map((line) => parseBlueprintExtractListFieldLine(line))
+        .filter((field) => field !== undefined)
+        .slice(0, 20);
+    }
+
+    function parseBlueprintExtractListFieldLine(
+      line: string,
+    ): NonNullable<DraftNode['fields']>[number] | undefined {
+      const match =
+        /^([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(.+?)(?:\s+@([A-Za-z_:][A-Za-z0-9_:.-]*))?$/.exec(
+          line.trim(),
+        );
+
+      if (!match) {
+        return undefined;
+      }
+
+      const [, name, selector, attribute] = match;
+      const trimmedSelector = selector?.trim();
+
+      if (!name || !trimmedSelector) {
+        return undefined;
+      }
+
+      return attribute
+        ? {
+            attribute,
+            name,
+            selector: trimmedSelector,
+            source: 'attribute',
+          }
+        : {
+            name,
+            selector: trimmedSelector,
+            source: 'text',
+          };
     }
 
     function isVisibleElement(element: Element): boolean {

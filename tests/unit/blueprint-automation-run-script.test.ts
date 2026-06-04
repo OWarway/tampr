@@ -73,11 +73,11 @@ describe('runTamprBlueprintAutomationNode', () => {
     });
   });
 
-  it('extracts repeated visible text into a bounded JSON list', async () => {
+  it('extracts repeated mapped fields into a bounded JSON list', async () => {
     document.body.innerHTML = `
-      <article class="deal">First deal</article>
-      <article class="deal">Second deal</article>
-      <article class="deal">Third deal</article>
+      <article class="deal"><h2>First deal</h2><a href="/first">Open</a></article>
+      <article class="deal"><h2>Second deal</h2><a href="/second">Open</a></article>
+      <article class="deal"><h2>Third deal</h2><a href="/third">Open</a></article>
     `;
     document.querySelectorAll('.deal').forEach((element) => stubRect(element));
 
@@ -85,6 +85,19 @@ describe('runTamprBlueprintAutomationNode', () => {
       runTamprBlueprintAutomationNode({
         type: 'extract-list',
         selector: '.deal',
+        fields: [
+          {
+            name: 'title',
+            selector: 'h2',
+            source: 'text',
+          },
+          {
+            attribute: 'href',
+            name: 'url',
+            selector: 'a',
+            source: 'attribute',
+          },
+        ],
         maxItems: 2,
         requireVisible: true,
         timeoutMs: 5000,
@@ -98,9 +111,13 @@ describe('runTamprBlueprintAutomationNode', () => {
         firstTagName: 'article',
         matchCount: 3,
         message: 'Extracted 2 list items from the source page.',
-        preview: '"First deal", "Second deal"',
+        preview:
+          'title: "First deal", url: "/first", title: "Second deal", url: "/second"',
         value: JSON.stringify(
-          [{ text: 'First deal' }, { text: 'Second deal' }],
+          [
+            { title: 'First deal', url: '/first' },
+            { title: 'Second deal', url: '/second' },
+          ],
           null,
           2,
         ),

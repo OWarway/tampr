@@ -126,10 +126,18 @@ Automation Blueprint nodes are domain-supported before they are fully exposed in
 the workspace builder. Recipes can model wait-for-element, click, set-value,
 extract-text, extract-list, download-json, and custom-code steps. The JavaScript
 compiler emits a readable local runner with timeouts, visible-element checks,
-bounded repeated extraction, protected-field refusal, risky-click refusal,
-visible custom code execution, and `Tampr.download()` JSON output. Keep
-automation generated code visible in the normal snippet editor; do not move
-execution into a hidden interpreter.
+bounded repeated extraction, optional per-row field mapping, protected-field
+refusal, risky-click refusal, visible custom code execution, and
+`Tampr.download()` JSON output. Keep automation generated code visible in the
+normal snippet editor; do not move execution into a hidden interpreter.
+
+Extract-list fields use the same compact format in the page-side builder and
+workspace inspector: one line per field, with `name = selector` for text and
+`name = selector @attribute` for attributes such as `href`. Field selectors are
+resolved relative to each matched list item. If no fields are configured,
+extract-list keeps the simpler `{ text }` fallback for each row. Richer
+click-to-map table/card authoring should build on this stored field shape rather
+than replacing it.
 
 Custom-code nodes are an explicit escape hatch. They default to unreviewed, show
 danger-level safety copy until reviewed, and generated snippets refuse to execute

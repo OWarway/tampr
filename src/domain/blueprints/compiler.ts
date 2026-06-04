@@ -117,9 +117,39 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
     const matches = Array.from(document.querySelectorAll(step.selector));
     const usableMatches = step.requireVisible ? matches.filter(isVisible) : matches;
 
-    return usableMatches.slice(0, step.maxItems).map((element) => ({
-      text: (element.textContent ?? '').replace(/\\s+/g, ' ').trim(),
-    }));
+    return usableMatches
+      .slice(0, step.maxItems)
+      .map((element) => extractListItem(element, step.fields));
+  }
+
+  function extractListItem(element, fields) {
+    if (!fields?.length) {
+      return {
+        text: normalizeText(element.textContent ?? ''),
+      };
+    }
+
+    return Object.fromEntries(
+      fields.map((field) => [field.name, extractListField(element, field)]),
+    );
+  }
+
+  function extractListField(element, field) {
+    const target = element.querySelector(field.selector);
+
+    if (!target) {
+      return '';
+    }
+
+    if (field.source === 'attribute') {
+      return target.getAttribute(field.attribute) ?? '';
+    }
+
+    return normalizeText(target.textContent ?? '');
+  }
+
+  function normalizeText(value) {
+    return value.replace(/\\s+/g, ' ').trim();
   }
 
   function isVisible(element) {
@@ -395,6 +425,7 @@ function automationStepDefinition(node: BlueprintAutomationNode) {
     case 'extract-list':
       return {
         ...base,
+        ...(node.fields.length > 0 ? { fields: node.fields } : {}),
         maxItems: node.maxItems,
         requireVisible: node.requireVisible,
         timeoutMs: node.timeoutMs,

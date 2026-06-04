@@ -140,6 +140,19 @@ body {
         },
         {
           action: 'extract-list',
+          fields: [
+            {
+              name: 'title',
+              selector: 'h2',
+              source: 'text',
+            },
+            {
+              attribute: 'href',
+              name: 'url',
+              selector: 'a',
+              source: 'attribute',
+            },
+          ],
           maxItems: 12,
           pick: {
             label: 'Deal card',
@@ -187,6 +200,19 @@ body {
         variableName: 'headline',
       }),
       expect.objectContaining({
+        fields: [
+          {
+            name: 'title',
+            selector: 'h2',
+            source: 'text',
+          },
+          {
+            attribute: 'href',
+            name: 'url',
+            selector: 'a',
+            source: 'attribute',
+          },
+        ],
         id: 'extract-list-step-3',
         maxItems: 12,
         selector: '[data-testid="deal-card"]',

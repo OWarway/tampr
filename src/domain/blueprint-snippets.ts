@@ -12,6 +12,7 @@ import {
   BLUEPRINT_RECIPE_VERSION,
   BlueprintRecipeSchema,
   buildCssBlueprintRecipe,
+  type BlueprintExtractListField,
   type BlueprintRecipe,
 } from './blueprints/recipe';
 import {
@@ -41,6 +42,7 @@ export type BuildBlueprintSnippetDraftInput = {
 export type BlueprintFlowDraftNode = {
   action: BlueprintNodeAction;
   code?: string;
+  fields?: BlueprintExtractListField[];
   label?: string;
   maxItems?: number;
   pick: BlueprintElementPick;
@@ -142,6 +144,7 @@ function buildBlueprintFlowRecipe(
       case 'extract-list':
         return {
           ...base,
+          fields: node.fields ?? [],
           maxItems: node.maxItems ?? 50,
           variableName: node.variableName ?? `items${index + 1}`,
         };

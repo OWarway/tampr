@@ -358,6 +358,19 @@ body {
           },
           {
             ...node('extract-deals', 'extract-list', '.deal-card'),
+            fields: [
+              {
+                name: 'title',
+                selector: 'h2',
+                source: 'text',
+              },
+              {
+                attribute: 'href',
+                name: 'url',
+                selector: 'a',
+                source: 'attribute',
+              },
+            ],
             maxItems: 25,
             variableName: 'deals',
           },
@@ -400,6 +413,19 @@ body {
         variableName: 'total',
       }),
       expect.objectContaining({
+        fields: [
+          {
+            name: 'title',
+            selector: 'h2',
+            source: 'text',
+          },
+          {
+            attribute: 'href',
+            name: 'url',
+            selector: 'a',
+            source: 'attribute',
+          },
+        ],
         id: 'extract-deals',
         maxItems: 25,
         requireVisible: true,
@@ -446,6 +472,19 @@ body {
           nodes: [
             {
               ...node('extract-deals', 'extract-list', '.deal-card'),
+              fields: [
+                {
+                  name: 'title',
+                  selector: 'h2',
+                  source: 'text',
+                },
+                {
+                  attribute: 'href',
+                  name: 'url',
+                  selector: 'a',
+                  source: 'attribute',
+                },
+              ],
               maxItems: 10,
               variableName: 'deals',
             },
@@ -459,6 +498,8 @@ body {
     );
 
     expect(js).toContain('"type": "extract-list"');
+    expect(js).toContain('"name": "title"');
+    expect(js).toContain('"attribute": "href"');
     expect(js).toContain('"maxItems": 10');
     expect(js).toContain('"variableName": "deals"');
     expect(js).toContain(
@@ -466,6 +507,7 @@ body {
     );
     expect(js).toContain('document.querySelectorAll(step.selector)');
     expect(js).toContain('slice(0, step.maxItems)');
+    expect(js).toContain('extractListField(element, field)');
   });
 
   it('compiles pause-before-run nodes into a confirmation step', () => {

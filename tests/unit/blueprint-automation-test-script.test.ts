@@ -112,11 +112,11 @@ describe('runTamprBlueprintAutomationNodeTest', () => {
     });
   });
 
-  it('previews repeated list extraction without mutating the page', () => {
+  it('previews repeated mapped list extraction without mutating the page', () => {
     document.body.innerHTML = `
-      <article class="deal">First deal</article>
-      <article class="deal">Second deal</article>
-      <article class="deal">Third deal</article>
+      <article class="deal"><h2>First deal</h2><a href="/first">Open</a></article>
+      <article class="deal"><h2>Second deal</h2><a href="/second">Open</a></article>
+      <article class="deal"><h2>Third deal</h2><a href="/third">Open</a></article>
     `;
     document.querySelectorAll('.deal').forEach((element) => stubRect(element));
 
@@ -124,6 +124,19 @@ describe('runTamprBlueprintAutomationNodeTest', () => {
       runTamprBlueprintAutomationNodeTest({
         type: 'extract-list',
         selector: '.deal',
+        fields: [
+          {
+            name: 'title',
+            selector: 'h2',
+            source: 'text',
+          },
+          {
+            attribute: 'href',
+            name: 'url',
+            selector: 'a',
+            source: 'attribute',
+          },
+        ],
         maxItems: 2,
         requireVisible: true,
         variableName: 'deals',
@@ -137,7 +150,8 @@ describe('runTamprBlueprintAutomationNodeTest', () => {
           'Selector matches 3 elements; only the first 2 will be extracted.',
         ],
         matchCount: 3,
-        preview: 'First rows: "First deal", "Second deal"',
+        preview:
+          'First rows: title: "First deal", url: "/first", title: "Second deal", url: "/second"',
         ready: false,
         visibleCount: 3,
       },

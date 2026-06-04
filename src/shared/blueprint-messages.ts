@@ -1,5 +1,6 @@
 import type { BlueprintElementPick } from '../domain/blueprint-snippets';
 import type { BlueprintSelectorMeta } from '../domain/blueprint-selectors';
+import type { BlueprintExtractListField } from '../domain/blueprints/recipe';
 import {
   BLUEPRINT_AUTOMATION_ACTIONS,
   type BlueprintAutomationAction,
@@ -33,6 +34,7 @@ export type BlueprintSelectorSuggestion = {
 
 export type BlueprintAutomationNodeTestInput = {
   code?: string;
+  fields?: BlueprintExtractListField[];
   filename?: string;
   maxItems?: number;
   requireVisible?: boolean;
@@ -299,6 +301,7 @@ function isAutomationNodeTestInput(
   return (
     optionalString(value, 'filename', 160) &&
     optionalString(value, 'code', 10_000) &&
+    optionalExtractListFields(value, 'fields') &&
     optionalNumber(value, 'maxItems', 1, 500) &&
     optionalString(value, 'value', 10_000) &&
     optionalString(value, 'valueFrom', 80) &&
@@ -378,5 +381,70 @@ function optionalNumber(
     Number.isInteger(property) &&
     property >= min &&
     property <= max
+  );
+}
+
+function optionalExtractListFields(value: object, key: string): boolean {
+  const fields = (value as Record<string, unknown>)[key];
+
+  if (fields === undefined) {
+    return true;
+  }
+
+  if (!Array.isArray(fields) || fields.length > 20) {
+    return false;
+  }
+
+  return fields.every(isExtractListField);
+}
+
+function isExtractListField(
+  value: unknown,
+): value is BlueprintExtractListField {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const field = value as Record<string, unknown>;
+  const source = field['source'];
+
+  if (!isJavaScriptIdentifier(field['name'])) {
+    return false;
+  }
+
+  if (
+    typeof field['selector'] !== 'string' ||
+    field['selector'].trim().length === 0 ||
+    field['selector'].length > 1000
+  ) {
+    return false;
+  }
+
+  if (source !== 'text' && source !== 'attribute') {
+    return false;
+  }
+
+  if (source === 'attribute') {
+    return isAttributeName(field['attribute']);
+  }
+
+  return field['attribute'] === undefined;
+}
+
+function isJavaScriptIdentifier(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 80 &&
+    /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value)
+  );
+}
+
+function isAttributeName(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 80 &&
+    /^[A-Za-z_:][A-Za-z0-9_:.-]*$/.test(value)
   );
 }

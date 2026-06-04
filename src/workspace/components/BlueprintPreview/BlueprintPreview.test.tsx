@@ -365,7 +365,7 @@ describe('BlueprintPreview', () => {
       target: { value: '25' },
     });
 
-    expect(onChange).toHaveBeenCalledWith(
+    expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         graph: expect.objectContaining({
           nodes: [
@@ -378,6 +378,37 @@ describe('BlueprintPreview', () => {
       }),
       '',
       expect.stringContaining('"maxItems": 25'),
+    );
+
+    fireEvent.change(screen.getByLabelText('Automation list fields'), {
+      target: { value: ['title = h2', 'url = a @href'].join('\n') },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              fields: [
+                {
+                  name: 'title',
+                  selector: 'h2',
+                  source: 'text',
+                },
+                {
+                  attribute: 'href',
+                  name: 'url',
+                  selector: 'a',
+                  source: 'attribute',
+                },
+              ],
+              type: 'extract-list',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"fields"'),
     );
   });
 

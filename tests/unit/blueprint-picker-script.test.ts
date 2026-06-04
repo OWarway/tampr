@@ -645,6 +645,10 @@ describe('runTamprBlueprintPicker', () => {
     clickButton('Extract list');
     setDraftField('Blueprint variable name', 'dealItems');
     setDraftField('Blueprint max list items', '12');
+    setDraftField(
+      'Blueprint list fields',
+      ['title = h2', 'url = a @href'].join('\n'),
+    );
     clickButton('Custom code');
     setDraftField(
       'Blueprint custom code',
@@ -673,6 +677,19 @@ describe('runTamprBlueprintPicker', () => {
           },
           {
             action: 'extract-list',
+            fields: [
+              {
+                name: 'title',
+                selector: 'h2',
+                source: 'text',
+              },
+              {
+                attribute: 'href',
+                name: 'url',
+                selector: 'a',
+                source: 'attribute',
+              },
+            ],
             maxItems: 12,
             variableName: 'dealItems',
             pick: {

@@ -367,24 +367,67 @@ export async function runTamprBlueprintAutomationNode(
     matches: Element[],
     visibleMatches: Element[],
     runNode: BlueprintAutomationNodeRunInput,
-  ): Array<{ text: string }> {
+  ): Array<Record<string, string>> {
     const sourceMatches =
       runNode.requireVisible === false ? matches : visibleMatches;
 
     return sourceMatches
       .slice(0, maxExtractListItems(runNode))
-      .map((match) => ({ text: normalizeText(match.textContent ?? '') }));
+      .map((match) => extractListItem(match, runNode.fields));
   }
 
-  function listPreview(items: Array<{ text: string }>): string | undefined {
+  function extractListItem(
+    element: Element,
+    fields: BlueprintAutomationNodeRunInput['fields'],
+  ): Record<string, string> {
+    if (!fields?.length) {
+      return {
+        text: normalizeText(element.textContent ?? ''),
+      };
+    }
+
+    return Object.fromEntries(
+      fields.map((field) => [field.name, extractListField(element, field)]),
+    );
+  }
+
+  function extractListField(
+    element: Element,
+    field: NonNullable<BlueprintAutomationNodeRunInput['fields']>[number],
+  ): string {
+    const target = element.querySelector(field.selector);
+
+    if (!target) {
+      return '';
+    }
+
+    if (field.source === 'attribute') {
+      return target.getAttribute(field.attribute ?? '') ?? '';
+    }
+
+    return normalizeText(target.textContent ?? '');
+  }
+
+  function listPreview(
+    items: Array<Record<string, string>>,
+  ): string | undefined {
     const preview = items
-      .map((item) => item.text)
+      .map(formatListPreviewItem)
       .filter(Boolean)
       .slice(0, 3)
-      .map((item) => `"${truncate(item, 50)}"`)
       .join(', ');
 
     return preview || undefined;
+  }
+
+  function formatListPreviewItem(item: Record<string, string>): string {
+    if ('text' in item && Object.keys(item).length === 1) {
+      return `"${truncate(item.text ?? '', 50)}"`;
+    }
+
+    return Object.entries(item)
+      .map(([key, value]) => `${key}: "${truncate(value, 32)}"`)
+      .join(', ');
   }
 
   function previewResult(element: Element): { preview: string } | object {

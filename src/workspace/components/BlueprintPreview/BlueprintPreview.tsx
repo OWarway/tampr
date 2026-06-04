@@ -30,6 +30,10 @@ import {
   type BlueprintSafetyIssue,
 } from '../../../domain/blueprints/safety';
 import {
+  formatBlueprintExtractListFieldsInput,
+  parseBlueprintExtractListFieldsInput,
+} from '../../../domain/blueprints/extract-list-fields';
+import {
   getLinearBlueprintNodes,
   insertBlueprintNode,
   moveBlueprintNode,
@@ -38,6 +42,7 @@ import {
   updateBlueprintNodeLayout,
   type MoveBlueprintNodeDirection,
   type BlueprintAutomationNode,
+  type BlueprintExtractListField,
   type BlueprintLayoutPoint,
   type BlueprintNode,
   type BlueprintNodeType,
@@ -1091,6 +1096,9 @@ export function BlueprintPreview({
             onFilenameChange={(filename) =>
               editNode(selectedNode.id, { filename }, { regeneratesCode: true })
             }
+            onFieldsChange={(fields) =>
+              editNode(selectedNode.id, { fields }, { regeneratesCode: true })
+            }
             onRequireVisibleChange={(requireVisible) =>
               editNode(
                 selectedNode.id,
@@ -1846,6 +1854,7 @@ type BlueprintNodeInspectorProps = {
   node: BlueprintNode;
   onEnabledChange(enabled: boolean): void;
   onCodeChange(code: string): void;
+  onFieldsChange(fields: BlueprintExtractListField[]): void;
   onFilenameChange(filename: string): void;
   onLabelChange(label: string): void;
   onMaxItemsChange(maxItems: number): void;
@@ -1885,6 +1894,7 @@ function BlueprintNodeInspector({
   node,
   onEnabledChange,
   onCodeChange,
+  onFieldsChange,
   onFilenameChange,
   onLabelChange,
   onMaxItemsChange,
@@ -1993,6 +2003,7 @@ function BlueprintNodeInspector({
             generatedCodeInSync={generatedCodeInSync}
             node={node}
             onCodeChange={onCodeChange}
+            onFieldsChange={onFieldsChange}
             onFilenameChange={onFilenameChange}
             onMaxItemsChange={onMaxItemsChange}
             onPauseBeforeRunChange={onPauseBeforeRunChange}
@@ -2269,6 +2280,7 @@ type BlueprintAutomationSettingsProps = {
   generatedCodeInSync: boolean;
   node: BlueprintAutomationNode;
   onCodeChange(code: string): void;
+  onFieldsChange(fields: BlueprintExtractListField[]): void;
   onFilenameChange(filename: string): void;
   onMaxItemsChange(maxItems: number): void;
   onPauseBeforeRunChange(pauseBeforeRun: boolean): void;
@@ -2284,6 +2296,7 @@ function BlueprintAutomationSettings({
   generatedCodeInSync,
   node,
   onCodeChange,
+  onFieldsChange,
   onFilenameChange,
   onMaxItemsChange,
   onPauseBeforeRunChange,
@@ -2412,6 +2425,25 @@ function BlueprintAutomationSettings({
                   onMaxItemsChange(clampExtractListMaxItems(value));
                 }
               }}
+            />
+          </label>
+          <label className={styles.inspectorField}>
+            <span>Fields</span>
+            <textarea
+              aria-label="Automation list fields"
+              defaultValue={formatBlueprintExtractListFieldsInput(node.fields)}
+              disabled={!generatedCodeInSync}
+              key={`${node.id}-fields`}
+              placeholder={['title = h2', 'url = a @href'].join('\n')}
+              rows={4}
+              spellCheck={false}
+              onChange={(event) =>
+                onFieldsChange(
+                  parseBlueprintExtractListFieldsInput(
+                    event.currentTarget.value,
+                  ),
+                )
+              }
             />
           </label>
         </>
@@ -2625,6 +2657,9 @@ function automationNodeTestInput(
   return {
     selector: node.selector,
     type: node.type,
+    ...('fields' in node && node.fields.length > 0
+      ? { fields: node.fields }
+      : {}),
     ...('filename' in node ? { filename: node.filename } : {}),
     ...('code' in node ? { code: node.code } : {}),
     ...('maxItems' in node ? { maxItems: node.maxItems } : {}),
