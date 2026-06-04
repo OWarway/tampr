@@ -40,6 +40,8 @@ group changes under the headings below.
   nodes can pause for review before they run.
 - Workspace Blueprint flow runs can now download JSON from values collected
   earlier in the same guarded run.
+- Blueprint Extract list nodes collect repeated matching elements into bounded
+  JSON arrays that can feed guarded downloads.
 - Custom-code Blueprint nodes now require explicit review before generated
   snippets or page-side previews execute them.
 - Blueprint click UIs now surface that synthetic clicks run with
@@ -50,9 +52,11 @@ group changes under the headings below.
   saved flow.
 - Blueprint flow reordering for moving saved nodes up and down.
 - Automation Blueprint recipe foundation with typed wait, click, set-value,
-  extract-text, and JSON download nodes plus a readable JavaScript compiler.
+  extract-text, extract-list, and JSON download nodes plus a readable JavaScript
+  compiler.
 - Workspace automation node library and inspector controls for adding and
-  configuring wait, click, set-value, extract-text, and JSON download nodes.
+  configuring wait, click, set-value, extract-text, extract-list, and JSON
+  download nodes.
 - Blueprint automation safety assessment for risky clicks, sensitive fields,
   selector drift, flaky timeouts, and download filename issues.
 - Source-page automation node testing for checking selectors, visibility, field

@@ -126,6 +126,17 @@ export function assessBlueprintNodeSafety(
     case 'extract-text':
       addTimeoutIssues(node, issues);
       break;
+    case 'extract-list':
+      addTimeoutIssues(node, issues);
+
+      if (node.maxItems > 200) {
+        issues.push({
+          code: 'large-extract-list',
+          level: 'info',
+          message: 'Large list extractions can make downloaded JSON noisy.',
+        });
+      }
+      break;
     case 'custom-code':
       addTimeoutIssues(node, issues);
 

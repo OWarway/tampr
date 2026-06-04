@@ -12,6 +12,7 @@ export const BLUEPRINT_AUTOMATION_ACTIONS = [
   'click',
   'set-value',
   'extract-text',
+  'extract-list',
   'download-json',
   'custom-code',
 ] as const;
@@ -75,6 +76,10 @@ const BLUEPRINT_AUTOMATION_ACTION_DEFINITIONS = {
   'extract-text': {
     label: 'Extract text',
     description: 'Stores text from the selected element for later steps.',
+  },
+  'extract-list': {
+    label: 'Extract list',
+    description: 'Stores text from repeated matching elements as an array.',
   },
   'download-json': {
     label: 'Download JSON',

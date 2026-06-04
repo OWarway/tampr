@@ -112,6 +112,38 @@ describe('runTamprBlueprintAutomationNodeTest', () => {
     });
   });
 
+  it('previews repeated list extraction without mutating the page', () => {
+    document.body.innerHTML = `
+      <article class="deal">First deal</article>
+      <article class="deal">Second deal</article>
+      <article class="deal">Third deal</article>
+    `;
+    document.querySelectorAll('.deal').forEach((element) => stubRect(element));
+
+    expect(
+      runTamprBlueprintAutomationNodeTest({
+        type: 'extract-list',
+        selector: '.deal',
+        maxItems: 2,
+        requireVisible: true,
+        variableName: 'deals',
+      }),
+    ).toEqual({
+      ok: true,
+      result: {
+        action: 'extract-list',
+        firstTagName: 'article',
+        issues: [
+          'Selector matches 3 elements; only the first 2 will be extracted.',
+        ],
+        matchCount: 3,
+        preview: 'First rows: "First deal", "Second deal"',
+        ready: false,
+        visibleCount: 3,
+      },
+    });
+  });
+
   it('returns an invalid selector error', () => {
     expect(
       runTamprBlueprintAutomationNodeTest({

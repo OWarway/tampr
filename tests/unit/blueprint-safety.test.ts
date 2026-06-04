@@ -79,6 +79,25 @@ describe('blueprint safety', () => {
     ]);
   });
 
+  it('surfaces large repeated extraction as a source-size note', () => {
+    const issues = assessBlueprintNodeSafety(
+      BlueprintNodeSchema.parse({
+        ...node('extract-list', '.deal-card'),
+        maxItems: 250,
+        variableName: 'deals',
+      }),
+    );
+
+    expect(issues).toEqual([
+      {
+        code: 'large-extract-list',
+        level: 'info',
+        message: 'Large list extractions can make downloaded JSON noisy.',
+      },
+    ]);
+    expect(highestBlueprintSafetyLevel(issues)).toBe('info');
+  });
+
   it('flags unreviewed custom code and risky custom code APIs', () => {
     const issues = assessBlueprintNodeSafety(
       BlueprintNodeSchema.parse({

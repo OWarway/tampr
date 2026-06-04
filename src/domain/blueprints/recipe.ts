@@ -48,6 +48,12 @@ export const BlueprintVariableNameSchema = z
     'Blueprint variable names must be valid JavaScript identifiers.',
   );
 
+export const BlueprintExtractListMaxItemsSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(500);
+
 const BlueprintElementNodeBaseSchema = z.object({
   id: BlueprintNodeIdSchema,
   enabled: z.boolean().default(true),
@@ -93,6 +99,16 @@ export const BlueprintExtractTextNodeSchema =
     variableName: BlueprintVariableNameSchema.default('text'),
   });
 
+export const BlueprintExtractListNodeSchema =
+  BlueprintElementNodeBaseSchema.extend({
+    type: z.literal('extract-list'),
+    maxItems: BlueprintExtractListMaxItemsSchema.default(50),
+    pauseBeforeRun: z.boolean().default(false),
+    requireVisible: z.boolean().default(true),
+    timeoutMs: BlueprintAutomationTimeoutMsSchema.default(5_000),
+    variableName: BlueprintVariableNameSchema.default('items'),
+  });
+
 export const BlueprintDownloadJsonNodeSchema =
   BlueprintElementNodeBaseSchema.extend({
     type: z.literal('download-json'),
@@ -125,6 +141,7 @@ export const BlueprintNodeSchema = z.discriminatedUnion('type', [
   BlueprintClickNodeSchema,
   BlueprintSetValueNodeSchema,
   BlueprintExtractTextNodeSchema,
+  BlueprintExtractListNodeSchema,
   BlueprintDownloadJsonNodeSchema,
   BlueprintCustomCodeNodeSchema,
 ]);
@@ -295,6 +312,7 @@ export type BlueprintRecipe = z.infer<typeof BlueprintRecipeSchema>;
 export type BlueprintNodeUpdate = {
   enabled?: boolean;
   label?: string;
+  maxItems?: number;
   selector?: string;
   selectorMeta?: BlueprintNode['selectorMeta'];
   filename?: string;
@@ -378,6 +396,7 @@ export function updateBlueprintNode(
     const nextNode: Record<string, unknown> = {
       ...node,
       ...(update.enabled !== undefined ? { enabled: update.enabled } : {}),
+      ...(update.maxItems !== undefined ? { maxItems: update.maxItems } : {}),
       ...(update.selector !== undefined ? { selector: update.selector } : {}),
       ...(update.selectorMeta !== undefined
         ? { selectorMeta: update.selectorMeta }

@@ -42,6 +42,7 @@ export type BlueprintFlowDraftNode = {
   action: BlueprintNodeAction;
   code?: string;
   label?: string;
+  maxItems?: number;
   pick: BlueprintElementPick;
   reviewed?: boolean;
   value?: string;
@@ -137,6 +138,12 @@ function buildBlueprintFlowRecipe(
         return {
           ...base,
           variableName: node.variableName ?? `value${index + 1}`,
+        };
+      case 'extract-list':
+        return {
+          ...base,
+          maxItems: node.maxItems ?? 50,
+          variableName: node.variableName ?? `items${index + 1}`,
         };
       case 'custom-code':
         return {

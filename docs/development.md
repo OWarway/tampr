@@ -124,11 +124,12 @@ source tab.
 
 Automation Blueprint nodes are domain-supported before they are fully exposed in
 the workspace builder. Recipes can model wait-for-element, click, set-value,
-extract-text, download-json, and custom-code steps. The JavaScript compiler emits
-a readable local runner with timeouts, visible-element checks, protected-field
-refusal, risky-click refusal, visible custom code execution, and
-`Tampr.download()` JSON output. Keep automation generated code visible in the
-normal snippet editor; do not move execution into a hidden interpreter.
+extract-text, extract-list, download-json, and custom-code steps. The JavaScript
+compiler emits a readable local runner with timeouts, visible-element checks,
+bounded repeated extraction, protected-field refusal, risky-click refusal,
+visible custom code execution, and `Tampr.download()` JSON output. Keep
+automation generated code visible in the normal snippet editor; do not move
+execution into a hidden interpreter.
 
 Custom-code nodes are an explicit escape hatch. They default to unreviewed, show
 danger-level safety copy until reviewed, and generated snippets refuse to execute
@@ -159,10 +160,11 @@ canvas node cards.
 
 Full workspace flow runs are a separate guarded action. They reuse the manual
 automation node runner, skip CSS nodes because generated CSS already applies
-them, run wait-for-element and extract-text steps, run set-value steps after
-explicit confirmation, run click steps only after explicit confirmation, and run
-download-json steps after explicit confirmation using values collected earlier in
-the same flow. The same runner can stop at the selected node for debugger-style
+them, run wait-for-element, extract-text, and extract-list steps, run set-value
+steps after explicit confirmation, run click steps only after explicit
+confirmation, and run download-json steps after explicit confirmation using
+values collected earlier in the same flow. The same runner can stop at the
+selected node for debugger-style
 verification, and confirmation is scoped to the steps that will actually run.
 Set-value runs still refuse unsupported, protected, password, payment, and
 one-time-code style fields. Flow runs can be stopped from the workspace; the stop
@@ -186,19 +188,20 @@ instead of adding separate UI-only rules.
 
 Automation node tests use a temporary `scripting.executeScript` call against the
 source tab to preflight one node at a time. They read selector matches,
-visibility, field compatibility, preview text, and download configuration only;
-they must not click, type into fields, submit forms, extract saved data, or start
-downloads. Keep this non-mutating test path separate from any future manual run
-or recording path.
+visibility, field compatibility, preview text, repeated extraction previews, and
+download configuration only; they must not click, type into fields, submit forms,
+persist extracted data, or start downloads. Keep this non-mutating test path
+separate from any future manual run or recording path.
 
 Manual automation node runs also use temporary `scripting.executeScript` against
 the source tab. The first supported run actions are intentionally low-risk:
-wait-for-element and extract-text. Set-value and click runs require explicit
-inspector confirmation. Set-value runs are refused for unsupported, protected,
-password, payment, or one-time-code style fields; click runs are refused when
-the target looks like submit, buy, send, delete, publish, or payment behavior.
-Download-json and custom-code steps must remain refused by the manual runner
-until their confirmation, blocking, and result-reporting UX is explicit.
+wait-for-element, extract-text, and bounded extract-list. Set-value and click
+runs require explicit inspector confirmation. Set-value runs are refused for
+unsupported, protected, password, payment, or one-time-code style fields; click
+runs are refused when the target looks like submit, buy, send, delete, publish,
+or payment behavior. Download-json and custom-code steps must remain refused by
+the manual runner until their confirmation, blocking, and result-reporting UX is
+explicit.
 
 Click execution resolves the selected element to the closest interactive
 ancestor before safety checks and dispatch. This keeps child selections inside

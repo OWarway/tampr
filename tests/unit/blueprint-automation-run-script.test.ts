@@ -73,6 +73,43 @@ describe('runTamprBlueprintAutomationNode', () => {
     });
   });
 
+  it('extracts repeated visible text into a bounded JSON list', async () => {
+    document.body.innerHTML = `
+      <article class="deal">First deal</article>
+      <article class="deal">Second deal</article>
+      <article class="deal">Third deal</article>
+    `;
+    document.querySelectorAll('.deal').forEach((element) => stubRect(element));
+
+    await expect(
+      runTamprBlueprintAutomationNode({
+        type: 'extract-list',
+        selector: '.deal',
+        maxItems: 2,
+        requireVisible: true,
+        timeoutMs: 5000,
+        variableName: 'deals',
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      result: {
+        action: 'extract-list',
+        durationMs: expect.any(Number),
+        firstTagName: 'article',
+        matchCount: 3,
+        message: 'Extracted 2 list items from the source page.',
+        preview: '"First deal", "Second deal"',
+        value: JSON.stringify(
+          [{ text: 'First deal' }, { text: 'Second deal' }],
+          null,
+          2,
+        ),
+        variableName: 'deals',
+        visibleCount: 3,
+      },
+    });
+  });
+
   it('runs a confirmed click node against a safe visible element', async () => {
     document.body.innerHTML = '<button data-testid="open">Open panel</button>';
     const button = document.querySelector('button') as HTMLButtonElement;
@@ -344,7 +381,7 @@ describe('runTamprBlueprintAutomationNode', () => {
       ok: false,
       reason: 'unsupported',
       message:
-        'Manual node runs currently support wait, extract-text, confirmed set-value, and confirmed click steps.',
+        'Manual node runs currently support wait, extract-text, extract-list, confirmed set-value, and confirmed click steps.',
     });
   });
 

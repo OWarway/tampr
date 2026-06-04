@@ -65,6 +65,11 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
         continue;
       }
 
+      if (step.type === 'extract-list') {
+        values[step.variableName] = await extractList(step);
+        continue;
+      }
+
       if (step.type === 'download-json') {
         await downloadJson(step);
         continue;
@@ -104,6 +109,17 @@ export function compileBlueprintJavaScript(recipe: BlueprintRecipe): string {
     }
 
     throw new Error(\`Step "\${step.label}" timed out waiting for \${step.selector}.\`);
+  }
+
+  async function extractList(step) {
+    await waitForElement(step);
+
+    const matches = Array.from(document.querySelectorAll(step.selector));
+    const usableMatches = step.requireVisible ? matches.filter(isVisible) : matches;
+
+    return usableMatches.slice(0, step.maxItems).map((element) => ({
+      text: (element.textContent ?? '').replace(/\\s+/g, ' ').trim(),
+    }));
   }
 
   function isVisible(element) {
@@ -372,6 +388,14 @@ function automationStepDefinition(node: BlueprintAutomationNode) {
     case 'extract-text':
       return {
         ...base,
+        requireVisible: node.requireVisible,
+        timeoutMs: node.timeoutMs,
+        variableName: node.variableName,
+      };
+    case 'extract-list':
+      return {
+        ...base,
+        maxItems: node.maxItems,
         requireVisible: node.requireVisible,
         timeoutMs: node.timeoutMs,
         variableName: node.variableName,

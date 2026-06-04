@@ -62,6 +62,7 @@ export async function runTamprBlueprintAutomationNode(
   if (
     node.type !== 'wait-for-element' &&
     node.type !== 'extract-text' &&
+    node.type !== 'extract-list' &&
     node.type !== 'set-value' &&
     node.type !== 'click'
   ) {
@@ -69,7 +70,7 @@ export async function runTamprBlueprintAutomationNode(
       ok: false,
       reason: 'unsupported',
       message:
-        'Manual node runs currently support wait, extract-text, confirmed set-value, and confirmed click steps.',
+        'Manual node runs currently support wait, extract-text, extract-list, confirmed set-value, and confirmed click steps.',
     };
   }
 
@@ -161,6 +162,25 @@ export async function runTamprBlueprintAutomationNode(
           message: 'Text extracted from the source page.',
           ...(preview ? { preview } : {}),
           value: truncate(value, 2_000),
+          ...(node.variableName ? { variableName: node.variableName } : {}),
+        },
+      };
+    }
+
+    if (node.type === 'extract-list') {
+      const items = extractListItems(match.matches, match.visibleMatches, node);
+      const value = JSON.stringify(items, null, 2);
+      const preview = listPreview(items);
+
+      return {
+        ok: true,
+        result: {
+          ...base,
+          message: `Extracted ${items.length} list ${
+            items.length === 1 ? 'item' : 'items'
+          } from the source page.`,
+          ...(preview ? { preview } : {}),
+          value: truncate(value, 4_000),
           ...(node.variableName ? { variableName: node.variableName } : {}),
         },
       };
@@ -341,6 +361,30 @@ export async function runTamprBlueprintAutomationNode(
     const text = normalizeText(element.textContent ?? '');
 
     return text ? truncate(text, 160) : undefined;
+  }
+
+  function extractListItems(
+    matches: Element[],
+    visibleMatches: Element[],
+    runNode: BlueprintAutomationNodeRunInput,
+  ): Array<{ text: string }> {
+    const sourceMatches =
+      runNode.requireVisible === false ? matches : visibleMatches;
+
+    return sourceMatches
+      .slice(0, maxExtractListItems(runNode))
+      .map((match) => ({ text: normalizeText(match.textContent ?? '') }));
+  }
+
+  function listPreview(items: Array<{ text: string }>): string | undefined {
+    const preview = items
+      .map((item) => item.text)
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((item) => `"${truncate(item, 50)}"`)
+      .join(', ');
+
+    return preview || undefined;
   }
 
   function previewResult(element: Element): { preview: string } | object {
@@ -529,6 +573,16 @@ export async function runTamprBlueprintAutomationNode(
     }
 
     return Math.min(Math.max(Math.trunc(value), 250), 60_000);
+  }
+
+  function maxExtractListItems(runNode: BlueprintAutomationNodeRunInput) {
+    const maxItems = runNode.maxItems;
+
+    if (maxItems === undefined || !Number.isFinite(maxItems)) {
+      return 50;
+    }
+
+    return Math.min(500, Math.max(1, Math.trunc(maxItems)));
   }
 
   function truncate(value: string, maxLength: number): string {

@@ -3,6 +3,7 @@ import type { BlueprintAutomationNodeTestResult } from '../shared/blueprint-mess
 
 export type BlueprintAutomationNodeTestInput = {
   filename?: string;
+  maxItems?: number;
   requireVisible?: boolean;
   selector: string;
   type: BlueprintAutomationAction;
@@ -120,7 +121,22 @@ export function runTamprBlueprintAutomationNodeTest(
     }
 
     if (matches.length > 1) {
-      issues.push(`Selector matches ${matches.length} elements on this page.`);
+      if (testNode.type !== 'extract-list') {
+        issues.push(
+          `Selector matches ${matches.length} elements on this page.`,
+        );
+      }
+    }
+
+    if (
+      testNode.type === 'extract-list' &&
+      matches.length > maxExtractListItems(testNode)
+    ) {
+      issues.push(
+        `Selector matches ${matches.length} elements; only the first ${maxExtractListItems(
+          testNode,
+        )} will be extracted.`,
+      );
     }
 
     if (testNode.requireVisible !== false && visibleMatches.length === 0) {
@@ -169,6 +185,23 @@ export function runTamprBlueprintAutomationNodeTest(
 
     if (testNode.type === 'set-value') {
       return fieldPreview(element);
+    }
+
+    if (testNode.type === 'extract-list') {
+      const selector = testNode.selector.trim();
+      const matches = Array.from(document.querySelectorAll(selector));
+      const usableMatches =
+        testNode.requireVisible === false
+          ? matches
+          : matches.filter(isVisibleElement);
+      const items = usableMatches
+        .slice(0, Math.min(3, maxExtractListItems(testNode)))
+        .map((match) => normalizeText(match.textContent ?? ''))
+        .filter(Boolean);
+
+      return items.length > 0
+        ? `First rows: ${items.map((item) => `"${truncate(item, 40)}"`).join(', ')}`
+        : undefined;
     }
 
     const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -288,6 +321,20 @@ export function runTamprBlueprintAutomationNodeTest(
     const rect = element.getBoundingClientRect();
 
     return rect.width > 0 && rect.height > 0;
+  }
+
+  function maxExtractListItems(testNode: BlueprintAutomationNodeTestInput) {
+    const maxItems = testNode.maxItems;
+
+    if (maxItems === undefined || !Number.isFinite(maxItems)) {
+      return 50;
+    }
+
+    return Math.min(500, Math.max(1, Math.trunc(maxItems)));
+  }
+
+  function normalizeText(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
   }
 
   function truncate(value: string, maxLength: number): string {

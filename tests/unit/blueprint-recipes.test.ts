@@ -356,18 +356,25 @@ body {
             ...node('extract-total', 'extract-text', '.total'),
             variableName: 'total',
           },
+          {
+            ...node('extract-deals', 'extract-list', '.deal-card'),
+            maxItems: 25,
+            variableName: 'deals',
+          },
           node('download-total', 'download-json', 'body'),
         ],
         edges: [
           edge('edge-click-buy', 'wait-for-buy', 'click-buy'),
           edge('edge-extract-total', 'click-buy', 'extract-total'),
-          edge('edge-download-total', 'extract-total', 'download-total'),
+          edge('edge-extract-deals', 'extract-total', 'extract-deals'),
+          edge('edge-download-total', 'extract-deals', 'download-total'),
         ],
         layout: {
           'wait-for-buy': { x: 0, y: 0 },
           'click-buy': { x: 220, y: 0 },
           'extract-total': { x: 440, y: 0 },
-          'download-total': { x: 660, y: 0 },
+          'extract-deals': { x: 660, y: 0 },
+          'download-total': { x: 880, y: 0 },
         },
       },
     });
@@ -391,6 +398,14 @@ body {
         timeoutMs: 5000,
         type: 'extract-text',
         variableName: 'total',
+      }),
+      expect.objectContaining({
+        id: 'extract-deals',
+        maxItems: 25,
+        requireVisible: true,
+        timeoutMs: 5000,
+        type: 'extract-list',
+        variableName: 'deals',
       }),
       expect.objectContaining({
         filename: 'tampr-blueprint.json',
@@ -420,6 +435,37 @@ body {
     expect(js).toContain('new MouseEvent(mouseType, init)');
     expect(js).toContain('globalThis.Tampr.download');
     expect(js).toContain('pauseBeforeStep(step)');
+  });
+
+  it('compiles extract-list nodes into bounded repeated extraction', () => {
+    const js = compileBlueprintJavaScript(
+      BlueprintRecipeSchema.parse({
+        version: BLUEPRINT_RECIPE_VERSION,
+        name: 'Extract deals',
+        graph: {
+          nodes: [
+            {
+              ...node('extract-deals', 'extract-list', '.deal-card'),
+              maxItems: 10,
+              variableName: 'deals',
+            },
+          ],
+          edges: [],
+          layout: {
+            'extract-deals': { x: 0, y: 0 },
+          },
+        },
+      }),
+    );
+
+    expect(js).toContain('"type": "extract-list"');
+    expect(js).toContain('"maxItems": 10');
+    expect(js).toContain('"variableName": "deals"');
+    expect(js).toContain(
+      'values[step.variableName] = await extractList(step);',
+    );
+    expect(js).toContain('document.querySelectorAll(step.selector)');
+    expect(js).toContain('slice(0, step.maxItems)');
   });
 
   it('compiles pause-before-run nodes into a confirmation step', () => {

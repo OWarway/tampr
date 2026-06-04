@@ -139,6 +139,20 @@ body {
           variableName: 'headline',
         },
         {
+          action: 'extract-list',
+          maxItems: 12,
+          pick: {
+            label: 'Deal card',
+            selector: '[data-testid="deal-card"]',
+            selectorMeta: {
+              ...strongSelectorMeta(),
+              matchCount: 3,
+            },
+            tagName: 'article',
+          },
+          variableName: 'deals',
+        },
+        {
           action: 'custom-code',
           code: 'values.custom = element.textContent;',
           reviewed: true,
@@ -152,10 +166,12 @@ body {
       ],
     });
 
-    expect(draft.name).toBe('Click Open panel + 2 steps');
+    expect(draft.name).toBe('Click Open panel + 3 steps');
     expect(draft.matches).toEqual(['https://example.com/deals/today*']);
     expect(draft.css).toBe('');
     expect(draft.js).toContain('"type": "click"');
+    expect(draft.js).toContain('"type": "extract-list"');
+    expect(draft.js).toContain('"maxItems": 12');
     expect(draft.js).toContain('"type": "custom-code"');
     expect(draft.js).toContain('values.custom = element.textContent;');
     expect(draft.blueprint?.graph.nodes).toEqual([
@@ -171,8 +187,15 @@ body {
         variableName: 'headline',
       }),
       expect.objectContaining({
+        id: 'extract-list-step-3',
+        maxItems: 12,
+        selector: '[data-testid="deal-card"]',
+        type: 'extract-list',
+        variableName: 'deals',
+      }),
+      expect.objectContaining({
         code: 'values.custom = element.textContent;',
-        id: 'custom-code-step-3',
+        id: 'custom-code-step-4',
         reviewed: true,
         type: 'custom-code',
       }),

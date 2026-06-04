@@ -642,6 +642,9 @@ describe('runTamprBlueprintPicker', () => {
 
     clickButton('Extract');
     setDraftField('Blueprint variable name', 'dealText');
+    clickButton('Extract list');
+    setDraftField('Blueprint variable name', 'dealItems');
+    setDraftField('Blueprint max list items', '12');
     clickButton('Custom code');
     setDraftField(
       'Blueprint custom code',
@@ -664,6 +667,14 @@ describe('runTamprBlueprintPicker', () => {
           {
             action: 'extract-text',
             variableName: 'dealText',
+            pick: {
+              selector: 'h1[data-testid="headline"]',
+            },
+          },
+          {
+            action: 'extract-list',
+            maxItems: 12,
+            variableName: 'dealItems',
             pick: {
               selector: 'h1[data-testid="headline"]',
             },

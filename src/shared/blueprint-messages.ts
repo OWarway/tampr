@@ -34,6 +34,7 @@ export type BlueprintSelectorSuggestion = {
 export type BlueprintAutomationNodeTestInput = {
   code?: string;
   filename?: string;
+  maxItems?: number;
   requireVisible?: boolean;
   selector: string;
   type: BlueprintAutomationAction;
@@ -298,6 +299,7 @@ function isAutomationNodeTestInput(
   return (
     optionalString(value, 'filename', 160) &&
     optionalString(value, 'code', 10_000) &&
+    optionalNumber(value, 'maxItems', 1, 500) &&
     optionalString(value, 'value', 10_000) &&
     optionalString(value, 'valueFrom', 80) &&
     optionalString(value, 'variableName', 80)
@@ -357,4 +359,24 @@ function optionalString(
   }
 
   return typeof property === 'string' && property.length <= maxLength;
+}
+
+function optionalNumber(
+  value: object,
+  key: string,
+  min: number,
+  max: number,
+): boolean {
+  const property = (value as Record<string, unknown>)[key];
+
+  if (property === undefined) {
+    return true;
+  }
+
+  return (
+    typeof property === 'number' &&
+    Number.isInteger(property) &&
+    property >= min &&
+    property <= max
+  );
 }

@@ -396,6 +396,9 @@ export async function runTamprBlueprintPicker({
           createPaletteButton('Extract', '#2d7d56', () =>
             appendAction('extract-text'),
           ),
+          createPaletteButton('Extract list', '#14594d', () =>
+            appendAction('extract-list'),
+          ),
           createPaletteButton('Download JSON', '#29463d', () =>
             appendAction('download-json'),
           ),
@@ -762,6 +765,11 @@ export async function runTamprBlueprintPicker({
         node.variableName = uniqueVariableName(draftNodes.length + 1);
       }
 
+      if (action === 'extract-list') {
+        node.maxItems = 50;
+        node.variableName = uniqueListVariableName(draftNodes.length + 1);
+      }
+
       if (action === 'custom-code') {
         node.code = defaultCustomCode();
         node.reviewed = false;
@@ -901,6 +909,12 @@ export async function runTamprBlueprintPicker({
             continue;
           }
 
+          if (node.action === 'extract-list') {
+            values[node.variableName ?? uniqueListVariableName(1)] =
+              extractDraftList(node);
+            continue;
+          }
+
           if (node.action === 'custom-code') {
             if (!node.reviewed) {
               throw new Error('Custom code needs review before running.');
@@ -979,8 +993,11 @@ export async function runTamprBlueprintPicker({
         return;
       }
 
-      if (node.action === 'extract-text') {
-        const fallback = uniqueVariableName(selectedDraftIndex + 1);
+      if (node.action === 'extract-text' || node.action === 'extract-list') {
+        const fallback =
+          node.action === 'extract-list'
+            ? uniqueListVariableName(selectedDraftIndex + 1)
+            : uniqueVariableName(selectedDraftIndex + 1);
         node.variableName = normalizeVariableName(
           node.variableName ?? fallback,
           fallback,
@@ -1005,10 +1022,45 @@ export async function runTamprBlueprintPicker({
         stepEditorBody.append(
           createEditorField(
             'Variable name',
-            'The extracted text is stored under this JavaScript-safe name.',
+            node.action === 'extract-list'
+              ? 'The extracted list is stored under this JavaScript-safe name.'
+              : 'The extracted text is stored under this JavaScript-safe name.',
             input,
           ),
         );
+
+        if (node.action === 'extract-list') {
+          node.maxItems = clampExtractListMaxItems(node.maxItems ?? 50);
+
+          const maxItemsInput = document.createElement('input');
+          maxItemsInput.type = 'text';
+          maxItemsInput.inputMode = 'numeric';
+          maxItemsInput.autocomplete = 'off';
+          maxItemsInput.maxLength = 3;
+          maxItemsInput.placeholder = '50';
+          maxItemsInput.value = String(node.maxItems);
+          maxItemsInput.setAttribute('aria-label', 'Blueprint max list items');
+          maxItemsInput.style.cssText = editorControlStyle();
+          maxItemsInput.addEventListener('input', () => {
+            const parsed = Number.parseInt(
+              maxItemsInput.value.replace(/\D/g, ''),
+              10,
+            );
+
+            if (Number.isFinite(parsed)) {
+              node.maxItems = clampExtractListMaxItems(parsed);
+              maxItemsInput.value = String(node.maxItems);
+            }
+          });
+          stepEditorBody.append(
+            createEditorField(
+              'Max items',
+              'Keeps repeated extraction bounded before preview, save, or download.',
+              maxItemsInput,
+            ),
+          );
+        }
+
         return;
       }
 
@@ -1188,6 +1240,7 @@ export async function runTamprBlueprintPicker({
       return (
         node.action === 'set-value' ||
         node.action === 'extract-text' ||
+        node.action === 'extract-list' ||
         node.action === 'custom-code'
       );
     }
@@ -1266,6 +1319,8 @@ export async function runTamprBlueprintPicker({
           return 'Set value';
         case 'extract-text':
           return 'Extract text';
+        case 'extract-list':
+          return 'Extract list';
         case 'download-json':
           return 'Download JSON';
         case 'custom-code':
@@ -1275,6 +1330,10 @@ export async function runTamprBlueprintPicker({
 
     function uniqueVariableName(index: number): string {
       return `value${index}`;
+    }
+
+    function uniqueListVariableName(index: number): string {
+      return `items${index}`;
     }
 
     async function waitForDraftElement(node: DraftNode): Promise<Element> {
@@ -1291,6 +1350,21 @@ export async function runTamprBlueprintPicker({
       }
 
       throw new Error(`Step ${nodeLabel(node.action)} could not find target.`);
+    }
+
+    function extractDraftList(node: DraftNode): Array<{ text: string }> {
+      return Array.from(document.querySelectorAll(node.pick.selector))
+        .filter(isVisibleElement)
+        .slice(0, clampExtractListMaxItems(node.maxItems ?? 50))
+        .map((element) => ({ text: visibleText(element) ?? '' }));
+    }
+
+    function clampExtractListMaxItems(value: number): number {
+      if (!Number.isFinite(value)) {
+        return 50;
+      }
+
+      return Math.min(500, Math.max(1, Math.trunc(value)));
     }
 
     function isVisibleElement(element: Element): boolean {

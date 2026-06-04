@@ -607,8 +607,16 @@ export function BlueprintPreview({
         };
       }
 
-      if (result.action === 'extract-text' && result.variableName) {
-        runContext.values[result.variableName] = result.value ?? '';
+      if (
+        result.action === 'extract-text' ||
+        result.action === 'extract-list'
+      ) {
+        if (result.variableName) {
+          runContext.values[result.variableName] =
+            result.action === 'extract-list'
+              ? parseExtractedListValue(result.value)
+              : (result.value ?? '');
+        }
       }
 
       return {
@@ -1068,6 +1076,9 @@ export function BlueprintPreview({
             onLabelChange={(label) =>
               editNode(selectedNode.id, { label }, { regeneratesCode: true })
             }
+            onMaxItemsChange={(maxItems) =>
+              editNode(selectedNode.id, { maxItems }, { regeneratesCode: true })
+            }
             onMoveDown={() => moveNode(selectedNode.id, 'down')}
             onMoveUp={() => moveNode(selectedNode.id, 'up')}
             onPauseBeforeRunChange={(pauseBeforeRun) =>
@@ -1184,7 +1195,7 @@ const BLUEPRINT_NODE_LIBRARY_GROUPS: ReadonlyArray<{
   },
   {
     label: 'Data',
-    actions: ['extract-text', 'download-json'],
+    actions: ['extract-text', 'extract-list', 'download-json'],
   },
   {
     label: 'Advanced',
@@ -1837,6 +1848,7 @@ type BlueprintNodeInspectorProps = {
   onCodeChange(code: string): void;
   onFilenameChange(filename: string): void;
   onLabelChange(label: string): void;
+  onMaxItemsChange(maxItems: number): void;
   onMoveDown(): void;
   onMoveUp(): void;
   onPauseBeforeRunChange(pauseBeforeRun: boolean): void;
@@ -1875,6 +1887,7 @@ function BlueprintNodeInspector({
   onCodeChange,
   onFilenameChange,
   onLabelChange,
+  onMaxItemsChange,
   onMoveDown,
   onMoveUp,
   onPauseBeforeRunChange,
@@ -1981,6 +1994,7 @@ function BlueprintNodeInspector({
             node={node}
             onCodeChange={onCodeChange}
             onFilenameChange={onFilenameChange}
+            onMaxItemsChange={onMaxItemsChange}
             onPauseBeforeRunChange={onPauseBeforeRunChange}
             onRequireVisibleChange={onRequireVisibleChange}
             onReviewedChange={onReviewedChange}
@@ -2256,6 +2270,7 @@ type BlueprintAutomationSettingsProps = {
   node: BlueprintAutomationNode;
   onCodeChange(code: string): void;
   onFilenameChange(filename: string): void;
+  onMaxItemsChange(maxItems: number): void;
   onPauseBeforeRunChange(pauseBeforeRun: boolean): void;
   onRequireVisibleChange(requireVisible: boolean): void;
   onReviewedChange(reviewed: boolean): void;
@@ -2270,6 +2285,7 @@ function BlueprintAutomationSettings({
   node,
   onCodeChange,
   onFilenameChange,
+  onMaxItemsChange,
   onPauseBeforeRunChange,
   onRequireVisibleChange,
   onReviewedChange,
@@ -2360,6 +2376,45 @@ function BlueprintAutomationSettings({
             }
           />
         </label>
+      ) : null}
+
+      {node.type === 'extract-list' ? (
+        <>
+          <label className={styles.inspectorField}>
+            <span>Variable</span>
+            <input
+              aria-label="Automation list variable name"
+              disabled={!generatedCodeInSync}
+              value={node.variableName}
+              onChange={(event) =>
+                onVariableNameChange(event.currentTarget.value)
+              }
+            />
+          </label>
+          <label className={styles.inspectorField}>
+            <span>Max items</span>
+            <input
+              aria-label="Automation max list items"
+              disabled={!generatedCodeInSync}
+              inputMode="numeric"
+              max={500}
+              min={1}
+              pattern="[0-9]*"
+              type="text"
+              value={node.maxItems}
+              onChange={(event) => {
+                const value = Number.parseInt(
+                  event.currentTarget.value.replace(/\D/g, ''),
+                  10,
+                );
+
+                if (Number.isFinite(value)) {
+                  onMaxItemsChange(clampExtractListMaxItems(value));
+                }
+              }}
+            />
+          </label>
+        </>
       ) : null}
 
       {node.type === 'download-json' ? (
@@ -2572,6 +2627,7 @@ function automationNodeTestInput(
     type: node.type,
     ...('filename' in node ? { filename: node.filename } : {}),
     ...('code' in node ? { code: node.code } : {}),
+    ...('maxItems' in node ? { maxItems: node.maxItems } : {}),
     ...('requireVisible' in node
       ? { requireVisible: node.requireVisible }
       : {}),
@@ -2601,6 +2657,7 @@ function canRunManualAutomationNode(node: BlueprintAutomationNode): boolean {
   return (
     node.type === 'wait-for-element' ||
     node.type === 'extract-text' ||
+    node.type === 'extract-list' ||
     node.type === 'set-value' ||
     node.type === 'click'
   );
@@ -2703,6 +2760,20 @@ function downloadPreview(value: unknown): string {
   return json.length <= 160 ? json : json.slice(0, 159).trimEnd();
 }
 
+function parseExtractedListValue(value: string | undefined): unknown {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function createBlueprintRunId(): string {
   return `run-${Date.now().toString(36)}-${Math.random()
     .toString(36)
@@ -2749,6 +2820,10 @@ function safetyClass(
 
 function clampAutomationTimeout(value: number): number {
   return Math.min(60_000, Math.max(250, Math.round(value)));
+}
+
+function clampExtractListMaxItems(value: number): number {
+  return Math.min(500, Math.max(1, Math.round(value)));
 }
 
 function actionLabel(type: BlueprintNode['type']): string {

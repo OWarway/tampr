@@ -299,6 +299,88 @@ describe('BlueprintPreview', () => {
     );
   });
 
+  it('adds extract-list nodes for repeated data extraction', () => {
+    const onChange = vi.fn();
+    const blueprint = buildCssBlueprintRecipe({
+      id: 'hide-offer',
+      label: 'Hide offer',
+      selector: '[data-testid="offer"]',
+      selectorMeta: selectorMeta('attribute'),
+      type: 'hide',
+    });
+    const css = compileBlueprintCss(blueprint);
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css={css}
+        js=""
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add Extract list node' }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              id: 'hide-offer',
+              type: 'hide',
+            }),
+            expect.objectContaining({
+              id: 'extract-list-selection',
+              maxItems: 50,
+              requireVisible: true,
+              timeoutMs: 5000,
+              type: 'extract-list',
+              variableName: 'items',
+            }),
+          ],
+        }),
+      }),
+      css,
+      expect.stringContaining('"type": "extract-list"'),
+    );
+  });
+
+  it('edits extract-list settings and regenerates JavaScript', () => {
+    const onChange = vi.fn();
+    const blueprint = extractListRecipe();
+    const js = compileBlueprintJavaScript(blueprint);
+
+    render(
+      <BlueprintPreview
+        blueprint={blueprint}
+        css=""
+        js={js}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Automation max list items'), {
+      target: { value: '25' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        graph: expect.objectContaining({
+          nodes: [
+            expect.objectContaining({
+              maxItems: 25,
+              type: 'extract-list',
+            }),
+          ],
+        }),
+      }),
+      '',
+      expect.stringContaining('"maxItems": 25'),
+    );
+  });
+
   it('moves selected nodes and regenerates CSS in flow order', () => {
     const onChange = vi.fn();
     const blueprint = twoNodeRecipe();
@@ -1728,6 +1810,35 @@ function automationRecipe(
       edges: [],
       layout: {
         'wait-for-deal': { x: 0, y: 0 },
+      },
+    },
+  });
+}
+
+function extractListRecipe(): BlueprintRecipe {
+  return BlueprintRecipeSchema.parse({
+    version: BLUEPRINT_RECIPE_VERSION,
+    name: 'Extract deals',
+    graph: {
+      nodes: [
+        {
+          id: 'extract-deals',
+          enabled: true,
+          maxItems: 50,
+          requireVisible: true,
+          selector: '[data-testid="deal-card"]',
+          selectorMeta: {
+            ...selectorMeta('attribute'),
+            matchCount: 3,
+          },
+          timeoutMs: 5000,
+          type: 'extract-list',
+          variableName: 'deals',
+        },
+      ],
+      edges: [],
+      layout: {
+        'extract-deals': { x: 0, y: 0 },
       },
     },
   });
